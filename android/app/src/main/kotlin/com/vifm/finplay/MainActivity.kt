@@ -1,0 +1,5 @@
+package com.vifm.finplay
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
