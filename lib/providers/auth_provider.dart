@@ -71,7 +71,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       final prefs = await SharedPreferences.getInstance();
       if (token != null) await prefs.setString(AppConstants.selfPacedTokenKey, token);
-      await prefs.setString(_userKey, jsonEncode(user.toJson()));
+      await prefs.setString(_userKey, jsonEncode(user.toStorageJson()));
     } catch (_) {/* non-critical */}
   }
 

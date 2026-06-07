@@ -630,7 +630,7 @@ class _ModeCardState extends State<_ModeCard> with SingleTickerProviderStateMixi
               children: [
                 // ── Gradient header with icon ──
                 Expanded(
-                  flex: 5,
+                  flex: 4,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -769,7 +769,7 @@ class _ModeCardState extends State<_ModeCard> with SingleTickerProviderStateMixi
                 Expanded(
                   flex: 7,
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -777,7 +777,7 @@ class _ModeCardState extends State<_ModeCard> with SingleTickerProviderStateMixi
                         Text(
                           widget.title,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: widget.isDark ? Colors.white : const Color(0xFF111827),
                           ),
@@ -794,7 +794,7 @@ class _ModeCardState extends State<_ModeCard> with SingleTickerProviderStateMixi
                           ),
                         ),
 
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
 
                         // Features grid (2x2)
                         Expanded(
@@ -803,7 +803,7 @@ class _ModeCardState extends State<_ModeCard> with SingleTickerProviderStateMixi
                             children: [
                               for (int row = 0; row < 2; row++)
                                 Padding(
-                                  padding: EdgeInsets.only(bottom: row == 0 ? 10 : 0),
+                                  padding: EdgeInsets.only(bottom: row == 0 ? 8 : 0),
                                   child: Row(
                                     children: [
                                       for (int col = 0; col < 2; col++) ...[
@@ -825,12 +825,12 @@ class _ModeCardState extends State<_ModeCard> with SingleTickerProviderStateMixi
                           ),
                         ),
 
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
 
                         // CTA button
                         SizedBox(
                           width: double.infinity,
-                          height: 50,
+                          height: 48,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: widget.isLocked
@@ -913,7 +913,7 @@ class _FeaturePill extends StatelessWidget {
     final color = isLocked ? const Color(0xFF9CA3AF) : accentColor;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: isDark
             ? color.withValues(alpha: 0.08)

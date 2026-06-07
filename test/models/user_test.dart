@@ -20,7 +20,7 @@ void main() {
 
         final user = SelfPacedUser.fromJson(json);
 
-        expect(user.id, 42);
+        expect(user.id, '42'); // id is normalized to String by the model
         expect(user.email, 'test@example.com');
         expect(user.displayName, 'John Doe');
         expect(user.teamName, 'Alpha');

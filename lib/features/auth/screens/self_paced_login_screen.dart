@@ -333,7 +333,8 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
 
                   Text(
                     _isRegister
-                        ? s.tr('Start your finance learning journey', 'ابدأ رحلتك في تعلّم المالية')
+                        ? s.tr('Register to start your self-paced learning journey',
+                            'سجّل لتبدأ رحلة التعلّم الذاتي')
                         : s.tr('Sign in to continue your progress', 'سجّل الدخول لمتابعة تقدّمك'),
                     style: TextStyle(
                       fontSize: 14,
@@ -366,10 +367,52 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                       key: _formKey,
                       child: Column(
                         children: [
+                          // Access Code — shown at the top in a styled box when
+                          // self-paced sign-up is gated (parity with the website).
+                          if (_isRegister && _voucherRequired) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF), // indigo-50
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFC7D2FE)), // indigo-200
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  TextFormField(
+                                    controller: _voucherController,
+                                    textCapitalization: TextCapitalization.characters,
+                                    style: GoogleFonts.jetBrainsMono(
+                                        fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+                                    decoration: InputDecoration(
+                                      labelText: s.tr('Access Code', 'رمز الدخول'),
+                                      prefixIcon: const Icon(Icons.vpn_key_rounded, size: 20),
+                                      hintText: s.tr('Enter your access code', 'أدخل رمز الدخول'),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      filled: true,
+                                      fillColor: isDark ? AppColors.darkSurface : Colors.white,
+                                    ),
+                                    validator: (v) => (v == null || v.trim().isEmpty)
+                                        ? s.tr('Access code required', 'رمز الدخول مطلوب')
+                                        : null,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    s.tr('A valid access code is required to create an account.',
+                                        'مطلوب رمز دخول صالح لإنشاء حساب.'),
+                                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
                           if (_isRegister) ...[
                             _buildField(
                               controller: _nameController,
-                              label: s.tr('Display Name', 'الاسم الظاهر'),
+                              label: s.tr('Your Name', 'اسمك'),
                               icon: Icons.badge_rounded,
                               validator: (v) => v?.isEmpty == true ? s.tr('Name required', 'الاسم مطلوب') : null,
                             ),
@@ -393,6 +436,10 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                             controller: _passwordController,
                             label: s.tr('Password', 'كلمة المرور'),
                             icon: Icons.lock_rounded,
+                            hint: _isRegister
+                                ? s.tr('Create a password (min 6 characters)',
+                                    'أنشئ كلمة مرور (6 أحرف على الأقل)')
+                                : null,
                             obscure: _obscurePassword,
                             suffix: IconButton(
                               icon: Icon(
@@ -416,17 +463,6 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                               label: s.tr('Team Name (Optional)', 'اسم الفريق (اختياري)'),
                               icon: Icons.group_rounded,
                             ),
-                            if (_voucherRequired) ...[
-                              const SizedBox(height: 16),
-                              _buildField(
-                                controller: _voucherController,
-                                label: s.tr('Access Code *', 'رمز الدخول *'),
-                                icon: Icons.vpn_key_rounded,
-                                validator: (v) => (v == null || v.trim().isEmpty)
-                                    ? s.tr('Access code required', 'رمز الدخول مطلوب')
-                                    : null,
-                              ),
-                            ],
                           ],
 
                           const SizedBox(height: 24),
@@ -541,6 +577,7 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
     TextInputType? keyboardType,
     bool obscure = false,
     Widget? suffix,
+    String? hint,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
@@ -551,6 +588,7 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
       style: TextStyle(fontSize: 15, color: AppColors.textPrimary(context)),
       decoration: InputDecoration(
         labelText: label,
+        hintText: hint,
         prefixIcon: Icon(icon, size: 20),
         suffixIcon: suffix,
         filled: true,

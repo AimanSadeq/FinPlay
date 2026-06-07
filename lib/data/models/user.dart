@@ -41,6 +41,15 @@ class SelfPacedUser {
   }
 
   Map<String, dynamic> toJson() => {
+    'email': email,
+    'displayName': displayName,
+    'teamName': teamName,
+    'role': role,
+  };
+
+  /// Full serialization for local session persistence (includes system fields
+  /// that toJson() intentionally omits from API payloads).
+  Map<String, dynamic> toStorageJson() => {
     'id': id,
     'email': email,
     'displayName': displayName,

@@ -20,7 +20,7 @@ void main() {
 
         final decision = Decision.fromJson(json);
 
-        expect(decision.id, 42);
+        expect(decision.id, '42'); // id is normalized to String by the model
         expect(decision.teamId, 'Team 1');
         expect(decision.roundNum, 2);
         expect(decision.module, 'financing');
