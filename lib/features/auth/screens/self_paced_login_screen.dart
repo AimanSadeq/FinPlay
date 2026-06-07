@@ -491,7 +491,7 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                   TextButton(
                     onPressed: () => setState(() {
                       _isRegister = !_isRegister;
-                      ref.read(authProvider.notifier).logout(); // clear error
+                      ref.read(authProvider.notifier).clearError();
                     }),
                     child: Text.rich(
                       TextSpan(

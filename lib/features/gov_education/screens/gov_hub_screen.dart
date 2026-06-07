@@ -22,6 +22,7 @@ class _GovHubScreenState extends ConsumerState<GovHubScreen>
   Map<String, dynamic>? _progress;
   List<Map<String, dynamic>> _leaderboard = [];
   bool _loadingData = true;
+  int _teamId = 1; // selected gov team (from the lobby)
   late AnimationController _pulseController;
 
   // Matches website education hub exactly
@@ -61,6 +62,7 @@ class _GovHubScreenState extends ConsumerState<GovHubScreen>
       final repo = ref.read(educationRepositoryProvider);
       final prefs = await SharedPreferences.getInstance();
       final teamId = prefs.getInt('gov_team_id') ?? 1;
+      _teamId = teamId;
       final progress = await repo.fetchGovProgress(teamId);
       final leaderboard = await repo.fetchGovLeaderboard();
       if (mounted) {
@@ -234,6 +236,32 @@ class _GovHubScreenState extends ConsumerState<GovHubScreen>
             ),
           ),
           const Spacer(),
+          // Current team chip + switch (back to lobby to pick another).
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                color: AppColors.purple.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.purple.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.groups_rounded, size: 14, color: AppColors.purple),
+                  const SizedBox(width: 5),
+                  Text(
+                    s.tr('Team $_teamId', 'فريق $_teamId'),
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.purple),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.swap_horiz_rounded, size: 14, color: AppColors.purple.withValues(alpha: 0.7)),
+                ],
+              ),
+            ),
+          ),
           Container(
             decoration: BoxDecoration(
               color: AppColors.accentLight.withValues(alpha: 0.1),

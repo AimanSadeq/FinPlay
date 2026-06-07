@@ -41,9 +41,13 @@ class SelfPacedUser {
   }
 
   Map<String, dynamic> toJson() => {
+    'id': id,
     'email': email,
     'displayName': displayName,
     'teamName': teamName,
     'role': role,
+    'currentRound': currentRound,
+    'currentModule': currentModule,
+    'isActive': isActive,
   };
 }

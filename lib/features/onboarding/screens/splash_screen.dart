@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../providers/repository_providers.dart';
+import '../../../providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -118,18 +119,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   /// which polls /site-access/status and blocks the app behind an access code).
   Future<void> _navigateOnward() async {
     if (!mounted) return;
-    String destination = '/mode-selector';
+    // 1) Honour the site-access gate first.
     try {
       final prefs = await SharedPreferences.getInstance();
       final alreadyVerified = prefs.getBool('site_access_verified') ?? false;
       if (!alreadyVerified) {
         final gated = await ref.read(authRepositoryProvider).isSiteAccessEnabled();
-        if (gated) destination = '/site-access';
+        if (gated) {
+          if (mounted) context.go('/site-access');
+          return;
+        }
       }
     } catch (_) {
       // Fall through to the normal flow if the check fails.
     }
-    if (mounted) context.go(destination);
+    // 2) Restore a saved self-paced session so the user stays signed in.
+    try {
+      final restored = await ref.read(authProvider.notifier).restoreSession();
+      if (restored && mounted) {
+        context.go('/self-paced-progress');
+        return;
+      }
+    } catch (_) {/* not signed in — continue */}
+    if (mounted) context.go('/mode-selector');
   }
 
   @override

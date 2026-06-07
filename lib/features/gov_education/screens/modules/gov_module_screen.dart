@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/i18n/app_strings.dart';
 import '../../../../providers/repository_providers.dart';
+import '../../../../providers/auth_provider.dart';
 import '../../../../shared/widgets/glass_card.dart';
 import '../../widgets/games/memory_match_game.dart';
 import '../../widgets/games/classification_game.dart';
@@ -87,11 +88,17 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
     _restoreProgress();
   }
 
-  String _prefKey(String activity) => 'gov_module_${widget.moduleId}_$activity';
+  // Progress scope: 'sp' for self-paced learners (per-user), else the gov team id
+  // (per-team). Keeps each team's / each self-paced learner's progress separate.
+  String _scope = 'sp';
+  String _prefKey(String activity) => 'gov_module_${_scope}_${widget.moduleId}_$activity';
 
   Future<void> _restoreProgress() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
+    final auth = ref.read(authProvider);
+    final isSelfPaced = auth.user != null && !auth.isFacilitator;
+    _scope = isSelfPaced ? 'sp' : (prefs.getInt('gov_team_id') ?? 1).toString();
     setState(() {
       _lessonComplete = prefs.getBool(_prefKey('learn')) ?? false;
       _gameComplete = prefs.getBool(_prefKey('game')) ?? false;
@@ -121,6 +128,18 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
     if (scoreKey != null && scoreValue != null) {
       await prefs.setInt(_prefKey(scoreKey), scoreValue);
     }
+    await _syncHubProgress(prefs);
+  }
+
+  /// Mirror this module's completion into the keys the /education hub reads
+  /// (`edu_progress_<id>` / `edu_passed_<id>`) so its grid % and badge count
+  /// reflect real progress. Only for self-paced learners (the 'sp' scope).
+  Future<void> _syncHubProgress(SharedPreferences prefs) async {
+    if (_scope != 'sp') return;
+    final done = [_lessonComplete, _quizComplete, _gameComplete, _simComplete]
+        .where((b) => b).length;
+    await prefs.setInt('edu_progress_${widget.moduleId}', done * 25);
+    await prefs.setBool('edu_passed_${widget.moduleId}', done == 4);
   }
 
   @override
@@ -191,6 +210,7 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
     for (final e in _gameScores.entries) {
       await prefs.setInt(_prefKey('gameScore_${e.key.name}'), e.value);
     }
+    await _syncHubProgress(prefs);
   }
 
   void _onQuizComplete() {

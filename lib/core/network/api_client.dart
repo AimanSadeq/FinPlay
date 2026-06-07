@@ -5,6 +5,10 @@ class ApiClient {
   static ApiClient? _instance;
   late final Dio _dio;
 
+  /// Invoked when an AUTHENTICATED request (one carrying an Authorization bearer)
+  /// is rejected with 401 — used to force a self-paced sign-out + redirect to login.
+  void Function()? onUnauthorized;
+
   ApiClient._() {
     _dio = Dio(BaseOptions(
       baseUrl: '${AppConstants.baseUrl}${AppConstants.apiPrefix}',
@@ -18,6 +22,7 @@ class ApiClient {
 
     _dio.interceptors.addAll([
       _LoggingInterceptor(),
+      _AuthInterceptor(this),
       _RetryInterceptor(_dio),
     ]);
   }
@@ -143,6 +148,23 @@ class _LoggingInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) {
     // ignore: avoid_print
     print('[API ERROR] ${err.response?.statusCode} ${err.message}');
+    handler.next(err);
+  }
+}
+
+// Detects 401 on authenticated requests (those carrying an Authorization bearer)
+// and fires onUnauthorized so the app can sign the self-paced user out. Login /
+// register / auth requests don't carry the bearer, so they won't trigger it.
+class _AuthInterceptor extends Interceptor {
+  final ApiClient _client;
+  _AuthInterceptor(this._client);
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.response?.statusCode == 401 &&
+        err.requestOptions.headers.containsKey('Authorization')) {
+      _client.onUnauthorized?.call();
+    }
     handler.next(err);
   }
 }

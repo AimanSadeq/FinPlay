@@ -467,9 +467,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               icon: Icon(Icons.logout_rounded,
                   size: 20, color: AppColors.textSecondary(context)),
               tooltip: s.tr('Logout', 'تسجيل الخروج'),
-              onPressed: () {
-                ref.read(authProvider.notifier).logout();
-                context.go('/mode-selector');
+              onPressed: () async {
+                await ref.read(authProvider.notifier).logout();
+                if (context.mounted) context.go('/mode-selector');
               },
               visualDensity: VisualDensity.compact,
             ),

@@ -385,9 +385,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
                     _SmallActionButton(
                       icon: Icons.logout_rounded,
                       color: AppColors.textSecondary(context),
-                      onTap: () {
-                        ref.read(authProvider.notifier).logout();
-                        context.go('/');
+                      onTap: () async {
+                        await ref.read(authProvider.notifier).logout();
+                        if (context.mounted) context.go('/mode-selector');
                       },
                     ),
                   ],

@@ -352,7 +352,8 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
         final isTool = m.govModuleNum == 11 || m.govModuleNum == 12; // calculators, no Learn
         if (gateOpen || isTool) unlocked.add(m.govModuleNum);
         if (!isTool) {
-          final learnDone = prefs.getBool('gov_module_${m.govModuleNum}_learn') ?? false;
+          // Self-paced learners use the 'sp' progress scope (see gov_module_screen).
+          final learnDone = prefs.getBool('gov_module_sp_${m.govModuleNum}_learn') ?? false;
           gateOpen = gateOpen && learnDone; // close the chain until this Learn is done
         }
       }
@@ -374,7 +375,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     for (final m in _modules) {
       final isTool = m.govModuleNum == 11 || m.govModuleNum == 12;
       if (isTool) continue;
-      if (!(prefs.getBool('gov_module_${m.govModuleNum}_learn') ?? false)) return false;
+      if (!(prefs.getBool('gov_module_sp_${m.govModuleNum}_learn') ?? false)) return false;
     }
     return true;
   }
@@ -639,7 +640,9 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                 icon: Icons.home_rounded,
                 label: s.tr('Home', 'الرئيسية'),
                 color: AppColors.primaryLight,
-                onTap: () => context.go('/home'),
+                // Self-paced learners go back to their progress landing, not the
+                // corporate home (parity with where login dropped them).
+                onTap: () => context.go(isSelfPaced ? '/self-paced-progress' : '/home'),
               ),
               const SizedBox(width: 6),
               _NavPill(

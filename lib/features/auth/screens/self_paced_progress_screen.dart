@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../shared/widgets/app_settings_button.dart';
 
 class SelfPacedProgressScreen extends ConsumerStatefulWidget {
   const SelfPacedProgressScreen({super.key});
@@ -231,14 +232,17 @@ class _SelfPacedProgressScreenState
               ],
             ),
           ),
+          // Language + theme toggle (parity with the website header)
+          const AppSettingsButton(),
+          const SizedBox(width: 4),
           // Logout
           IconButton(
             icon: Icon(Icons.logout_rounded,
                 size: 20, color: AppColors.textSecondary(context)),
             tooltip: s.tr('Logout', 'تسجيل الخروج'),
-            onPressed: () {
-              ref.read(authProvider.notifier).logout();
-              context.go('/mode-selector');
+            onPressed: () async {
+              await ref.read(authProvider.notifier).logout();
+              if (context.mounted) context.go('/mode-selector');
             },
             visualDensity: VisualDensity.compact,
           ),

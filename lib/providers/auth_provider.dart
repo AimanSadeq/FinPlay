@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_client.dart';
 import '../core/network/api_endpoints.dart';
+import '../core/utils/constants.dart';
 import '../data/models/user.dart';
+import '../app/router/app_router.dart';
 import 'repository_providers.dart';
+import 'self_paced_provider.dart';
 
 enum AuthStatus { initial, authenticated, unauthenticated, loading }
 
@@ -40,8 +45,56 @@ class AuthState {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final ApiClient _api;
+  final Ref _ref;
 
-  AuthNotifier(this._api) : super(const AuthState());
+  AuthNotifier(this._api, this._ref) : super(const AuthState()) {
+    // Force a self-paced sign-out when the server rejects our token (401).
+    _api.onUnauthorized = _handleUnauthorized;
+  }
+
+  static const _userKey = 'self_paced_user';
+  bool _handlingUnauthorized = false;
+
+  /// A 401 on an authenticated request means our session is expired/revoked.
+  /// Sign the self-paced user out and bounce to login (website parity). Ignored
+  /// for corporate/facilitator sessions (no self-paced user).
+  void _handleUnauthorized() {
+    if (_handlingUnauthorized || state.user == null) return;
+    _handlingUnauthorized = true;
+    logout().whenComplete(() => _handlingUnauthorized = false);
+    AppRouter.router.go('/self-paced-login');
+  }
+
+  /// Persist the self-paced session so the user stays signed in across relaunches
+  /// (website parity — it keeps the token + user in localStorage).
+  Future<void> _persistSession(String? token, SelfPacedUser user) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (token != null) await prefs.setString(AppConstants.selfPacedTokenKey, token);
+      await prefs.setString(_userKey, jsonEncode(user.toJson()));
+    } catch (_) {/* non-critical */}
+  }
+
+  /// Restore a saved self-paced session on app launch. Returns true if a session
+  /// was restored. Trusts the stored token (the website does the same).
+  Future<bool> restoreSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.selfPacedTokenKey);
+      final userJson = prefs.getString(_userKey);
+      if (token == null || token.isEmpty || userJson == null) return false;
+      final user = SelfPacedUser.fromJson(jsonDecode(userJson) as Map<String, dynamic>);
+      _api.setAuthToken(token);
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: user,
+        token: token,
+      );
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   Future<bool> loginSelfPaced(String email, String password) async {
     state = state.copyWith(status: AuthStatus.loading, error: null);
@@ -50,8 +103,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         'email': email,
         'password': password,
       });
-      // ignore: avoid_print
-      print('[Auth] login response keys: ${response.keys.toList()}');
       if (response['success'] == true) {
         return _parseAuthResponse(response);
       }
@@ -81,8 +132,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (teamName != null) data['teamName'] = teamName;
       if (voucherCode != null && voucherCode.isNotEmpty) data['voucherCode'] = voucherCode;
       final response = await _api.post(ApiEndpoints.selfPacedRegister, data: data);
-      // ignore: avoid_print
-      print('[Auth] register response keys: ${response.keys.toList()}');
       if (response['success'] == true) {
         // Register response includes token + user (same structure as login)
         return _parseAuthResponse(response);
@@ -104,9 +153,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Shared parser for login/register responses: { success, token, user: {...} }
   bool _parseAuthResponse(Map<String, dynamic> response) {
     try {
-      // ignore: avoid_print
-      print('[Auth] full response: $response');
-
       // Backend returns token + user at top level (no 'data' wrapper)
       // Safely extract user data from ANY response format
       Map<String, dynamic>? userData;
@@ -148,10 +194,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
 
       if (userData == null) {
-        // ignore: avoid_print
-        print('[Auth] ERROR: no user data found. keys=${response.keys.toList()}, '
-            'user type=${response['user']?.runtimeType}, '
-            'data type=${response['data']?.runtimeType}');
         state = state.copyWith(
           status: AuthStatus.unauthenticated,
           error: 'Invalid server response (no user data)',
@@ -176,10 +218,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: user,
         token: token,
       );
+      _persistSession(token, user); // keep the user signed in across relaunches
       return true;
     } catch (e) {
-      // ignore: avoid_print
-      print('[Auth] ERROR parsing auth response: $e');
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
         error: 'Failed to parse server response: $e',
@@ -217,12 +258,31 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  void logout() {
+  /// Clear only the transient error (e.g. when toggling between login/register).
+  void clearError() {
+    if (state.error != null) state = state.copyWith(error: null);
+  }
+
+  /// Full sign-out (website parity): invalidate the server session, clear the
+  /// stored token + user, drop the in-memory header, and reset self-paced state.
+  Future<void> logout() async {
+    // Best-effort server-side session invalidation (don't block on failure).
+    try {
+      await _ref.read(authRepositoryProvider).logout();
+    } catch (_) {/* ignore */}
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.selfPacedTokenKey);
+      await prefs.remove(_userKey);
+    } catch (_) {/* ignore */}
     _api.clearAuthToken();
+    _api.clearFacilitatorPassword();
+    // Reset any cached self-paced progress so it can't bleed into a next session.
+    _ref.invalidate(selfPacedProvider);
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 }
 
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.watch(apiClientProvider));
+  return AuthNotifier(ref.watch(apiClientProvider), ref);
 });
