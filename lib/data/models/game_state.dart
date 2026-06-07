@@ -11,7 +11,11 @@ class GameState {
   final bool capitalBudgetingUnlocked;
   final bool govEducationUnlocked;
   final List<int> govEducationModulesUnlocked;
+  final bool educationUnlocked; // master education gate
+  final List<int> educationModulesUnlocked; // per-module unlock ids
   final bool educationRetryUnlocked;
+  final bool preAssessmentMandated;
+  final bool postAssessmentMandated;
   final bool siteAccessEnabled;
   final String? activeQrPlaceholder;
   final String? activeCaseStudyId;
@@ -31,7 +35,11 @@ class GameState {
     this.capitalBudgetingUnlocked = false,
     this.govEducationUnlocked = false,
     this.govEducationModulesUnlocked = const [],
+    this.educationUnlocked = false,
+    this.educationModulesUnlocked = const [],
     this.educationRetryUnlocked = false,
+    this.preAssessmentMandated = false,
+    this.postAssessmentMandated = false,
     this.siteAccessEnabled = false,
     this.activeQrPlaceholder,
     this.activeCaseStudyId,
@@ -57,7 +65,12 @@ class GameState {
       govEducationUnlocked: json['govEducationUnlocked'] as bool? ?? false,
       govEducationModulesUnlocked: (json['govEducationModulesUnlocked'] as List<dynamic>?)
           ?.map((e) => e as int).toList() ?? [],
+      educationUnlocked: json['educationUnlocked'] as bool? ?? false,
+      educationModulesUnlocked: (json['educationModulesUnlocked'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt()).toList() ?? [],
       educationRetryUnlocked: json['educationRetryUnlocked'] as bool? ?? false,
+      preAssessmentMandated: json['preAssessmentMandated'] as bool? ?? false,
+      postAssessmentMandated: json['postAssessmentMandated'] as bool? ?? false,
       siteAccessEnabled: json['siteAccessEnabled'] as bool? ?? false,
       activeQrPlaceholder: json['activeQrPlaceholder'] as String?,
       activeCaseStudyId: json['activeCaseStudyId'] as String?,

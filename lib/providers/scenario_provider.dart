@@ -6,12 +6,17 @@ import 'repository_providers.dart';
 class ScenarioState {
   final List<Scenario> scenarios;
   final Set<String> selectedScenarioIds;
+  // User-edited dollar amounts (scenarioId -> amount). Overrides the backend
+  // value so a team can set/change a decision's amount on the card, matching
+  // the website's inline amount editor.
+  final Map<String, double> userAmounts;
   final bool isLoading;
   final String? error;
 
   const ScenarioState({
     this.scenarios = const [],
     this.selectedScenarioIds = const {},
+    this.userAmounts = const {},
     this.isLoading = false,
     this.error,
   });
@@ -19,16 +24,21 @@ class ScenarioState {
   ScenarioState copyWith({
     List<Scenario>? scenarios,
     Set<String>? selectedScenarioIds,
+    Map<String, double>? userAmounts,
     bool? isLoading,
     String? error,
   }) {
     return ScenarioState(
       scenarios: scenarios ?? this.scenarios,
       selectedScenarioIds: selectedScenarioIds ?? this.selectedScenarioIds,
+      userAmounts: userAmounts ?? this.userAmounts,
       isLoading: isLoading ?? this.isLoading,
       error: error,
     );
   }
+
+  /// Effective amount for a scenario: a user edit overrides the backend value.
+  double amountFor(Scenario s) => userAmounts[s.id] ?? s.amount ?? 0;
 
   List<Scenario> get selectedScenarios =>
       scenarios.where((s) => selectedScenarioIds.contains(s.id)).toList();
@@ -59,6 +69,7 @@ class ScenarioNotifier extends StateNotifier<ScenarioState> {
       state = state.copyWith(
         scenarios: scenarios,
         selectedScenarioIds: autoSelected,
+        userAmounts: <String, double>{}, // fresh round/module — drop stale edits
         isLoading: false,
       );
     } catch (e) {
@@ -74,6 +85,37 @@ class ScenarioNotifier extends StateNotifier<ScenarioState> {
       ids.add(scenarioId);
     }
     state = state.copyWith(selectedScenarioIds: ids);
+  }
+
+  /// Set a scenario's amount and auto-select / auto-deselect to match the
+  /// website: a non-zero amount selects the scenario, a zero amount deselects it.
+  void setAmount(String scenarioId, double amount) {
+    final amounts = Map<String, double>.from(state.userAmounts);
+    amounts[scenarioId] = amount;
+    final ids = Set<String>.from(state.selectedScenarioIds);
+    if (amount != 0) {
+      ids.add(scenarioId);
+    } else {
+      ids.remove(scenarioId);
+    }
+    state = state.copyWith(userAmounts: amounts, selectedScenarioIds: ids);
+  }
+
+  /// Background write of an edited amount to the backend (corporate mode only).
+  Future<void> persistAmount({
+    required String teamId,
+    required int round,
+    required String module,
+    required String scenarioId,
+    required double amount,
+  }) {
+    return _repo.updateScenarioAmount(
+      teamId: teamId,
+      round: round,
+      module: module,
+      scenarioId: scenarioId,
+      amount: amount,
+    );
   }
 
   void clearSelection() {

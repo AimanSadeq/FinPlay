@@ -87,11 +87,15 @@ class EducationRepository {
     required int teamId,
     required int moduleId,
     required List<Map<String, dynamic>> answers,
+    int? score,
+    int? total,
   }) async {
     final response = await _api.post(ApiEndpoints.govEducationQuiz, data: {
       'teamId': teamId,
       'moduleId': moduleId,
       'answers': answers,
+      'score': ?score,
+      'total': ?total,
     });
     if (response['success'] == true) {
       return response['data'] as Map<String, dynamic>;

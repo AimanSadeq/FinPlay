@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/constants.dart';
 import '../../../data/models/game_state.dart';
@@ -38,7 +39,7 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 15, vsync: this);
+    _tabController = TabController(length: 19, vsync: this);
   }
 
   @override
@@ -262,12 +263,16 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                 tabAlignment: TabAlignment.start,
                 tabs: [
                   Tab(text: s.tr('Controls', 'التحكّم')),
+                  Tab(text: s.tr('Cohorts', 'المجموعات')),
                   Tab(text: s.tr('Leaderboard', 'لوحة المتصدّرين')),
                   Tab(text: s.tr('Teams', 'الفرق')),
                   Tab(text: s.tr('Sign-In', 'تسجيل الدخول')),
                   Tab(text: s.tr('Shocks', 'الصدمات')),
                   Tab(text: s.tr('Timer', 'المؤقّت')),
                   Tab(text: s.tr('Education', 'التعليم')),
+                  Tab(text: s.tr('Realism', 'الواقعية')),
+                  Tab(text: s.tr('Vouchers', 'القسائم')),
+                  Tab(text: s.tr('Assessments', 'التقييمات')),
                   Tab(text: s.tr('QR Code', 'رمز QR')),
                   Tab(text: s.tr('Rounds', 'الجولات')),
                   Tab(text: s.tr('Round Details', 'تفاصيل الجولة')),
@@ -288,6 +293,7 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                       repo: ref.read(facilitatorRepositoryProvider),
                       onRefreshState: () => ref.read(gameStateProvider.notifier).fetchGameState(),
                     ),
+                    _CohortsTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _LeaderboardTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _TeamsTab(teams: teamState.teams),
                     _TeamSignInTab(repo: ref.read(facilitatorRepositoryProvider)),
@@ -298,6 +304,9 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                     ),
                     _TimerTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _EducationTab(gameState: gameState, onToggle: _toggleEducation),
+                    _RealismTab(repo: ref.read(facilitatorRepositoryProvider)),
+                    _VouchersTab(repo: ref.read(facilitatorRepositoryProvider)),
+                    _AssessmentsTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _QrCodeTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _RoundsTab(gameState: gameState, onAdvance: _advanceRound),
                     _RoundDetailsTab(repo: ref.read(facilitatorRepositoryProvider)),
@@ -784,6 +793,35 @@ class _ControlsTabState extends State<_ControlsTab> {
         ),
         const SizedBox(height: 12),
 
+        // Lock & Advance to Next Module
+        GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.skip_next_rounded, color: AppColors.primaryLight, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.tr('Lock & Advance Module', 'قفل والتقدّم للوحدة'), style: Theme.of(context).textTheme.titleMedium),
+                Text(s.tr('Lock current module & move all teams to the next', 'قفل الوحدة الحالية ونقل جميع الفرق للتالية'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+              ],
+            )),
+            ElevatedButton(
+              onPressed: _loading ? null : _lockAndAdvanceModule,
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+              child: Text(s.tr('Advance', 'تقدّم'), style: const TextStyle(fontSize: 12)),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 12),
+
         // End Timer
         GlassCard(
           padding: const EdgeInsets.all(16),
@@ -954,6 +992,28 @@ class _ControlsTabState extends State<_ControlsTab> {
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _lockAndAdvanceModule() async {
+    setState(() => _loading = true);
+    try {
+      final res = await widget.repo.lockAndAdvanceModule();
+      widget.onRefreshState();
+      if (mounted) {
+        final ok = res['success'] == true;
+        final msg = (res['message'] as String?) ??
+            (ok ? 'Advanced to next module' : 'Could not advance');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: ok ? AppColors.primary : AppColors.danger),
         );
       }
     } catch (e) {
@@ -1877,6 +1937,17 @@ class _ShocksTabState extends State<_ShocksTab> {
     await _refresh();
   }
 
+  Future<void> _dismissOne(Map<String, dynamic> shock) async {
+    final id = (shock['id'] ?? shock['instanceId'] ?? shock['shockInstanceId'])?.toString();
+    if (id == null || id.isEmpty) return;
+    final ok = await widget.repo.dismissShock(id);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? 'Shock dismissed' : 'Could not dismiss shock')));
+    }
+    await _refresh();
+  }
+
   Color _sevColor(String s) => switch (s.toLowerCase()) {
         'low' => AppColors.info,
         'high' => AppColors.dangerLight,
@@ -2017,6 +2088,16 @@ class _ShocksTabState extends State<_ShocksTab> {
             decoration: BoxDecoration(color: c.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
             child: Text(sev.toUpperCase(), style: TextStyle(fontSize: 10, color: c, fontWeight: FontWeight.w600)),
           ),
+          // Dismiss this single shock (reverts its Excel impact)
+          IconButton(
+            onPressed: () => _dismissOne(s),
+            icon: const Icon(Icons.close_rounded, size: 18),
+            color: AppColors.dangerLight,
+            tooltip: 'Dismiss',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(),
+            padding: const EdgeInsets.only(left: 8),
+          ),
         ]),
       ),
     );
@@ -2121,23 +2202,67 @@ class _TimerTabState extends State<_TimerTab> {
             const SizedBox(height: 20),
             Wrap(
               alignment: WrapAlignment.center,
-              children: [5, 10, 15, 20, 30].map((m) => Padding(
+              children: [1, 2, 5, 10, 15, 20, 30, 45, 60].map((m) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: ChoiceChip(label: Text('${m}m'), selected: _minutes == m, onSelected: (_) => setState(() => _minutes = m)),
               )).toList(),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            // Free-form numeric entry (1–120 min) with a stepper.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  onPressed: () => setState(() => _minutes = (_minutes - 1).clamp(1, 120)),
+                  icon: const Icon(Icons.remove_circle_outline_rounded),
+                ),
+                SizedBox(
+                  width: 70,
+                  child: TextField(
+                    controller: TextEditingController(text: _minutes.toString())
+                      ..selection = TextSelection.collapsed(offset: _minutes.toString().length),
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.jetBrainsMono(fontSize: 18, fontWeight: FontWeight.w700),
+                    decoration: const InputDecoration(suffixText: 'm', isDense: true, border: OutlineInputBorder()),
+                    onSubmitted: (v) {
+                      final n = int.tryParse(v.trim());
+                      if (n != null) setState(() => _minutes = n.clamp(1, 120));
+                    },
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => setState(() => _minutes = (_minutes + 1).clamp(1, 120)),
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             Wrap(
               alignment: WrapAlignment.center,
               spacing: 12, runSpacing: 12,
               children: [
                 ElevatedButton.icon(
                   onPressed: () {
-                    widget.repo.setTimer(_minutes * 60, action: 'start');
+                    widget.repo.startTimerMinutes(_minutes);
                     _snack(s.tr('Timer started', 'بدأ المؤقّت'));
                   },
                   icon: const Icon(Icons.play_arrow_rounded), label: Text(s.tr('Start', 'بدء')),
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final res = await widget.repo.updateTimer(_minutes);
+                    final ok = res['success'] == true;
+                    _snack(
+                      ok
+                          ? s.tr('Timer updated to ${_minutes}m', 'تم تحديث المؤقّت إلى $_minutes د')
+                          : (res['message'] as String? ?? s.tr('Could not update timer', 'تعذّر تحديث المؤقّت')),
+                      color: ok ? AppColors.primary : AppColors.danger,
+                    );
+                  },
+                  icon: const Icon(Icons.update_rounded), label: Text(s.tr('Update', 'تحديث')),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                 ),
                 ElevatedButton.icon(
                   onPressed: () {
@@ -2202,39 +2327,719 @@ class _TimerTabState extends State<_TimerTab> {
 }
 
 // ---- Education Tab ----
-class _EducationTab extends StatelessWidget {
+// The 11 unlockable education modules (id → label), matching the website's
+// EducationAdmin grid. Ids are intentionally non-sequential (5 and 8 are absent).
+const List<(int, String, String)> _eduModules = [
+  (1, 'Financial Primer', 'تمهيد مالي'),
+  (3, 'Financial Statements', 'القوائم المالية'),
+  (4, 'Financial Analysis', 'التحليل المالي'),
+  (11, 'Break-Even Analysis', 'تحليل نقطة التعادل'),
+  (12, 'Capital Budgeting', 'الموازنة الرأسمالية'),
+  (6, 'Budgeting & Planning', 'الموازنة والتخطيط'),
+  (7, 'Reporting Standards', 'معايير التقارير'),
+  (2, 'Sector Comparison', 'مقارنة القطاعات'),
+  (9, 'Compliance', 'الامتثال'),
+  (10, 'Auditing', 'التدقيق'),
+  (13, 'Simulation', 'المحاكاة'),
+];
+
+class _EducationTab extends ConsumerStatefulWidget {
   final AsyncValue<GameState> gameState;
   final Future<void> Function(String, bool) onToggle;
   const _EducationTab({required this.gameState, required this.onToggle});
 
   @override
+  ConsumerState<_EducationTab> createState() => _EducationTabState();
+}
+
+class _EducationTabState extends ConsumerState<_EducationTab> {
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function(FacilitatorRepository repo) action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action(ref.read(facilitatorRepositoryProvider));
+      await ref.read(gameStateProvider.notifier).fetchGameState();
+    } catch (_) {/* ignore — UI reflects refreshed state */}
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return gameState.when(
+    final s = ref.watch(stringsProvider);
+    return widget.gameState.when(
       data: (gs) {
-        final modules = [
-          ('breakEven', 'Break-Even Analysis', gs.breakEvenUnlocked),
-          ('capitalBudgeting', 'Capital Budgeting', gs.capitalBudgetingUnlocked),
-          ('govEducation', 'Government Education', gs.govEducationUnlocked),
-          ('educationRetry', 'Education Retry', gs.educationRetryUnlocked),
-        ];
+        final unlocked = gs.educationModulesUnlocked.toSet();
         return ListView(
           padding: const EdgeInsets.all(16),
-          children: modules.map((m) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: GlassCard(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(children: [
-                Icon(Icons.school_rounded, color: m.$3 ? AppColors.secondaryLight : AppColors.textTertiary(context)),
-                const SizedBox(width: 12),
-                Expanded(child: Text(m.$2, style: Theme.of(context).textTheme.titleMedium)),
-                Switch(value: m.$3, onChanged: (val) => onToggle(m.$1, val), activeTrackColor: AppColors.secondaryLight),
-              ]),
+          children: [
+            // Master education gate + Unlock-All / Lock-All
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Icon(Icons.menu_book_rounded,
+                        color: gs.educationUnlocked ? AppColors.secondaryLight : AppColors.textTertiary(context)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(s.tr('Education (master)', 'التعليم (رئيسي)'),
+                        style: Theme.of(context).textTheme.titleMedium)),
+                    Switch(
+                      value: gs.educationUnlocked,
+                      onChanged: _busy ? null : (v) => _run((r) => r.toggleEducation(v)),
+                      activeTrackColor: AppColors.secondaryLight,
+                    ),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _run((r) => r.toggleAllEducationModules(true)),
+                        icon: const Icon(Icons.lock_open_rounded, size: 16),
+                        label: Text(s.tr('Unlock All', 'فتح الكل')),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _run((r) => r.toggleAllEducationModules(false)),
+                        icon: const Icon(Icons.lock_rounded, size: 16),
+                        label: Text(s.tr('Lock All', 'قفل الكل')),
+                      ),
+                    ),
+                  ]),
+                ],
+              ),
             ),
-          )).toList(),
+            const SizedBox(height: 12),
+            Text(s.tr('Modules', 'الوحدات'),
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.textSecondary(context))),
+            const SizedBox(height: 8),
+            ..._eduModules.map((m) {
+              final isOn = unlocked.contains(m.$1);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GlassCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    Icon(Icons.school_rounded, size: 20,
+                        color: isOn ? AppColors.secondaryLight : AppColors.textTertiary(context)),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(s.tr(m.$2, m.$3), style: Theme.of(context).textTheme.bodyLarge)),
+                    Switch(
+                      value: isOn,
+                      onChanged: _busy ? null : (v) => _run((r) => r.toggleEducationModule(m.$1, v)),
+                      activeTrackColor: AppColors.secondaryLight,
+                    ),
+                  ]),
+                ),
+              );
+            }),
+            const SizedBox(height: 12),
+            // Other education controls (gov education, retry)
+            _eduRow(context, s.tr('Government Education', 'التعليم الحكومي'), gs.govEducationUnlocked,
+                (v) => widget.onToggle('govEducation', v)),
+            _eduRow(context, s.tr('Activity Retry', 'إعادة المحاولة'), gs.educationRetryUnlocked,
+                (v) => _run((r) => r.toggleEducationRetry(v))),
+          ],
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('Error: $e')),
+    );
+  }
+
+  Widget _eduRow(BuildContext context, String label, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: GlassCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(children: [
+          Icon(Icons.tune_rounded, color: value ? AppColors.secondaryLight : AppColors.textTertiary(context)),
+          const SizedBox(width: 12),
+          Expanded(child: Text(label, style: Theme.of(context).textTheme.titleMedium)),
+          Switch(value: value, onChanged: _busy ? null : onChanged, activeTrackColor: AppColors.secondaryLight),
+        ]),
+      ),
+    );
+  }
+}
+
+// ---- Cohorts Tab ----
+class _CohortsTab extends ConsumerStatefulWidget {
+  final FacilitatorRepository repo;
+  const _CohortsTab({required this.repo});
+  @override
+  ConsumerState<_CohortsTab> createState() => _CohortsTabState();
+}
+
+class _CohortsTabState extends ConsumerState<_CohortsTab> {
+  List<Map<String, dynamic>> _cohorts = [];
+  bool _loading = true;
+  bool _busy = false;
+  final _subdomain = TextEditingController();
+  final _displayName = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _subdomain.dispose();
+    _displayName.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final cohorts = await widget.repo.fetchCohorts();
+    if (mounted) setState(() { _cohorts = cohorts; _loading = false; });
+  }
+
+  Future<void> _create() async {
+    final sub = _subdomain.text.trim();
+    final name = _displayName.text.trim();
+    if (sub.isEmpty || name.isEmpty) return;
+    setState(() => _busy = true);
+    final res = await widget.repo.createCohort(sub, name);
+    _subdomain.clear();
+    _displayName.clear();
+    await _load();
+    if (mounted) {
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(res['success'] == true ? 'Cohort created' : (res['error']?.toString() ?? 'Could not create'))));
+    }
+  }
+
+  Future<void> _switch(String url) async {
+    final api = ref.read(apiClientProvider);
+    api.setBaseHost(url);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('cohort_base_url', url);
+    // Refresh data against the newly selected cohort host.
+    ref.read(gameStateProvider.notifier).fetchGameState();
+    ref.read(teamProvider.notifier).fetchTeams();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Switched to $url')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    final currentHost = ref.read(apiClientProvider).baseUrl;
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        GlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(children: [
+            const Icon(Icons.dns_rounded, size: 18, color: AppColors.primaryLight),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.tr('Current host', 'المضيف الحالي'),
+                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context))),
+              Text(currentHost, style: GoogleFonts.jetBrainsMono(fontSize: 12)),
+            ])),
+          ]),
+        ),
+        const SizedBox(height: 16),
+        Text(s.tr('Cohorts', 'المجموعات'), style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        if (_cohorts.isEmpty)
+          Text(s.tr('No cohorts yet', 'لا توجد مجموعات بعد'),
+              style: TextStyle(color: AppColors.textTertiary(context)))
+        else
+          ..._cohorts.map((c) {
+            final url = (c['url'] ?? '').toString();
+            final active = c['isActive'] != false;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text((c['displayName'] ?? c['subdomain'] ?? '').toString(),
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(url, style: GoogleFonts.jetBrainsMono(fontSize: 11, color: AppColors.textTertiary(context))),
+                  ])),
+                  TextButton(
+                    onPressed: (_busy || url.isEmpty) ? null : () => _switch(url),
+                    child: Text(active ? s.tr('Switch', 'تبديل') : s.tr('Inactive', 'غير نشط')),
+                  ),
+                ]),
+              ),
+            );
+          }),
+        const SizedBox(height: 16),
+        Text(s.tr('Create cohort', 'إنشاء مجموعة'), style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        GlassCard(
+          padding: const EdgeInsets.all(14),
+          child: Column(children: [
+            TextField(
+              controller: _subdomain,
+              decoration: InputDecoration(
+                labelText: s.tr('Subdomain', 'النطاق الفرعي'),
+                hintText: 'groupa',
+                isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _displayName,
+              decoration: InputDecoration(
+                labelText: s.tr('Display name', 'الاسم المعروض'),
+                hintText: 'May Cohort',
+                isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _busy ? null : _create,
+                icon: const Icon(Icons.add_rounded, size: 16),
+                label: Text(s.tr('Create', 'إنشاء')),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+              ),
+            ),
+          ]),
+        ),
+      ],
+    );
+  }
+}
+
+// ---- Realism Tab ----
+// The 12 finance-realism modules (flag → label) shown on team dashboards.
+const List<(String, String, String)> _realismFlags = [
+  ('workingCapitalEnabled', 'Working Capital', 'رأس المال العامل'),
+  ('duPontEnabled', 'DuPont Analysis', 'تحليل دوبونت'),
+  ('waccEnabled', 'WACC', 'المتوسط المرجّح لتكلفة رأس المال'),
+  ('creditRatingEnabled', 'Credit Rating', 'التصنيف الائتماني'),
+  ('debtCovenantsEnabled', 'Debt Covenants', 'تعهّدات الدين'),
+  ('capTableEnabled', 'Cap Table', 'جدول الملكية'),
+  ('dividendPolicyEnabled', 'Dividend Policy', 'سياسة التوزيعات'),
+  ('ratiosLiquidityEnabled', 'Liquidity Ratios', 'نسب السيولة'),
+  ('ratiosEfficiencyEnabled', 'Efficiency Ratios', 'نسب الكفاءة'),
+  ('ratiosProfitabilityEnabled', 'Profitability Ratios', 'نسب الربحية'),
+  ('ratiosSolvencyEnabled', 'Solvency Ratios', 'نسب الملاءة'),
+  ('ratiosMarketEnabled', 'Market Ratios', 'نسب السوق'),
+];
+
+class _RealismTab extends ConsumerStatefulWidget {
+  final FacilitatorRepository repo;
+  const _RealismTab({required this.repo});
+  @override
+  ConsumerState<_RealismTab> createState() => _RealismTabState();
+}
+
+class _RealismTabState extends ConsumerState<_RealismTab> {
+  Map<String, dynamic> _status = {};
+  bool _loading = true;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final status = await widget.repo.fetchRealismStatus();
+    if (mounted) setState(() { _status = status; _loading = false; });
+  }
+
+  Future<void> _toggle(String flag, bool enabled) async {
+    if (_busy) return;
+    setState(() { _busy = true; _status[flag] = enabled; }); // optimistic
+    await widget.repo.toggleRealism(flag, enabled);
+    await _load();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text(s.tr('Show these finance modules on team dashboards.',
+            'إظهار هذه الوحدات المالية على لوحات الفرق.'),
+            style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+        const SizedBox(height: 12),
+        ..._realismFlags.map((f) {
+          final isOn = _status[f.$1] == true;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: GlassCard(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(children: [
+                Icon(Icons.insights_rounded, size: 20,
+                    color: isOn ? AppColors.secondaryLight : AppColors.textTertiary(context)),
+                const SizedBox(width: 12),
+                Expanded(child: Text(s.tr(f.$2, f.$3), style: Theme.of(context).textTheme.bodyLarge)),
+                Switch(value: isOn, onChanged: _busy ? null : (v) => _toggle(f.$1, v),
+                    activeTrackColor: AppColors.secondaryLight),
+              ]),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+// ---- Vouchers Tab ----
+class _VouchersTab extends ConsumerStatefulWidget {
+  final FacilitatorRepository repo;
+  const _VouchersTab({required this.repo});
+  @override
+  ConsumerState<_VouchersTab> createState() => _VouchersTabState();
+}
+
+class _VouchersTabState extends ConsumerState<_VouchersTab> {
+  List<Map<String, dynamic>> _vouchers = [];
+  bool _gating = false;
+  bool _loading = true;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final vouchers = await widget.repo.fetchVouchers();
+    final gating = await widget.repo.fetchVoucherGating();
+    if (mounted) setState(() { _vouchers = vouchers; _gating = gating; _loading = false; });
+  }
+
+  Future<void> _generate() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final created = await widget.repo.createVouchers(count: 1, maxUses: 1);
+    await _load();
+    if (mounted) {
+      setState(() => _busy = false);
+      if (created.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Created code: ${created.first['code']}')));
+      }
+    }
+  }
+
+  Future<void> _delete(String id) async {
+    setState(() => _busy = true);
+    await widget.repo.deleteVoucher(id);
+    await _load();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        GlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(children: [
+            Icon(Icons.verified_user_rounded, color: _gating ? AppColors.secondaryLight : AppColors.textTertiary(context)),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.tr('Require access code', 'طلب رمز الدخول'), style: Theme.of(context).textTheme.titleMedium),
+              Text(s.tr('Gate self-paced sign-up behind a voucher', 'تقييد التسجيل الذاتي برمز قسيمة'),
+                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context))),
+            ])),
+            Switch(
+              value: _gating,
+              onChanged: _busy ? null : (v) async {
+                setState(() { _busy = true; _gating = v; });
+                await widget.repo.setVoucherGating(v);
+                if (mounted) setState(() => _busy = false);
+              },
+              activeTrackColor: AppColors.secondaryLight,
+            ),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        Row(children: [
+          Text(s.tr('Codes', 'الرموز'), style: Theme.of(context).textTheme.titleMedium),
+          const Spacer(),
+          ElevatedButton.icon(
+            onPressed: _busy ? null : _generate,
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: Text(s.tr('Generate', 'إنشاء')),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        if (_vouchers.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(s.tr('No codes yet', 'لا توجد رموز بعد'),
+                style: TextStyle(color: AppColors.textTertiary(context))),
+          )
+        else
+          ..._vouchers.map((v) {
+            final code = (v['code'] ?? '').toString();
+            final used = v['usedCount'] ?? 0;
+            final max = v['maxUses'] ?? 1;
+            final active = v['isActive'] != false;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(code, style: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.w700, fontSize: 15)),
+                    Text('${v['label'] ?? ''}  ·  $used/$max ${s.tr('used', 'مستخدم')}${active ? '' : ' · ${s.tr('revoked', 'ملغى')}'}',
+                        style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context))),
+                  ])),
+                  IconButton(
+                    onPressed: _busy ? null : () => _delete(v['id'].toString()),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                    color: AppColors.dangerLight,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ]),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+}
+
+// ---- Assessments Tab ----
+class _AssessmentsTab extends ConsumerStatefulWidget {
+  final FacilitatorRepository repo;
+  const _AssessmentsTab({required this.repo});
+  @override
+  ConsumerState<_AssessmentsTab> createState() => _AssessmentsTabState();
+}
+
+class _AssessmentsTabState extends ConsumerState<_AssessmentsTab> {
+  List<Map<String, dynamic>> _attempts = [];
+  bool _loading = true;
+  bool _preMandated = false;
+  bool _postMandated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final attempts = await widget.repo.fetchAssessmentAttempts();
+    final gs = ref.read(gameStateProvider).valueOrNull;
+    if (mounted) {
+      setState(() {
+        _attempts = attempts;
+        _loading = false;
+        if (gs != null) {
+          _preMandated = gs.preAssessmentMandated;
+          _postMandated = gs.postAssessmentMandated;
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(children: [
+          Expanded(child: _mandateCard(context, s, s.tr('Mandate Pre', 'إلزام القبلي'), _preMandated, (v) async {
+            setState(() => _preMandated = v);
+            await widget.repo.setAssessmentMandate('pre', v);
+          })),
+          const SizedBox(width: 10),
+          Expanded(child: _mandateCard(context, s, s.tr('Mandate Post', 'إلزام البعدي'), _postMandated, (v) async {
+            setState(() => _postMandated = v);
+            await widget.repo.setAssessmentMandate('post', v);
+          })),
+        ]),
+        const SizedBox(height: 16),
+        Text('${s.tr('Attempts', 'المحاولات')} (${_attempts.length})',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        if (_attempts.isEmpty)
+          Text(s.tr('No attempts yet', 'لا توجد محاولات بعد'),
+              style: TextStyle(color: AppColors.textTertiary(context)))
+        else
+          ..._attempts.map((a) {
+            final kind = (a['kind'] ?? '').toString();
+            final name = (a['playerName'] ?? '—').toString();
+            final score = a['score'] ?? 0;
+            final total = a['total'] ?? 0;
+            final pct = a['percentage'] ?? 0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (kind == 'post' ? AppColors.primary : AppColors.accent).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(kind.toUpperCase(),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                            color: kind == 'post' ? AppColors.primaryLight : AppColors.accentLight)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(name, style: Theme.of(context).textTheme.bodyLarge)),
+                  Text('$score/$total  ·  $pct%', style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  Widget _mandateCard(BuildContext context, AppStrings s, String label, bool value, ValueChanged<bool> onChanged) {
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(children: [
+        Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+        Switch(value: value, onChanged: onChanged, activeTrackColor: AppColors.secondaryLight),
+      ]),
+    );
+  }
+}
+
+// Editable QR placeholder destinations (the 6 fixed keys), matching the website.
+const List<(String, String, String)> _qrPlaceholderKeys = [
+  ('preAssessment', 'Pre-Assessment', 'التقييم القبلي'),
+  ('postAssessment', 'Post-Assessment', 'التقييم البعدي'),
+  ('courseSurvey', 'Course Survey', 'استبيان الدورة'),
+  ('consultantLinkedin', 'Consultant LinkedIn', 'لينكدإن المستشار'),
+  ('companyLinkedin', 'Company LinkedIn', 'لينكدإن الشركة'),
+  ('infoSheet', 'Info Sheet', 'ورقة المعلومات'),
+];
+
+class _QrPlaceholdersCard extends ConsumerStatefulWidget {
+  final FacilitatorRepository repo;
+  const _QrPlaceholdersCard({required this.repo});
+  @override
+  ConsumerState<_QrPlaceholdersCard> createState() => _QrPlaceholdersCardState();
+}
+
+class _QrPlaceholdersCardState extends ConsumerState<_QrPlaceholdersCard> {
+  final Map<String, TextEditingController> _url = {};
+  bool _loading = true;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final k in _qrPlaceholderKeys) {
+      _url[k.$1] = TextEditingController();
+    }
+    _load();
+  }
+
+  @override
+  void dispose() {
+    for (final c in _url.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final status = await widget.repo.fetchQrStatus();
+    final ph = status['qrPlaceholders'];
+    if (ph is Map) {
+      for (final k in _qrPlaceholderKeys) {
+        final v = ph[k.$1];
+        if (v is Map && v['url'] != null) _url[k.$1]!.text = v['url'].toString();
+      }
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final placeholders = <String, dynamic>{};
+    for (final k in _qrPlaceholderKeys) {
+      placeholders[k.$1] = {'url': _url[k.$1]!.text.trim(), 'label': ''};
+    }
+    final ok = await widget.repo.saveQrPlaceholders(placeholders);
+    if (mounted) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(ok ? 'QR destinations saved' : 'Could not save')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Icon(Icons.qr_code_2_rounded, size: 18, color: AppColors.primaryLight),
+            const SizedBox(width: 8),
+            Text(s.tr('QR Destinations', 'وجهات رمز QR'), style: Theme.of(context).textTheme.titleMedium),
+          ]),
+          const SizedBox(height: 4),
+          Text(s.tr('Set the URLs the overlay QR codes point to.',
+              'حدّد الروابط التي تشير إليها رموز QR.'),
+              style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 12),
+          if (_loading)
+            const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()))
+          else ...[
+            ..._qrPlaceholderKeys.map((k) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: TextField(
+                controller: _url[k.$1],
+                keyboardType: TextInputType.url,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  labelText: s.tr(k.$2, k.$3),
+                  hintText: 'https://…',
+                  isDense: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            )),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: const Icon(Icons.save_rounded, size: 16),
+                label: Text(s.tr('Save Destinations', 'حفظ الوجهات')),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -2306,6 +3111,9 @@ class _QrCodeTab extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            // Manage the 6 placeholder QR destinations (assessment, survey, LinkedIn, info).
+            _QrPlaceholdersCard(repo: repo),
             const SizedBox(height: 16),
             GlassCard(
               padding: const EdgeInsets.all(24),

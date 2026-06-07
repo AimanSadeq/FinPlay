@@ -12,6 +12,7 @@ import '../../../providers/repository_providers.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../core/services/cache_service.dart';
+import '../../../shared/widgets/team_leader_gate.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +25,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _bgController;
   String? _clientName;
+  String? _appTitle;
 
   @override
   void initState() {
@@ -35,8 +37,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     // Check reset epoch to detect game resets
     _checkResetEpoch();
-    // Fetch client name
+    // Fetch client name + dynamic app title
     _fetchClientName();
+    _fetchAppTitle();
   }
 
   Future<void> _fetchClientName() async {
@@ -49,6 +52,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       }
     } catch (_) {
       // Non-critical — leave null
+    }
+  }
+
+  /// Dynamic course title from the Excel control sheet (EN B6 / AR B7), matching
+  /// the website's /api/app-title.
+  Future<void> _fetchAppTitle() async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.get('/app-title');
+      final isAr = ref.read(stringsProvider).ar;
+      final title = (isAr
+              ? (res['titleAr'] ?? res['ar'] ?? res['title'])
+              : (res['title'] ?? res['en'] ?? res['titleEn']))
+          ?.toString();
+      if (title != null && title.isNotEmpty && mounted) {
+        setState(() => _appTitle = title);
+      }
+    } catch (_) {
+      // Non-critical — fall back to client name / static title
     }
   }
 
@@ -186,6 +208,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.dispose();
   }
 
+  /// Enter [route], but in corporate mode require the team to designate a leader
+  /// first (parity with the website's TeamLeaderGate). Self-paced proceeds directly.
+  Future<void> _enterWithLeaderGate(String route) async {
+    final proceed = await showTeamLeaderGate(context, ref);
+    if (proceed && mounted) context.push(route);
+  }
+
+  /// Prompt an un-registered corporate user to join a team first (parity with the
+  /// website's locked Education/Simulation cards).
+  void _promptJoinFirst() {
+    final s = ref.read(stringsProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.groups_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 10),
+            Expanded(child: Text(s.tr('Register / join a team first to unlock this.',
+                'سجّل / انضم إلى فريق أولاً لفتح هذا.'))),
+          ],
+        ),
+        backgroundColor: const Color(0xFFF59E0B),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        action: SnackBarAction(
+          label: s.tr('Join Team', 'انضم إلى فريق'),
+          textColor: Colors.white,
+          onPressed: () => context.push('/lobby'),
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -196,6 +252,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final isSelfPaced = authState.user != null &&
         !authState.isFacilitator &&
         teamState.selectedTeam == null;
+    // Registered = has joined a team (corporate) or logged in self-paced. The
+    // Education & Simulation cards stay locked until then (parity with website).
+    final isRegistered = isSelfPaced || teamState.selectedTeam != null;
 
     return Scaffold(
       body: AnimatedBuilder(
@@ -266,9 +325,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         icon: Icons.school_rounded,
                         accentColor: const Color(0xFF10B981),
                         gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                        isLocked: !isRegistered,
+                        lockedBadge: s.tr('LOCKED', 'مقفل'),
                         onTap: () {
                           HapticFeedback.mediumImpact();
-                          context.push('/education');
+                          if (!isRegistered) {
+                            _promptJoinFirst();
+                            return;
+                          }
+                          _enterWithLeaderGate('/education');
                         },
                       ).animate().fadeIn(delay: 420.ms, duration: 500.ms).slideX(begin: -0.06),
 
@@ -284,33 +349,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         icon: Icons.play_circle_rounded,
                         accentColor: const Color(0xFFF59E0B),
                         gradient: const [Color(0xFFF59E0B), Color(0xFFEA580C)],
+                        isLocked: !isRegistered,
+                        lockedBadge: s.tr('LOCKED', 'مقفل'),
                         onTap: () {
                           HapticFeedback.mediumImpact();
-                          // Corporate mode: check if team is selected
-                          if (!isSelfPaced && teamState.selectedTeam == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Row(
-                                  children: [
-                                    const Icon(Icons.groups_rounded, color: Colors.white, size: 20),
-                                    const SizedBox(width: 10),
-                                    Expanded(child: Text(s.tr('Please join a team first before entering the simulation', 'يرجى الانضمام إلى فريق أولاً قبل دخول المحاكاة'))),
-                                  ],
-                                ),
-                                backgroundColor: const Color(0xFFF59E0B),
-                                behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                action: SnackBarAction(
-                                  label: s.tr('Join Team', 'انضم إلى فريق'),
-                                  textColor: Colors.white,
-                                  onPressed: () => context.push('/lobby'),
-                                ),
-                                duration: const Duration(seconds: 4),
-                              ),
-                            );
+                          // Corporate mode: must join a team first.
+                          if (!isRegistered) {
+                            _promptJoinFirst();
                             return;
                           }
-                          context.push('/simulation');
+                          _enterWithLeaderGate('/simulation');
                         },
                       ).animate().fadeIn(delay: 540.ms, duration: 500.ms).slideX(begin: -0.06),
 
@@ -371,7 +419,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _clientName ?? s.tr('Finance for Non-Finance', 'المالية لغير المتخصصين'),
+                  _appTitle ?? _clientName ?? s.tr('Finance for Non-Finance', 'المالية لغير المتخصصين'),
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -589,6 +637,8 @@ class _ActionCard extends StatefulWidget {
   final Color accentColor;
   final List<Color> gradient;
   final VoidCallback onTap;
+  final bool isLocked;
+  final String? lockedBadge;
 
   const _ActionCard({
     required this.title,
@@ -597,6 +647,8 @@ class _ActionCard extends StatefulWidget {
     required this.accentColor,
     required this.gradient,
     required this.onTap,
+    this.isLocked = false,
+    this.lockedBadge,
   });
 
   @override
@@ -609,6 +661,11 @@ class _ActionCardState extends State<_ActionCard> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locked = widget.isLocked;
+    final accent = locked ? const Color(0xFF9CA3AF) : widget.accentColor;
+    final iconColors = locked
+        ? const [Color(0xFFD1D5DB), Color(0xFF9CA3AF)]
+        : widget.gradient;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -620,14 +677,16 @@ class _ActionCardState extends State<_ActionCard> {
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 120),
-        child: Container(
+        child: Opacity(
+          opacity: locked ? 0.6 : 1.0,
+          child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkSurface : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: _pressed
-                  ? widget.accentColor.withValues(alpha: 0.5)
+                  ? accent.withValues(alpha: 0.5)
                   : (isDark
                       ? AppColors.darkBorder.withValues(alpha: 0.3)
                       : const Color(0xFFE2E8F0)),
@@ -636,7 +695,7 @@ class _ActionCardState extends State<_ActionCard> {
             boxShadow: [
               BoxShadow(
                 color: _pressed
-                    ? widget.accentColor.withValues(alpha: 0.15)
+                    ? accent.withValues(alpha: 0.15)
                     : Colors.black.withValues(alpha: isDark ? 0.12 : 0.04),
                 blurRadius: _pressed ? 16 : 8,
                 offset: const Offset(0, 3),
@@ -653,18 +712,18 @@ class _ActionCardState extends State<_ActionCard> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: widget.gradient,
+                    colors: iconColors,
                   ),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: widget.accentColor.withValues(alpha: 0.3),
+                      color: accent.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-                child: Icon(widget.icon, color: Colors.white, size: 26),
+                child: Icon(locked ? Icons.lock_rounded : widget.icon, color: Colors.white, size: 26),
               ),
               const SizedBox(width: 14),
 
@@ -673,13 +732,36 @@ class _ActionCardState extends State<_ActionCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      widget.title,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary(context),
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            widget.title,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary(context),
+                            ),
+                          ),
+                        ),
+                        if (locked && widget.lockedBadge != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF9CA3AF).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              widget.lockedBadge!,
+                              style: const TextStyle(
+                                fontSize: 9, fontWeight: FontWeight.w800,
+                                color: Color(0xFF6B7280), letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -698,21 +780,22 @@ class _ActionCardState extends State<_ActionCard> {
 
               const SizedBox(width: 8),
 
-              // Arrow
+              // Arrow / lock
               Container(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: widget.accentColor.withValues(alpha: 0.08),
+                  color: accent.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.arrow_forward_rounded,
+                  locked ? Icons.lock_outline_rounded : Icons.arrow_forward_rounded,
                   size: 18,
-                  color: widget.accentColor,
+                  color: accent,
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -56,9 +57,13 @@ class GovLobbyScreen extends ConsumerWidget {
                   itemBuilder: (context, index) {
                     final color = AppColors.teamColor(index);
                     return GlassCard(
-                      onTap: () {
+                      onTap: () async {
                         HapticFeedback.mediumImpact();
-                        context.push('/gov-education/hub');
+                        // Persist the chosen team so the hub/modules use it
+                        // (instead of hardcoding team 1).
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setInt('gov_team_id', index + 1);
+                        if (context.mounted) context.push('/gov-education/hub');
                       },
                       padding: const EdgeInsets.all(16),
                       child: Column(

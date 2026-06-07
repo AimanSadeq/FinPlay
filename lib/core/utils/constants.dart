@@ -22,6 +22,10 @@ class AppConstants {
   static const String teamIdKey = 'team_id';
   static const String sessionKey = 'session_token';
   static const String selfPacedTokenKey = 'self_paced_token';
+  static const String playerNameKey = 'player_name';
+  // Team-member token minted by /facilitator/register-signin; required as a
+  // Bearer on decision-write endpoints (confirm/unlock) and select-leader.
+  static const String teamMemberTokenKey = 'team_member_token';
 
   // Animation Durations
   static const Duration quickAnimation = Duration(milliseconds: 200);

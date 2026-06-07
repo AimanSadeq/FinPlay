@@ -46,6 +46,10 @@ class TeamNotifier extends StateNotifier<TeamState> {
     final prefs = await SharedPreferences.getInstance();
     final teamId = prefs.getString(AppConstants.teamIdKey);
     if (teamId != null) {
+      // Restore the team-member token so decision writes carry their Bearer
+      // (corporate mode has no other auth token, so a global header is safe).
+      final token = prefs.getString(AppConstants.teamMemberTokenKey);
+      if (token != null && token.isNotEmpty) _api.setAuthToken(token);
       await fetchTeams();
       final team = state.teams.where((t) => t.id == teamId).firstOrNull;
       if (team != null) {
@@ -77,6 +81,8 @@ class TeamNotifier extends StateNotifier<TeamState> {
   Future<void> clearTeam() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(AppConstants.teamIdKey);
+    await prefs.remove(AppConstants.teamMemberTokenKey);
+    _api.clearAuthToken();
     state = state.copyWith(clearSelectedTeam: true);
   }
 

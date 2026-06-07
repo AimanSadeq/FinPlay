@@ -69,7 +69,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> registerSelfPaced(String email, String password, String displayName, {String? teamName}) async {
+  Future<bool> registerSelfPaced(String email, String password, String displayName,
+      {String? teamName, String? voucherCode}) async {
     state = state.copyWith(status: AuthStatus.loading, error: null);
     try {
       final data = <String, dynamic>{
@@ -78,6 +79,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         'displayName': displayName,
       };
       if (teamName != null) data['teamName'] = teamName;
+      if (voucherCode != null && voucherCode.isNotEmpty) data['voucherCode'] = voucherCode;
       final response = await _api.post(ApiEndpoints.selfPacedRegister, data: data);
       // ignore: avoid_print
       print('[Auth] register response keys: ${response.keys.toList()}');
@@ -193,6 +195,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         'password': password,
       });
       if (response['success'] == true) {
+        // Attach the password to every later facilitator-gated request.
+        _api.setFacilitatorPassword(password);
         state = state.copyWith(
           status: AuthStatus.authenticated,
           isFacilitator: true,

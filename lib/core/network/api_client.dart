@@ -29,12 +29,33 @@ class ApiClient {
 
   Dio get dio => _dio;
 
+  /// Switch the API host (used to select a cohort, which is its own subdomain).
+  /// Accepts a full origin like "https://groupa.finplay.viftraining.com"; the
+  /// "/api" prefix is appended if missing.
+  void setBaseHost(String origin) {
+    final trimmed = origin.replaceAll(RegExp(r'/+$'), '');
+    _dio.options.baseUrl =
+        trimmed.endsWith(AppConstants.apiPrefix) ? trimmed : '$trimmed${AppConstants.apiPrefix}';
+  }
+
+  String get baseUrl => _dio.options.baseUrl;
+
   void setAuthToken(String token) {
     _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
   void clearAuthToken() {
     _dio.options.headers.remove('Authorization');
+  }
+
+  /// Facilitator console auth: the backend accepts this header on every
+  /// facilitator-gated route, so set it once after the facilitator logs in.
+  void setFacilitatorPassword(String password) {
+    _dio.options.headers['x-facilitator-password'] = password;
+  }
+
+  void clearFacilitatorPassword() {
+    _dio.options.headers.remove('x-facilitator-password');
   }
 
   /// GET that returns a Map response

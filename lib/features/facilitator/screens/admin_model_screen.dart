@@ -33,6 +33,8 @@ class _AdminModelScreenState extends ConsumerState<AdminModelScreen> {
   List<Map<String, dynamic>> _assumptions = [];
   List<Map<String, dynamic>> _baseline = [];
   List<Map<String, dynamic>> _scenarios = [];
+  // Edited scenario fields keyed by composite key "module|round|scenarioId".
+  final Map<String, Map<String, dynamic>> _scenarioEdits = {};
   Map<String, String> _branding = {
     'titleEn': '',
     'titleAr': '',
@@ -146,6 +148,10 @@ class _AdminModelScreenState extends ConsumerState<AdminModelScreen> {
       dynamic body;
       String path;
       switch (_tab) {
+        case 1:
+          path = ApiEndpoints.modelScenarios;
+          body = {'updates': _scenarioEdits.values.toList()};
+          break;
         case 0:
           path = ApiEndpoints.modelAssumptions;
           body = {
@@ -175,8 +181,8 @@ class _AdminModelScreenState extends ConsumerState<AdminModelScreen> {
           setState(() {
             _loading = false;
             _status = ref.read(stringsProvider).tr(
-                'Scenario editing is read-only in this build.',
-                'تحرير السيناريوهات للقراءة فقط في هذه النسخة.');
+                'Shocks are managed live from Facilitator → Shocks.',
+                'تُدار الصدمات مباشرة من الميسّر ← الصدمات.');
           });
           return;
       }
@@ -191,6 +197,7 @@ class _AdminModelScreenState extends ConsumerState<AdminModelScreen> {
               '✅ تم الحفظ — تم تحديث $applied قيمة');
           _assumptionEdits.clear();
           _baselineEdits.clear();
+          _scenarioEdits.clear();
         });
       }
     } catch (_) {
@@ -363,8 +370,8 @@ class _AdminModelScreenState extends ConsumerState<AdminModelScreen> {
               ? const Center(child: CircularProgressIndicator())
               : _buildTabBody(),
         ),
-        // Save bar (hidden for read-only tabs: Scenarios, Shocks)
-        if (_tab != 1 && _tab != 4)
+        // Save bar (hidden only for the read-only Shocks tab)
+        if (_tab != 4)
           Padding(
             padding: const EdgeInsets.all(16),
             child: GradientButton(
@@ -499,15 +506,16 @@ class _AdminModelScreenState extends ConsumerState<AdminModelScreen> {
   }
 
   Widget _scenarioList() {
+    final s = ref.watch(stringsProvider);
     if (_scenarios.isEmpty) {
-      return _emptyState(ref.read(stringsProvider)
-          .tr('No scenarios loaded for this section.', 'لم يتم تحميل سيناريوهات لهذا القسم.'));
+      return _emptyState(s.tr('No scenarios loaded for this section.', 'لم يتم تحميل سيناريوهات لهذا القسم.'));
     }
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       itemCount: _scenarios.length,
       itemBuilder: (context, i) {
         final m = _scenarios[i];
+        final key = '${m['module']}|${m['round']}|${m['scenarioId']}';
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: GlassCard(
@@ -516,24 +524,45 @@ class _AdminModelScreenState extends ConsumerState<AdminModelScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('${m['module'] ?? ''} · R${m['round'] ?? ''} · #${m['scenarioId'] ?? ''}',
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textTertiary(context))),
-                const SizedBox(height: 4),
-                Text('${m['title'] ?? '—'}',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13, fontWeight: FontWeight.w600)),
-                if (m['type'] != null)
-                  Text('${ref.read(stringsProvider).tr('Type: ', 'النوع: ')}${m['type']}',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary(context))),
+                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context))),
+                const SizedBox(height: 8),
+                TextFormField(
+                  initialValue: (m['title'] ?? '').toString(),
+                  onChanged: (v) => _editScenario(key, 'title', v),
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
+                  decoration: InputDecoration(
+                    labelText: s.tr('Title', 'العنوان'),
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  initialValue: (m['type'] ?? '').toString(),
+                  onChanged: (v) => _editScenario(key, 'type', v),
+                  style: const TextStyle(fontSize: 12),
+                  decoration: InputDecoration(
+                    labelText: s.tr('Type', 'النوع'),
+                    isDense: true,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
               ],
             ),
           ),
         );
       },
     );
+  }
+
+  void _editScenario(String key, String field, String value) {
+    final parts = key.split('|');
+    final edit = _scenarioEdits.putIfAbsent(key, () => {
+          'module': parts[0],
+          'round': int.tryParse(parts[1]) ?? parts[1],
+          'scenarioId': parts[2],
+        });
+    edit[field] = value;
   }
 
   Widget _brandingForm() {

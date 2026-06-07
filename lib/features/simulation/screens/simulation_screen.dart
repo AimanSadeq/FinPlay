@@ -560,10 +560,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
       });
     }
 
-    // Match website logic: prioritize scenarios with non-zero amounts from Excel,
-    // fallback to user-selected scenarios if none have amounts
+    // Match website logic: prioritize scenarios with non-zero amounts (using the
+    // team's edited amount when set), fallback to user-selected scenarios.
     final scenariosWithAmounts = scenarioState.scenarios
-        .where((s) => s.amount != null && s.amount != 0)
+        .where((s) => scenarioState.amountFor(s) != 0)
         .toList();
     final scenariosToConfirm = scenariosWithAmounts.isNotEmpty
         ? scenariosWithAmounts
@@ -574,7 +574,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     final decisions = scenariosToConfirm
         .map((s) => <String, dynamic>{
               'scenarioId': s.id,
-              'amount': s.amount ?? 0,
+              'amount': scenarioState.amountFor(s),
               if (customValues.containsKey(s.id)) 'customValues': customValues[s.id],
             })
         .toList();
@@ -623,6 +623,38 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
         }
       }
     }
+  }
+
+  /// Handle an edited scenario amount: update local state (auto-select/deselect),
+  /// persist to the backend, and broadcast the change to teammates. Mirrors the
+  /// website's inline amount editor.
+  void _onScenarioAmountChanged(String module, String scenarioId, double amount) {
+    final notifier = ref.read(scenarioProvider.notifier);
+    notifier.setAmount(scenarioId, amount);
+
+    if (_isSelfPaced) return;
+
+    final team = ref.read(teamProvider).selectedTeam;
+    if (team == null) return;
+    final round = _effectiveRound;
+
+    // Background write to the model (best-effort; confirm() re-sends authoritatively).
+    notifier.persistAmount(
+      teamId: team.id,
+      round: round,
+      module: module,
+      scenarioId: scenarioId,
+      amount: amount,
+    );
+
+    // Broadcast so teammates see the amount update live.
+    ref.read(socketManagerProvider).sendDecision({
+      'teamId': team.id,
+      'round': round,
+      'module': module,
+      'scenarioId': scenarioId,
+      'amount': amount,
+    });
   }
 
   @override
@@ -1030,6 +1062,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
                     return _ModuleContent(
                       moduleIndex: moduleIndex,
                       moduleName: _moduleLabels[moduleIndex],
+                      moduleKey: _modules[moduleIndex],
                       moduleColor: _moduleColors[moduleIndex],
                       moduleIcon: _moduleIcons[moduleIndex],
                       scenarioState: scenarioState,
@@ -1056,6 +1089,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
                                 });
                               }
                             },
+                      onAmountChanged: (id, amount) =>
+                          _onScenarioAmountChanged(_modules[moduleIndex], id, amount),
                     );
                   }),
                 ),
@@ -2477,6 +2512,7 @@ class _ActionIcon extends StatelessWidget {
 class _ModuleContent extends ConsumerWidget {
   final int moduleIndex;
   final String moduleName;
+  final String moduleKey; // canonical: 'financing' | 'investing' | 'operating'
   final Color moduleColor;
   final IconData moduleIcon;
   final ScenarioState scenarioState;
@@ -2488,10 +2524,12 @@ class _ModuleContent extends ConsumerWidget {
   final Map<String, Map<String, String>> customInputValues;
   final void Function(String scenarioId, String fieldName, String value) onCustomInputChanged;
   final void Function(String) onToggle;
+  final void Function(String scenarioId, double amount) onAmountChanged;
 
   const _ModuleContent({
     required this.moduleIndex,
     required this.moduleName,
+    required this.moduleKey,
     required this.moduleColor,
     required this.moduleIcon,
     required this.scenarioState,
@@ -2503,6 +2541,7 @@ class _ModuleContent extends ConsumerWidget {
     required this.customInputValues,
     required this.onCustomInputChanged,
     required this.onToggle,
+    required this.onAmountChanged,
   });
 
   @override
@@ -2564,10 +2603,15 @@ class _ModuleContent extends ConsumerWidget {
               isSelected: isSelected,
               isLocked: isLocked,
               moduleColor: moduleColor,
+              moduleKey: moduleKey,
+              effectiveAmount: scenarioState.amountFor(scenario),
               customInputValues: customInputValues[scenario.id] ?? {},
               onCustomInputChanged: (fieldName, value) =>
                   onCustomInputChanged(scenario.id, fieldName, value),
               onTap: () => onToggle(scenario.id),
+              onAmountChanged: isSelfPaced
+                  ? null
+                  : (amount) => onAmountChanged(scenario.id, amount),
             ),
           );
         }),
@@ -2901,12 +2945,12 @@ class _IncomeStatementTab extends ConsumerWidget {
     final s = ref.watch(stringsProvider);
     return Column(
       children: [
-        _FinLine(s.tr('Revenue', 'الإيرادات'), _val(data['revenue']), AppColors.secondaryLight),
-        _FinLine(s.tr('COGS', 'تكلفة البضاعة المباعة'), _val(data['cogs'] ?? data['costOfGoodsSold']), AppColors.textSecondary(context)),
-        _FinLine(s.tr('Gross Profit', 'إجمالي الربح'), _val(data['grossProfit']), AppColors.primaryLight, bold: true),
+        _FinLine(s.tr('Revenue', 'الإيرادات'), _val(data['revenue']), AppColors.secondaryLight, termKey: 'revenue'),
+        _FinLine(s.tr('COGS', 'تكلفة البضاعة المباعة'), _val(data['cogs'] ?? data['costOfGoodsSold']), AppColors.textSecondary(context), termKey: 'cogs'),
+        _FinLine(s.tr('Gross Profit', 'إجمالي الربح'), _val(data['grossProfit']), AppColors.primaryLight, bold: true, termKey: 'grossProfit'),
         Divider(height: 12, color: AppColors.borderColor(context).withValues(alpha: 0.2)),
-        _FinLine(s.tr('Operating Expenses', 'المصروفات التشغيلية'), _val(data['operatingExpenses'] ?? data['opex']), AppColors.textSecondary(context)),
-        _FinLine(s.tr('Net Income', 'صافي الدخل'), _val(data['netIncome']), AppColors.secondaryLight, bold: true),
+        _FinLine(s.tr('Operating Expenses', 'المصروفات التشغيلية'), _val(data['operatingExpenses'] ?? data['opex']), AppColors.textSecondary(context), termKey: 'opex'),
+        _FinLine(s.tr('Net Income', 'صافي الدخل'), _val(data['netIncome']), AppColors.secondaryLight, bold: true, termKey: 'netIncome'),
       ],
     );
   }
@@ -2922,12 +2966,12 @@ class _BalanceSheetTab extends ConsumerWidget {
     final s = ref.watch(stringsProvider);
     return Column(
       children: [
-        _FinLine(s.tr('Total Assets', 'إجمالي الأصول'), _val(data['totalAssets']), AppColors.primaryLight, bold: true),
-        _FinLine(s.tr('  Current Assets', '  الأصول المتداولة'), _val(data['currentAssets']), AppColors.textSecondary(context)),
-        _FinLine(s.tr('  Fixed Assets', '  الأصول الثابتة'), _val(data['fixedAssets'] ?? data['nonCurrentAssets']), AppColors.textSecondary(context)),
+        _FinLine(s.tr('Total Assets', 'إجمالي الأصول'), _val(data['totalAssets']), AppColors.primaryLight, bold: true, termKey: 'totalAssets'),
+        _FinLine(s.tr('  Current Assets', '  الأصول المتداولة'), _val(data['currentAssets']), AppColors.textSecondary(context), termKey: 'currentAssets'),
+        _FinLine(s.tr('  Fixed Assets', '  الأصول الثابتة'), _val(data['fixedAssets'] ?? data['nonCurrentAssets']), AppColors.textSecondary(context), termKey: 'fixedAssets'),
         Divider(height: 12, color: AppColors.borderColor(context).withValues(alpha: 0.2)),
-        _FinLine(s.tr('Total Liabilities', 'إجمالي الخصوم'), _val(data['totalLiabilities']), AppColors.accentLight, bold: true),
-        _FinLine(s.tr('Total Equity', 'إجمالي حقوق الملكية'), _val(data['totalEquity']), AppColors.info, bold: true),
+        _FinLine(s.tr('Total Liabilities', 'إجمالي الخصوم'), _val(data['totalLiabilities']), AppColors.accentLight, bold: true, termKey: 'totalLiabilities'),
+        _FinLine(s.tr('Total Equity', 'إجمالي حقوق الملكية'), _val(data['totalEquity']), AppColors.info, bold: true, termKey: 'totalEquity'),
       ],
     );
   }
@@ -2942,44 +2986,248 @@ class _CashFlowTab extends ConsumerWidget {
     final s = ref.watch(stringsProvider);
     return Column(
       children: [
-        _FinLine(s.tr('Operating', 'التشغيل'), _val(data['operatingCashFlow'] ?? data['operating']), AppColors.secondaryLight),
-        _FinLine(s.tr('Investing', 'الاستثمار'), _val(data['investingCashFlow'] ?? data['investing']), AppColors.accentLight),
-        _FinLine(s.tr('Financing', 'التمويل'), _val(data['financingCashFlow'] ?? data['financing']), AppColors.primaryLight),
+        _FinLine(s.tr('Operating', 'التشغيل'), _val(data['operatingCashFlow'] ?? data['operating']), AppColors.secondaryLight, termKey: 'cfOperating'),
+        _FinLine(s.tr('Investing', 'الاستثمار'), _val(data['investingCashFlow'] ?? data['investing']), AppColors.accentLight, termKey: 'cfInvesting'),
+        _FinLine(s.tr('Financing', 'التمويل'), _val(data['financingCashFlow'] ?? data['financing']), AppColors.primaryLight, termKey: 'cfFinancing'),
         Divider(height: 12, color: AppColors.borderColor(context).withValues(alpha: 0.2)),
         _FinLine(
           s.tr('Net Cash Change', 'صافي التغيّر النقدي'),
           _val(data['netCashChange'] ?? data['netCash']),
           AppColors.info,
           bold: true,
+          termKey: 'netCashChange',
         ),
       ],
     );
   }
 }
 
-/// Single financial line item
-class _FinLine extends StatelessWidget {
+/// Educational definitions for the statement line items, mirroring the website's
+/// TermInfoPopover so learners get the same on-statement guidance in corporate
+/// mode. Returns null when no term is registered for [key].
+({String title, String body, String? formula})? _statementTerm(AppStrings s, String key) {
+  switch (key) {
+    case 'revenue':
+      return (
+        title: s.tr('Revenue', 'الإيرادات'),
+        body: s.tr('Total income from selling goods or services before any costs are deducted — the "top line".',
+            'إجمالي الدخل من بيع السلع أو الخدمات قبل خصم أي تكاليف — "السطر الأعلى".'),
+        formula: s.tr('Revenue = Price × Quantity Sold', 'الإيرادات = السعر × الكمية المباعة'),
+      );
+    case 'cogs':
+      return (
+        title: s.tr('COGS', 'تكلفة البضاعة المباعة'),
+        body: s.tr('The direct costs of producing the goods or services a company sells (materials, direct labor).',
+            'التكاليف المباشرة لإنتاج السلع أو الخدمات التي تبيعها الشركة (المواد، العمالة المباشرة).'),
+        formula: null,
+      );
+    case 'grossProfit':
+      return (
+        title: s.tr('Gross Profit', 'إجمالي الربح'),
+        body: s.tr('What remains of revenue after deducting the direct cost of goods sold.',
+            'ما يتبقى من الإيرادات بعد خصم التكلفة المباشرة للبضاعة المباعة.'),
+        formula: s.tr('Gross Profit = Revenue − COGS', 'إجمالي الربح = الإيرادات − تكلفة البضاعة المباعة'),
+      );
+    case 'opex':
+      return (
+        title: s.tr('Operating Expenses', 'المصروفات التشغيلية'),
+        body: s.tr('Costs of running the business that are not tied directly to production (salaries, rent, marketing).',
+            'تكاليف تشغيل العمل غير المرتبطة مباشرة بالإنتاج (الرواتب، الإيجار، التسويق).'),
+        formula: null,
+      );
+    case 'netIncome':
+      return (
+        title: s.tr('Net Income', 'صافي الدخل'),
+        body: s.tr('The company\'s profit after all expenses, interest, and taxes — the "bottom line".',
+            'ربح الشركة بعد جميع المصروفات والفوائد والضرائب — "السطر الأدنى".'),
+        formula: s.tr('Net Income = Revenue − All Expenses', 'صافي الدخل = الإيرادات − جميع المصروفات'),
+      );
+    case 'totalAssets':
+      return (
+        title: s.tr('Total Assets', 'إجمالي الأصول'),
+        body: s.tr('Everything the company owns that has economic value — cash, receivables, inventory, and fixed assets.',
+            'كل ما تملكه الشركة وله قيمة اقتصادية — النقد والذمم المدينة والمخزون والأصول الثابتة.'),
+        formula: s.tr('Assets = Liabilities + Equity', 'الأصول = الخصوم + حقوق الملكية'),
+      );
+    case 'currentAssets':
+      return (
+        title: s.tr('Current Assets', 'الأصول المتداولة'),
+        body: s.tr('Assets expected to be converted to cash within one year (cash, receivables, inventory).',
+            'الأصول المتوقع تحويلها إلى نقد خلال عام واحد (النقد، الذمم المدينة، المخزون).'),
+        formula: null,
+      );
+    case 'fixedAssets':
+      return (
+        title: s.tr('Fixed Assets', 'الأصول الثابتة'),
+        body: s.tr('Long-term assets used to run the business, such as property, plant, and equipment (PP&E).',
+            'الأصول طويلة الأجل المستخدمة لتشغيل العمل، مثل الممتلكات والمصانع والمعدات.'),
+        formula: null,
+      );
+    case 'totalLiabilities':
+      return (
+        title: s.tr('Total Liabilities', 'إجمالي الخصوم'),
+        body: s.tr('Everything the company owes to others — loans, payables, and other obligations.',
+            'كل ما تدين به الشركة للآخرين — القروض والذمم الدائنة والالتزامات الأخرى.'),
+        formula: null,
+      );
+    case 'totalEquity':
+      return (
+        title: s.tr('Total Equity', 'إجمالي حقوق الملكية'),
+        body: s.tr('The owners\' residual claim on the business after all liabilities are paid.',
+            'حصة المالكين المتبقية في العمل بعد سداد جميع الخصوم.'),
+        formula: s.tr('Equity = Assets − Liabilities', 'حقوق الملكية = الأصول − الخصوم'),
+      );
+    case 'cfOperating':
+      return (
+        title: s.tr('Operating Cash Flow', 'التدفق النقدي التشغيلي'),
+        body: s.tr('Cash generated by the company\'s core business operations during the period.',
+            'النقد الناتج عن العمليات الأساسية للشركة خلال الفترة.'),
+        formula: null,
+      );
+    case 'cfInvesting':
+      return (
+        title: s.tr('Investing Cash Flow', 'التدفق النقدي الاستثماري'),
+        body: s.tr('Cash used for or generated from buying and selling long-term assets and investments.',
+            'النقد المستخدم في أو الناتج عن شراء وبيع الأصول طويلة الأجل والاستثمارات.'),
+        formula: null,
+      );
+    case 'cfFinancing':
+      return (
+        title: s.tr('Financing Cash Flow', 'التدفق النقدي التمويلي'),
+        body: s.tr('Cash from raising or repaying debt and equity — loans, share issues, dividends.',
+            'النقد من جمع أو سداد الديون وحقوق الملكية — القروض، إصدار الأسهم، توزيعات الأرباح.'),
+        formula: null,
+      );
+    case 'netCashChange':
+      return (
+        title: s.tr('Net Cash Change', 'صافي التغيّر النقدي'),
+        body: s.tr('The overall change in the company\'s cash position, summing operating, investing, and financing flows.',
+            'إجمالي التغيّر في المركز النقدي للشركة، بجمع التدفقات التشغيلية والاستثمارية والتمويلية.'),
+        formula: s.tr('Net Cash = Operating + Investing + Financing',
+            'صافي النقد = التشغيل + الاستثمار + التمويل'),
+      );
+    default:
+      return null;
+  }
+}
+
+void _showStatementTerm(BuildContext context, AppStrings s, String key) {
+  final term = _statementTerm(s, key);
+  if (term == null) return;
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      final isDark = Theme.of(ctx).brightness == Brightness.dark;
+      return Container(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 18),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Icon(Icons.school_rounded, size: 20, color: AppColors.primaryLight),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    term.title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 17, fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(ctx),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              term.body,
+              style: TextStyle(fontSize: 14, height: 1.5, color: AppColors.textSecondary(ctx)),
+            ),
+            if (term.formula != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  term.formula!,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.primaryLight,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    },
+  );
+}
+
+/// Single financial line item. Pass [termKey] to surface an educational tooltip.
+class _FinLine extends ConsumerWidget {
   final String label;
   final double value;
   final Color color;
   final bool bold;
+  final String? termKey;
 
-  const _FinLine(this.label, this.value, this.color, {this.bold = false});
+  const _FinLine(this.label, this.value, this.color, {this.bold = false, this.termKey});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasTerm = termKey != null;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
-                color: bold ? AppColors.textPrimary(context) : AppColors.textSecondary(context),
+            child: GestureDetector(
+              onTap: hasTerm
+                  ? () => _showStatementTerm(context, ref.read(stringsProvider), termKey!)
+                  : null,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+                        color: bold ? AppColors.textPrimary(context) : AppColors.textSecondary(context),
+                        decoration: hasTerm ? TextDecoration.underline : null,
+                        decorationStyle: TextDecorationStyle.dotted,
+                        decorationColor: AppColors.textTertiary(context),
+                      ),
+                    ),
+                  ),
+                  if (hasTerm) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.info_outline_rounded, size: 12, color: AppColors.textTertiary(context)),
+                  ],
+                ],
               ),
             ),
           ),
@@ -3001,23 +3249,175 @@ class _FinLine extends StatelessWidget {
 // Scenario Card (with Features 3 & 5)
 // ---------------------------------------------------------------------------
 
+// ───────────────────────────────────────────────────────────────────────────
+// Sign-convention affordance (parity with website ScenarioCard)
+//
+// A positive vs negative amount means opposite things, and the meaning differs
+// by module. `_signPolicyFor` mirrors the website's getSignPolicy / handleSave
+// validation EXACTLY so the on-card legend can never drift from what the editor
+// will actually accept (e.g. IPO must be positive; dividends/divestitures must
+// be negative, so fixed-asset pools can't be over-divested into the negative).
+// ───────────────────────────────────────────────────────────────────────────
+enum _SignPolicy { positive, negative, both }
+
+_SignPolicy _signPolicyFor(String module, String scenarioId, String? title) {
+  final id = scenarioId;
+  if (module == 'operating') {
+    if ((title ?? '').toLowerCase().contains('inventory')) return _SignPolicy.negative;
+    return ['5', '6', '7', '8'].contains(id) ? _SignPolicy.negative : _SignPolicy.both;
+  }
+  if (module == 'financing') {
+    if (['5', '7'].contains(id)) return _SignPolicy.positive; // IPO, Rights Issue — raise only
+    if (['6', '8', '9'].contains(id)) return _SignPolicy.negative; // Use RE, Dividends, Reserves — outflow only
+    return _SignPolicy.both;
+  }
+  // investing: building / expanding / intangible / acquisition are buy-only (negative)
+  return ['2', '3', '4', '5', '8', '9'].contains(id) ? _SignPolicy.negative : _SignPolicy.both;
+}
+
+/// Plain-language verbs for what +/- means in each module: (positive, negative).
+(String, String) _directionVerbs(AppStrings s, String module) {
+  switch (module) {
+    case 'financing':
+      return (s.tr('Raise / Borrow', 'جمع / اقتراض'), s.tr('Repay / Return', 'سداد / إرجاع'));
+    case 'investing':
+      return (s.tr('Sell / Divest', 'بيع / تصفية'), s.tr('Buy / Invest', 'شراء / استثمار'));
+    default: // operating
+      return (s.tr('Save / Cut cost', 'توفير / خفض التكلفة'), s.tr('Spend / Expand', 'إنفاق / توسّع'));
+  }
+}
+
+/// Returns a localized error if the amount's sign is invalid for this scenario,
+/// otherwise null. Mirrors the website's per-scenario validation.
+String? _validateAmountSign(
+    AppStrings s, String module, String scenarioId, String? title, double amount) {
+  switch (_signPolicyFor(module, scenarioId, title)) {
+    case _SignPolicy.positive:
+      if (amount < 0) {
+        return s.tr('This amount must be positive or zero.',
+            'يجب أن يكون هذا المبلغ موجبًا أو صفرًا.');
+      }
+      return null;
+    case _SignPolicy.negative:
+      if (amount > 0) {
+        return s.tr('This amount must be negative or zero.',
+            'يجب أن يكون هذا المبلغ سالبًا أو صفرًا.');
+      }
+      return null;
+    case _SignPolicy.both:
+      return null;
+  }
+}
+
+/// Compact, always-visible legend telling the user what + and − mean for THIS card.
+class _SignGuide extends StatelessWidget {
+  final AppStrings s;
+  final String module;
+  final String scenarioId;
+  final String? title;
+  const _SignGuide({
+    required this.s,
+    required this.module,
+    required this.scenarioId,
+    this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final policy = _signPolicyFor(module, scenarioId, title);
+    final (posVerb, negVerb) = _directionVerbs(s, module);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Widget chip(String sign, String verb, String flow, Color color) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(sign, style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w800, color: color)),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              '$verb · $flow',
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color, height: 1.2),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
+
+    const green = Color(0xFF15803D); // emerald-700
+    const red = Color(0xFFB91C1C); // red-700
+    final plus = chip('+', posVerb, s.tr('cash in', 'تدفق داخل'), green);
+    final minus = chip('−', negVerb, s.tr('cash out', 'تدفق خارج'), red);
+
+    final children = <Widget>[];
+    if (policy == _SignPolicy.both) {
+      children.addAll([Flexible(child: plus), const _Dot(), Flexible(child: minus)]);
+    } else if (policy == _SignPolicy.positive) {
+      children.addAll([
+        Text(s.tr('Enter a positive amount:', 'أدخل مبلغًا موجبًا:'),
+            style: TextStyle(fontSize: 10, color: AppColors.textTertiary(context))),
+        const SizedBox(width: 4),
+        Flexible(child: plus),
+      ]);
+    } else {
+      children.addAll([
+        Text(s.tr('Enter a negative amount:', 'أدخل مبلغًا سالبًا:'),
+            style: TextStyle(fontSize: 10, color: AppColors.textTertiary(context))),
+        const SizedBox(width: 4),
+        Flexible(child: minus),
+      ]);
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF3F4F6),
+        ),
+      ),
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: children),
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot();
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Text('·', style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+      );
+}
+
 class _ScenarioCard extends ConsumerWidget {
   final dynamic scenario;
   final bool isSelected;
   final bool isLocked;
   final Color moduleColor;
+  final String moduleKey; // 'financing' | 'investing' | 'operating'
+  final double effectiveAmount; // user-edited amount overrides the backend value
   final Map<String, String> customInputValues;
   final void Function(String fieldName, String value) onCustomInputChanged;
   final VoidCallback onTap;
+  // Set a new amount for this scenario (validated + persisted by the parent).
+  // Null in self-paced mode (that flow uses its own panel).
+  final void Function(double amount)? onAmountChanged;
 
   const _ScenarioCard({
     required this.scenario,
     required this.isSelected,
     this.isLocked = false,
     required this.moduleColor,
+    required this.moduleKey,
+    required this.effectiveAmount,
     required this.customInputValues,
     required this.onCustomInputChanged,
     required this.onTap,
+    this.onAmountChanged,
   });
 
   @override
@@ -3028,8 +3428,20 @@ class _ScenarioCard extends ConsumerWidget {
     final hasInputFields = s.inputFields != null && s.inputFields!.isNotEmpty;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final canEditAmount = onAmountChanged != null && !isLocked;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLocked
+          ? null
+          : () {
+              // Match the website: if no amount is set yet, tapping the card
+              // opens the amount editor instead of selecting an empty decision.
+              if (canEditAmount && effectiveAmount == 0 && !isSelected) {
+                _openAmountEditor(context, ref, str);
+              } else {
+                onTap();
+              }
+            },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(16),
@@ -3177,8 +3589,23 @@ class _ScenarioCard extends ConsumerWidget {
             ),
             const SizedBox(height: 6),
 
-            // Amount display (like website's gray box)
-            if (scenario.amount != null && scenario.amount != 0)
+            // Amount — editable in corporate mode (parity with website's inline
+            // amount editor), read-only fallback otherwise.
+            if (canEditAmount)
+              _EditableAmount(
+                str: str,
+                amount: effectiveAmount,
+                isDark: isDark,
+                onEdit: () => _openAmountEditor(context, ref, str),
+                onClear: effectiveAmount != 0
+                    ? () {
+                        final err = _validateAmountSign(
+                            str, moduleKey, scenario.id, scenario.title, 0);
+                        if (err == null) onAmountChanged!(0);
+                      }
+                    : null,
+              )
+            else if (scenario.amount != null && scenario.amount != 0)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -3216,6 +3643,18 @@ class _ScenarioCard extends ConsumerWidget {
                   ],
                 ),
               ),
+
+            // Sign-convention legend: makes +/- (buy/sell, cash in/out) unambiguous.
+            if (canEditAmount) ...[
+              const SizedBox(height: 6),
+              _SignGuide(
+                s: str,
+                module: moduleKey,
+                scenarioId: scenario.id,
+                title: scenario.title,
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Type + Title subtitle (like website: "Debt: 10 Year Long-Term Loan...")
             if (scenario.type.isNotEmpty)
@@ -3382,6 +3821,33 @@ class _ScenarioCard extends ConsumerWidget {
                   ],
                 ),
               )
+            else if (canEditAmount && !isSelected && effectiveAmount == 0)
+              // Website parity: can't select an empty decision — prompt for an
+              // amount. Tapping the card (handled above) opens the editor.
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.edit_rounded, size: 16, color: AppColors.textTertiary(context)),
+                    const SizedBox(width: 6),
+                    Text(
+                      str.tr('Enter an amount', 'أدخل مبلغًا'),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              )
             else
               Container(
                 width: double.infinity,
@@ -3431,6 +3897,219 @@ class _ScenarioCard extends ConsumerWidget {
       case 'high': return AppColors.dangerLight;
       default: return AppColors.lightTextTertiary;
     }
+  }
+
+  /// Bottom-sheet amount editor. Allows negative values, validates the sign
+  /// against the scenario's policy, then hands the value to the parent which
+  /// updates state, persists to the backend, and broadcasts to teammates.
+  void _openAmountEditor(BuildContext context, WidgetRef ref, AppStrings str) {
+    final Scenario sc = scenario as Scenario;
+    final policy = _signPolicyFor(moduleKey, sc.id, sc.title);
+    final controller = TextEditingController(
+      text: effectiveAmount != 0
+          ? (effectiveAmount == effectiveAmount.roundToDouble()
+              ? effectiveAmount.toInt().toString()
+              : effectiveAmount.toString())
+          : '',
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        String? errorText;
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            void submit() {
+              final raw = controller.text.trim().replaceAll(',', '');
+              final value = raw.isEmpty ? 0.0 : (double.tryParse(raw) ?? 0.0);
+              final err = _validateAmountSign(str, moduleKey, sc.id, sc.title, value);
+              if (err != null) {
+                setSheetState(() => errorText = err);
+                return;
+              }
+              Navigator.pop(ctx);
+              onAmountChanged!(value);
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40, height: 4,
+                        margin: const EdgeInsets.only(bottom: 18),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Text(
+                      sc.title,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 17, fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(ctx),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _SignGuide(s: str, module: moduleKey, scenarioId: sc.id, title: sc.title),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                        signed: policy != _SignPolicy.positive,
+                      ),
+                      style: GoogleFonts.jetBrainsMono(fontSize: 22, fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center,
+                      onSubmitted: (_) => submit(),
+                      decoration: InputDecoration(
+                        prefixText: '\$ ',
+                        hintText: '0',
+                        errorText: errorText,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: moduleColor, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        if (effectiveAmount != 0)
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                onAmountChanged!(0);
+                              },
+                              icon: const Icon(Icons.remove_circle_outline_rounded, size: 18),
+                              label: Text(str.tr('Do Not Use', 'عدم الاستخدام')),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFDC2626),
+                                side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        if (effectiveAmount != 0) const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: moduleColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: Text(
+                              str.tr('Save', 'حفظ'),
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+// Editable amount row used on corporate decision cards — tap to edit, with a
+// quick "do not use" (zero) action. Color-coded green (in) / red (out).
+class _EditableAmount extends StatelessWidget {
+  final AppStrings str;
+  final double amount;
+  final bool isDark;
+  final VoidCallback onEdit;
+  final VoidCallback? onClear;
+
+  const _EditableAmount({
+    required this.str,
+    required this.amount,
+    required this.isDark,
+    required this.onEdit,
+    this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasValue = amount != 0;
+    final valueColor = !hasValue
+        ? AppColors.textTertiary(context)
+        : (amount > 0 ? const Color(0xFF15803D) : const Color(0xFFDC2626));
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 2),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE5E7EB),
+        ),
+      ),
+      child: Row(
+        children: [
+          Text(
+            str.tr('Amount: ', 'المبلغ: '),
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: onEdit,
+              child: Text(
+                hasValue
+                    ? '${amount < 0 ? '-' : ''}\$${_formatCurrency(amount.abs())}'
+                    : str.tr('Tap to set', 'اضغط للإدخال'),
+                style: hasValue
+                    ? GoogleFonts.jetBrainsMono(
+                        fontSize: 15, fontWeight: FontWeight.w700, color: valueColor)
+                    : TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: valueColor),
+              ),
+            ),
+          ),
+          if (onClear != null)
+            InkWell(
+              onTap: onClear,
+              borderRadius: BorderRadius.circular(20),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(Icons.remove_circle_outline_rounded, size: 18, color: Color(0xFFDC2626)),
+              ),
+            ),
+          InkWell(
+            onTap: onEdit,
+            borderRadius: BorderRadius.circular(20),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.edit_rounded, size: 16, color: AppColors.textSecondary(context)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

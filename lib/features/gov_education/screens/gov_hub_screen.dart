@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../providers/repository_providers.dart';
@@ -58,7 +59,9 @@ class _GovHubScreenState extends ConsumerState<GovHubScreen>
   Future<void> _loadData() async {
     try {
       final repo = ref.read(educationRepositoryProvider);
-      final progress = await repo.fetchGovProgress(1);
+      final prefs = await SharedPreferences.getInstance();
+      final teamId = prefs.getInt('gov_team_id') ?? 1;
+      final progress = await repo.fetchGovProgress(teamId);
       final leaderboard = await repo.fetchGovLeaderboard();
       if (mounted) {
         setState(() {

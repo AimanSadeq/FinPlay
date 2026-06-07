@@ -241,6 +241,10 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
 
   // Unlocked modules fetched from /gov-education/status (like web app)
   List<int> _unlockedModules = [];
+  // Self-paced progressive-unlock set (govModuleNum values currently accessible).
+  Set<int> _selfPacedUnlocked = {};
+  // Self-paced simulation unlocks once every content module's Learn is complete.
+  bool _selfPacedSimUnlocked = false;
   Timer? _statusPollTimer;
 
   bool get _isSelfPaced {
@@ -254,8 +258,10 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     _loadProgress();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkMandatedAssessment());
     if (_isSelfPaced) {
-      // Self-paced: all modules are unlocked, no polling needed
-      _unlockedModules = _modules.map((m) => m.govModuleNum).toList();
+      // Self-paced: progressive unlock — each module opens once the previous
+      // module's Learn section is complete (website parity). _loadProgress
+      // computes the set; seed the first module + tools so something is open.
+      _selfPacedUnlocked = {_modules.first.govModuleNum, 11, 12};
     } else {
       _fetchEducationStatus();
       _statusPollTimer = Timer.periodic(
@@ -338,12 +344,39 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
       passed[m.govModuleNum] =
           prefs.getBool('edu_passed_${m.govModuleNum}') ?? false;
     }
+    // Recompute self-paced progressive unlocks from per-module Learn completion.
+    final unlocked = <int>{};
+    if (_isSelfPaced) {
+      bool gateOpen = true; // the next content module is unlocked while open
+      for (final m in _modules) {
+        final isTool = m.govModuleNum == 11 || m.govModuleNum == 12; // calculators, no Learn
+        if (gateOpen || isTool) unlocked.add(m.govModuleNum);
+        if (!isTool) {
+          final learnDone = prefs.getBool('gov_module_${m.govModuleNum}_learn') ?? false;
+          gateOpen = gateOpen && learnDone; // close the chain until this Learn is done
+        }
+      }
+    }
     if (mounted) {
       setState(() {
         _moduleProgress.addAll(updated);
         _modulePassed.addAll(passed);
+        if (_isSelfPaced) {
+          _selfPacedUnlocked = unlocked;
+          // gateOpen is still true only if every content module's Learn is done.
+          _selfPacedSimUnlocked = _selfPacedSimGate(prefs);
+        }
       });
     }
+  }
+
+  bool _selfPacedSimGate(SharedPreferences prefs) {
+    for (final m in _modules) {
+      final isTool = m.govModuleNum == 11 || m.govModuleNum == 12;
+      if (isTool) continue;
+      if (!(prefs.getBool('gov_module_${m.govModuleNum}_learn') ?? false)) return false;
+    }
+    return true;
   }
 
   int get _completedCount =>
@@ -357,11 +390,12 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
 
   int get _badgeCount => _completedCount; // 1 badge per completed module
 
-  // Whether a module is unlocked by facilitator
+  // Whether a module is unlocked (facilitator list, or progressive for self-paced)
   bool _isUnlocked(int govModuleNum, List<int> unlocked) {
-    // Self-paced mode: everything is unlocked
     final auth = ref.read(authProvider);
-    if (auth.user != null && !auth.isFacilitator) return true;
+    if (auth.user != null && !auth.isFacilitator) {
+      return _selfPacedUnlocked.contains(govModuleNum);
+    }
     return unlocked.contains(govModuleNum);
   }
 
@@ -433,6 +467,10 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                         completionPercent: completion,
                         isPassed: passed,
                         ar: ref.watch(stringsProvider).ar,
+                        // Refresh progressive unlocks when returning from a module.
+                        onTap: () => context.push(m.route).then((_) {
+                          if (mounted) _loadProgress();
+                        }),
                       ).animate().fadeIn(
                             delay: (300 + 60 * index).ms,
                             duration: 350.ms,
@@ -449,8 +487,9 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                   child: _buildSimulationBanner(
                     context,
-                    isUnlocked:
-                        isSelfPaced || unlockedModules.contains(13),
+                    isUnlocked: isSelfPaced
+                        ? _selfPacedSimUnlocked
+                        : unlockedModules.contains(13),
                   ),
                 ).animate().fadeIn(delay: 800.ms, duration: 400.ms),
               ),
@@ -1251,6 +1290,7 @@ class _ModuleCard extends StatefulWidget {
   final int completionPercent;
   final bool isPassed;
   final bool ar;
+  final VoidCallback? onTap;
 
   const _ModuleCard({
     required this.module,
@@ -1258,6 +1298,7 @@ class _ModuleCard extends StatefulWidget {
     required this.completionPercent,
     required this.isPassed,
     required this.ar,
+    this.onTap,
   });
 
   @override
@@ -1320,7 +1361,11 @@ class _ModuleCardState extends State<_ModuleCard> {
           : (_) {
               setState(() => _pressed = false);
               HapticFeedback.lightImpact();
-              context.push(m.route);
+              if (widget.onTap != null) {
+                widget.onTap!();
+              } else {
+                context.push(m.route);
+              }
             },
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedScale(

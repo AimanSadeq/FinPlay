@@ -537,9 +537,131 @@ class _MetricsTab extends StatelessWidget {
           getValue: (d) => d.totalScore,
         ).animate().fadeIn(delay: 650.ms).slideX(begin: 0.05, end: 0),
         const SizedBox(height: 24),
+        // Full all-teams financial statements table (metric rows × team columns),
+        // matching the website's RoundFinancialTable.
+        _AllTeamsFinancialTable(teams: teams),
+        const SizedBox(height: 24),
       ],
     );
     });
+  }
+}
+
+// ============================================================================
+// All-teams financial statements table (IS / BS / CF), best-performer highlighted
+// ============================================================================
+class _AllTeamsFinancialTable extends StatelessWidget {
+  final List<FinancialData> teams;
+  const _AllTeamsFinancialTable({required this.teams});
+
+  // Metrics where a LOWER value is better (liabilities, negative cash flows).
+  static bool _lowerIsBetter(String title) {
+    final t = title.toLowerCase();
+    return t.contains('liabilit') ||
+        t.contains('investing activities') ||
+        t.contains('financing activities');
+  }
+
+  static String _fmt(double v) {
+    final sign = v < 0 ? '-' : '';
+    final a = v.abs();
+    if (a >= 1000000) return '$sign\$${(a / 1000000).toStringAsFixed(1)}M';
+    if (a >= 1000) return '$sign\$${(a / 1000).toStringAsFixed(0)}K';
+    return '$sign\$${a.toStringAsFixed(0)}';
+  }
+
+  List<StatementRow> _rowsFor(FinancialData d, String type) => switch (type) {
+        'income' => d.incomeRows,
+        'balance' => d.balanceRows,
+        _ => d.cashFlowRows,
+      };
+
+  double? _lookup(FinancialData d, String type, String title) {
+    final rows = _rowsFor(d, type);
+    final lower = title.trim().toLowerCase();
+    for (final r in rows) {
+      if (r.title.trim().toLowerCase() == lower) return r.value;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ProviderScope.containerOf(context, listen: false).read(stringsProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _section(context, s.tr('Income Statement', 'قائمة الدخل'), 'income', AppColors.primaryLight),
+        const SizedBox(height: 16),
+        _section(context, s.tr('Balance Sheet', 'الميزانية العمومية'), 'balance', AppColors.secondaryLight),
+        const SizedBox(height: 16),
+        _section(context, s.tr('Cash Flow', 'التدفق النقدي'), 'cashflow', AppColors.accentLight),
+      ],
+    );
+  }
+
+  Widget _section(BuildContext context, String title, String type, Color accent) {
+    // Canonical row order = the team with the most rows for this statement.
+    FinancialData? canonical;
+    int best = -1;
+    for (final d in teams) {
+      final n = _rowsFor(d, type).length;
+      if (n > best) { best = n; canonical = d; }
+    }
+    final labels = <String>[
+      for (final r in (canonical == null ? <StatementRow>[] : _rowsFor(canonical, type)))
+        if (r.title.trim().isNotEmpty) r.title.trim(),
+    ];
+    if (labels.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final columns = <DataColumn>[
+      const DataColumn(label: Text('')),
+      for (final d in teams) DataColumn(label: Text(d.teamId)),
+    ];
+
+    final rows = <DataRow>[];
+    for (final label in labels) {
+      // Find best performer index for this row.
+      final values = teams.map((d) => _lookup(d, type, label)).toList();
+      final lowerBetter = _lowerIsBetter(label);
+      int bestIdx = -1;
+      double bestVal = lowerBetter ? double.infinity : -double.infinity;
+      for (var i = 0; i < values.length; i++) {
+        final v = values[i];
+        if (v == null || v == 0) continue;
+        if (lowerBetter ? v < bestVal : v > bestVal) { bestVal = v; bestIdx = i; }
+      }
+      rows.add(DataRow(cells: [
+        DataCell(Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+        for (var i = 0; i < teams.length; i++)
+          DataCell(Text(
+            values[i] == null ? '—' : _fmt(values[i]!),
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 12,
+              fontWeight: i == bestIdx ? FontWeight.w800 : FontWeight.w500,
+              color: i == bestIdx ? accent : AppColors.textSecondary(context),
+            ),
+          )),
+      ]));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Container(width: 4, height: 18, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(width: 8),
+          Text(title, style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: _StyledDataTable(columns: columns, rows: rows),
+        ),
+      ],
+    );
   }
 }
 

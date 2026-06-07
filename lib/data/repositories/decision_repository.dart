@@ -41,6 +41,30 @@ class DecisionRepository {
     }
   }
 
+  /// Persist a single scenario amount for a team (corporate mode), mirroring the
+  /// website's inline amount editor which POSTs to /excel/scenarios/keymetrics.
+  /// Non-blocking: failures are swallowed since the amount is kept locally and
+  /// re-sent in full on confirm.
+  Future<void> updateScenarioAmount({
+    required String teamId,
+    required int round,
+    required String module,
+    required String scenarioId,
+    required double amount,
+  }) async {
+    try {
+      await _api.post(ApiEndpoints.excelScenarioMetrics, data: {
+        'teamId': teamId,
+        'roundNum': round,
+        'scenarioId': scenarioId,
+        'keyMetrics': amount.toString(),
+        'module': module,
+      });
+    } catch (_) {
+      // Best-effort background write — confirm() sends the authoritative payload.
+    }
+  }
+
   Future<Map<String, dynamic>> validateDecision({
     required String teamId,
     required int round,

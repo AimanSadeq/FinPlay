@@ -69,6 +69,10 @@ class ApiEndpoints {
   static const String facilitatorRemoveTeamLeader = '/facilitator/remove-team-leader';
   // GET /facilitator/team-leader/{teamId} -> { success, teamId, leader }
   static const String facilitatorTeamLeader = '/facilitator/team-leader';
+  // GET /facilitator/team-signins/{teamId} -> { data: [{playerName, signedInAt}] }
+  static const String facilitatorTeamSignins = '/facilitator/team-signins';
+  // POST /team/select-leader { teamId, playerName } — team self-picks its leader.
+  static const String teamSelectLeader = '/team/select-leader';
 
   // Shocks
   static const String shocksPredefined = '/shocks/predefined';
@@ -132,6 +136,38 @@ class ApiEndpoints {
   static const String modelScenarios = '/facilitator/model/scenarios';
   static const String modelBaseline = '/facilitator/model/baseline';
   static const String modelBranding = '/facilitator/model/branding';
+
+  // Education unlock controls
+  static const String facilitatorToggleEducation = '/facilitator/toggle-education';
+  static const String facilitatorToggleEducationModule = '/facilitator/toggle-education-module';
+  static const String facilitatorToggleAllEducationModules = '/facilitator/toggle-all-education-modules';
+  static const String facilitatorToggleEducationRetry = '/facilitator/toggle-education-retry';
+
+  // Realism toggles
+  static const String realismStatus = '/realism/status';
+  static const String facilitatorRealismToggle = '/facilitator/realism-toggle';
+
+  // Lock & advance module
+  static const String facilitatorLockAdvanceModule = '/facilitator/lock-and-advance-module';
+
+  // Single-shock dismiss
+  static const String shocksDismiss = '/shocks/dismiss';
+
+  // Cohorts
+  static const String facilitatorCohorts = '/facilitator/cohorts';
+
+  // Vouchers / access codes
+  static const String vouchers = '/vouchers';
+  static const String vouchersGating = '/vouchers/gating';
+  static const String vouchersRedemptions = '/vouchers/redemptions';
+
+  // Assessments admin
+  static const String assessmentsAdminList = '/assessments/admin/list';
+  static const String assessmentsMandate = '/assessments/mandate';
+
+  // QR placeholders + status
+  static const String facilitatorQrPlaceholders = '/facilitator/qr-placeholders';
+  static const String facilitatorQrStatus = '/facilitator/qr-status';
 
   // Self-Paced Progress
   static const String selfPacedProgress = '/self-paced/progress';

@@ -61,10 +61,17 @@ class AuthRepository {
     await _api.post(ApiEndpoints.selfPacedLogout);
   }
 
-  Future<bool> validateSiteAccess(String password) async {
-    final response = await _api.post(ApiEndpoints.siteAccessVerify, data: {
+  /// Verify the site-access password. Returns the full response so callers can
+  /// branch on `isFacilitator` (the website auto-logs the facilitator in when the
+  /// entered code is the admin password).
+  Future<Map<String, dynamic>> verifySiteAccess(String password) async {
+    return _api.post(ApiEndpoints.siteAccessVerify, data: {
       'password': password,
     });
+  }
+
+  Future<bool> validateSiteAccess(String password) async {
+    final response = await verifySiteAccess(password);
     return response['success'] == true;
   }
 

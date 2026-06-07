@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/utils/constants.dart';
 import '../../../data/models/decision.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/team_provider.dart';
@@ -44,6 +45,21 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     Icons.shield_rounded,
     Icons.star_rounded,
   ];
+
+  // City-themed icons (parity with the website's per-city team icons), with an
+  // index-based fallback for non-city team names.
+  IconData _iconForTeam(String teamName, int index) {
+    final n = teamName.toLowerCase();
+    if (n.contains('riyadh') || n.contains('الرياض')) return Icons.workspace_premium_rounded; // crown
+    if (n.contains('jeddah') || n.contains('jiddah') || n.contains('جدة')) return Icons.waves_rounded;
+    if (n.contains('dammam') || n.contains('الدمام')) return Icons.oil_barrel_rounded;
+    if (n.contains('makkah') || n.contains('mecca') || n.contains('مكة')) return Icons.mosque_rounded;
+    if (n.contains('madinah') || n.contains('medina') || n.contains('المدينة')) return Icons.mosque_rounded;
+    if (n.contains('khobar') || n.contains('الخبر')) return Icons.anchor_rounded;
+    if (n.contains('abha') || n.contains('أبها')) return Icons.terrain_rounded;
+    if (n.contains('tabuk') || n.contains('تبوك')) return Icons.landscape_rounded;
+    return _teamIcons[index % _teamIcons.length];
+  }
 
   StreamSubscription<dynamic>? _facilitatorActionSub;
 
@@ -180,15 +196,52 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     HapticFeedback.mediumImpact();
 
     final api = ref.read(apiClientProvider);
+    final prefs = await SharedPreferences.getInstance();
 
     // Persist the joined name so the team-leader gate can tell if "I" am leader.
-    SharedPreferences.getInstance().then((p) => p.setString('player_name', name));
+    await prefs.setString(AppConstants.playerNameKey, name);
 
-    // STEP 1: Register sign-in (fire-and-forget, like website)
-    api.post(ApiEndpoints.facilitatorRegisterSignin, data: {
-      'teamId': team.id,
-      'playerName': name,
-    }).catchError((_) => <String, dynamic>{});
+    // Store the current reset epoch so /home can detect a stale session later.
+    try {
+      final epochRes = await api.get(ApiEndpoints.facilitatorResetEpoch);
+      final epoch = epochRes['epoch']?.toString() ?? epochRes['resetEpoch']?.toString();
+      if (epoch != null && epoch.isNotEmpty) await prefs.setString('reset_epoch', epoch);
+    } catch (_) {/* non-critical */}
+
+    // STEP 1: Register sign-in. We AWAIT this (not fire-and-forget) because the
+    // server mints a team-member token that decision-write endpoints require, and
+    // it lets us reject a name already taken on this team.
+    try {
+      final reg = await api.post(ApiEndpoints.facilitatorRegisterSignin, data: {
+        'teamId': team.id,
+        'playerName': name,
+      });
+      final token = reg['token'];
+      if (token is String && token.isNotEmpty) {
+        await prefs.setString(AppConstants.teamMemberTokenKey, token);
+        api.setAuthToken(token); // carry as Bearer on subsequent decision writes
+        // Honor a server-sanitized name if it changed ours.
+        final sanitized = reg['playerName'];
+        if (sanitized is String && sanitized.isNotEmpty && sanitized != name) {
+          await prefs.setString(AppConstants.playerNameKey, sanitized);
+        }
+      } else if (reg['success'] == false || reg['error'] != null) {
+        // Hard rejection (e.g. duplicate name on this team) — abort the join so
+        // the user can pick a different name.
+        if (mounted) {
+          setState(() {
+            _joining = false;
+            _nameError = (reg['error'] as String?) ??
+                s.tr('That name is already taken on this team. Please choose another.',
+                    'هذا الاسم مستخدم بالفعل في هذا الفريق. الرجاء اختيار اسم آخر.');
+          });
+        }
+        return;
+      }
+      // else: older backend without a token — proceed leniently.
+    } catch (_) {
+      // Network/5xx — don't hard-block the join over a transient failure.
+    }
 
     // STEP 2: Reconnect socket with teamId and join team room
     ref.read(socketManagerProvider).connect(teamId: team.id);
@@ -349,7 +402,13 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 20),
                                 children: [
                                   // Team Grid (non-scrollable inside ListView)
-                                  GridView.builder(
+                                  // Block team selection until the facilitator
+                                  // opens the lobby (parity with the website).
+                                  IgnorePointer(
+                                    ignoring: !_lobbyOpen,
+                                    child: Opacity(
+                                      opacity: _lobbyOpen ? 1.0 : 0.4,
+                                      child: GridView.builder(
                                     shrinkWrap: true,
                                     physics: const NeverScrollableScrollPhysics(),
                                     gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -363,7 +422,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                       final team = teamState.teams[index];
                                       final isSelected = teamState.selectedTeam?.id == team.id;
                                       final teamColor = AppColors.teamColor(index);
-                                      final teamIcon = _teamIcons[index % _teamIcons.length];
+                                      final teamIcon = _iconForTeam(team.name, index);
 
                                       return _TeamCard(
                                         team: team,
@@ -377,6 +436,8 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                         },
                                       );
                                     },
+                                      ),
+                                    ),
                                   ),
 
                                   // Round Recaps Section (only when team selected)

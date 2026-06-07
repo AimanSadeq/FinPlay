@@ -11,7 +11,10 @@ class FacilitatorRepository {
     final response = await _api.post(ApiEndpoints.facilitatorAuth, data: {
       'password': password,
     });
-    return response['success'] == true;
+    final ok = response['success'] == true;
+    // Attach the password to every later facilitator-gated request.
+    if (ok) _api.setFacilitatorPassword(password);
+    return ok;
   }
 
   Future<Map<String, dynamic>> getState() async {
@@ -147,6 +150,36 @@ class FacilitatorRepository {
       return leader.toString();
     } catch (_) {
       return null;
+    }
+  }
+
+  /// Signed-in members of a team (for the leader self-pick gate).
+  /// Returns a list of {playerName, signedInAt?}.
+  Future<List<Map<String, dynamic>>> fetchTeamSignins(String teamId) async {
+    try {
+      final res = await _api.get(
+          '${ApiEndpoints.facilitatorTeamSignins}/${Uri.encodeComponent(teamId)}');
+      final list = res['data'] as List<dynamic>? ??
+          res['signins'] as List<dynamic>? ??
+          res['members'] as List<dynamic>? ??
+          [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Team self-picks its leader (any signed-in member can designate one).
+  /// Returns true on success. The team-member token rides on the global header.
+  Future<bool> selectTeamLeader(String teamId, String playerName) async {
+    try {
+      final res = await _api.post(ApiEndpoints.teamSelectLeader, data: {
+        'teamId': teamId,
+        'playerName': playerName,
+      });
+      return res['success'] != false && res['error'] == null;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -348,5 +381,188 @@ class FacilitatorRepository {
     } catch (_) {
       return false;
     }
+  }
+
+  // ── Education unlock controls (parity with website EducationAdmin) ──
+  Future<bool> toggleEducation(bool unlock) async {
+    final res = await _api.post(ApiEndpoints.facilitatorToggleEducation, data: {'unlock': unlock});
+    return res['success'] == true;
+  }
+
+  Future<bool> toggleEducationModule(int moduleId, bool unlock) async {
+    final res = await _api.post(ApiEndpoints.facilitatorToggleEducationModule,
+        data: {'moduleId': moduleId, 'unlock': unlock});
+    return res['success'] == true;
+  }
+
+  Future<bool> toggleAllEducationModules(bool unlock) async {
+    final res = await _api.post(ApiEndpoints.facilitatorToggleAllEducationModules, data: {'unlock': unlock});
+    return res['success'] == true;
+  }
+
+  Future<bool> toggleEducationRetry(bool unlock) async {
+    final res = await _api.post(ApiEndpoints.facilitatorToggleEducationRetry, data: {'unlock': unlock});
+    return res['success'] == true;
+  }
+
+  // ── Realism toggles ──
+  Future<Map<String, dynamic>> fetchRealismStatus() async {
+    try {
+      return await _api.get(ApiEndpoints.realismStatus);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<bool> toggleRealism(String flag, bool enabled) async {
+    final res = await _api.post(ApiEndpoints.facilitatorRealismToggle,
+        data: {'flag': flag, 'enabled': enabled});
+    return res['success'] == true;
+  }
+
+  // ── Lock & advance to next module ──
+  /// Locks all teams' current module and advances them to the next one.
+  /// Returns the response map (may carry success/message).
+  Future<Map<String, dynamic>> lockAndAdvanceModule() async {
+    return await _api.post(ApiEndpoints.facilitatorLockAdvanceModule);
+  }
+
+  // ── Single-shock dismiss ──
+  /// Dismiss ONE active shock by its instance id (ActiveShock.id).
+  Future<bool> dismissShock(String shockInstanceId, {bool revertExcel = true}) async {
+    try {
+      final res = await _api.post(ApiEndpoints.shocksDismiss,
+          data: {'shockInstanceId': shockInstanceId, 'revertExcel': revertExcel});
+      return res['success'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── Timer: update a running timer's duration ──
+  Future<Map<String, dynamic>> updateTimer(int minutes) async {
+    return await _api.post(ApiEndpoints.facilitatorUpdateTimer, data: {'minutes': minutes});
+  }
+
+  /// Start a fresh timer for [minutes].
+  Future<Map<String, dynamic>> startTimerMinutes(int minutes) async {
+    return await _api.post(ApiEndpoints.facilitatorStartTimer, data: {'minutes': minutes});
+  }
+
+  // ── Model editor: scenarios (read + edit) ──
+  Future<List<Map<String, dynamic>>> fetchModelScenarios() async {
+    try {
+      final res = await _api.get(ApiEndpoints.modelScenarios);
+      final list = res['scenarios'] as List<dynamic>? ?? res['data'] as List<dynamic>? ?? [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<bool> saveModelScenarios(List<Map<String, dynamic>> updates) async {
+    final res = await _api.post(ApiEndpoints.modelScenarios, data: {'updates': updates});
+    return res['success'] == true;
+  }
+
+  // ── Cohorts ──
+  Future<List<Map<String, dynamic>>> fetchCohorts() async {
+    try {
+      final res = await _api.get(ApiEndpoints.facilitatorCohorts);
+      final list = res['cohorts'] as List<dynamic>? ?? [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> createCohort(String subdomain, String displayName) async {
+    return await _api.post(ApiEndpoints.facilitatorCohorts,
+        data: {'subdomain': subdomain, 'displayName': displayName});
+  }
+
+  // ── Vouchers / access codes ──
+  Future<List<Map<String, dynamic>>> fetchVouchers() async {
+    try {
+      final res = await _api.get(ApiEndpoints.vouchers);
+      final list = res['vouchers'] as List<dynamic>? ?? [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> createVouchers({
+    int count = 1,
+    int maxUses = 1,
+    String? label,
+    String? expiresAt,
+    String? notes,
+  }) async {
+    final res = await _api.post(ApiEndpoints.vouchers, data: {
+      'count': count,
+      'maxUses': maxUses,
+      'label': ?label,
+      'expiresAt': ?expiresAt,
+      'notes': ?notes,
+    });
+    final list = res['created'] as List<dynamic>? ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<bool> updateVoucher(String id, Map<String, dynamic> changes) async {
+    final res = await _api.put('${ApiEndpoints.vouchers}/${Uri.encodeComponent(id)}', data: changes);
+    return res['success'] == true;
+  }
+
+  Future<bool> deleteVoucher(String id) async {
+    final res = await _api.delete('${ApiEndpoints.vouchers}/${Uri.encodeComponent(id)}');
+    return res['success'] == true;
+  }
+
+  Future<bool> fetchVoucherGating() async {
+    try {
+      final res = await _api.get(ApiEndpoints.vouchersGating);
+      return res['required'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> setVoucherGating(bool required) async {
+    final res = await _api.post(ApiEndpoints.vouchersGating, data: {'required': required});
+    return res['success'] == true;
+  }
+
+  // ── Assessments admin ──
+  Future<List<Map<String, dynamic>>> fetchAssessmentAttempts() async {
+    try {
+      final res = await _api.get(ApiEndpoints.assessmentsAdminList);
+      final list = res['attempts'] as List<dynamic>? ?? [];
+      return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<bool> setAssessmentMandate(String kind, bool mandated) async {
+    final res = await _api.post(ApiEndpoints.assessmentsMandate,
+        data: {'kind': kind, 'mandated': mandated});
+    return res['success'] == true;
+  }
+
+  // ── QR placeholders ──
+  Future<Map<String, dynamic>> fetchQrStatus() async {
+    try {
+      return await _api.get(ApiEndpoints.facilitatorQrStatus);
+    } catch (_) {
+      return {};
+    }
+  }
+
+  Future<bool> saveQrPlaceholders(Map<String, dynamic> placeholders) async {
+    final res = await _api.post(ApiEndpoints.facilitatorQrPlaceholders,
+        data: {'placeholders': placeholders});
+    return res['success'] == true;
   }
 }

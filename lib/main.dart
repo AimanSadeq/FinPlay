@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'core/network/api_client.dart';
 import 'app/router/app_router.dart';
 import 'app/theme/app_theme.dart';
 import 'providers/theme_provider.dart';
@@ -13,6 +15,15 @@ import 'shared/widgets/global_timer_overlay.dart';
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
+  // Restore a previously selected cohort host (each cohort is its own subdomain).
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final cohortHost = prefs.getString('cohort_base_url');
+    if (cohortHost != null && cohortHost.isNotEmpty) {
+      ApiClient().setBaseHost(cohortHost);
+    }
+  } catch (_) {/* non-critical */}
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../providers/repository_providers.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/gradient_button.dart';
 
 class SiteAccessScreen extends ConsumerStatefulWidget {
@@ -28,6 +30,7 @@ class _SiteAccessScreenState extends ConsumerState<SiteAccessScreen>
 
   late AnimationController _bgAnimController;
   late Animation<double> _bgAnimation;
+  Timer? _statusTimer;
 
   @override
   void initState() {
@@ -42,10 +45,22 @@ class _SiteAccessScreenState extends ConsumerState<SiteAccessScreen>
     _focusNode.addListener(() {
       setState(() => _isFocused = _focusNode.hasFocus);
     });
+    // Live re-poll: if the facilitator disables the gate while we're here, the
+    // gate is no longer needed — proceed automatically (website parity).
+    _statusTimer = Timer.periodic(const Duration(seconds: 10), (_) => _checkStillGated());
+  }
+
+  Future<void> _checkStillGated() async {
+    final enabled = await ref.read(authRepositoryProvider).isSiteAccessEnabled();
+    if (!enabled && mounted) {
+      _statusTimer?.cancel();
+      context.go('/program');
+    }
   }
 
   @override
   void dispose() {
+    _statusTimer?.cancel();
     _bgAnimController.dispose();
     _codeController.dispose();
     _focusNode.dispose();
@@ -64,10 +79,21 @@ class _SiteAccessScreenState extends ConsumerState<SiteAccessScreen>
     setState(() { _loading = true; _error = null; });
     try {
       final repo = ref.read(authRepositoryProvider);
-      final valid = await repo.validateSiteAccess(_codeController.text.trim());
-      if (valid && mounted) {
+      final code = _codeController.text.trim();
+      final res = await repo.verifySiteAccess(code);
+      if (res['success'] == true && mounted) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool('site_access_verified', true);
+        // Website parity: if the entered code is the admin password, the verify
+        // response flags isFacilitator — authenticate and jump to the console.
+        if (res['isFacilitator'] == true) {
+          try {
+            await ref.read(authProvider.notifier).loginFacilitator(code);
+          } catch (_) {/* fall through to normal flow */}
+          if (!mounted) return;
+          context.go('/facilitator');
+          return;
+        }
         if (!mounted) return;
         context.go('/program');
       } else {

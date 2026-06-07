@@ -24,8 +24,10 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _teamNameController = TextEditingController();
+  final _voucherController = TextEditingController();
   bool _isRegister = false;
   bool _obscurePassword = true;
+  bool _voucherRequired = false; // self-paced sign-up gated behind an access code
   late AnimationController _bgController;
 
   // Blue theme matching website (bg-blue-600, from-blue-50, to-indigo-100)
@@ -42,6 +44,19 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
       duration: const Duration(seconds: 10),
       vsync: this,
     )..repeat(reverse: true);
+    _checkVoucherGating();
+  }
+
+  /// If self-paced sign-up is gated behind an access code, show the code field
+  /// and default new visitors to the Register view (website parity).
+  Future<void> _checkVoucherGating() async {
+    final required = await ref.read(facilitatorRepositoryProvider).fetchVoucherGating();
+    if (mounted && required) {
+      setState(() {
+        _voucherRequired = true;
+        _isRegister = true;
+      });
+    }
   }
 
   @override
@@ -50,6 +65,7 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
     _passwordController.dispose();
     _nameController.dispose();
     _teamNameController.dispose();
+    _voucherController.dispose();
     _bgController.dispose();
     super.dispose();
   }
@@ -62,11 +78,13 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
 
     if (_isRegister) {
       final teamName = _teamNameController.text.trim();
+      final voucher = _voucherController.text.trim();
       success = await auth.registerSelfPaced(
         _emailController.text.trim(),
         _passwordController.text,
         _nameController.text.trim(),
         teamName: teamName.isEmpty ? null : teamName,
+        voucherCode: voucher.isEmpty ? null : voucher,
       );
     } else {
       success = await auth.loginSelfPaced(
@@ -398,6 +416,17 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                               label: s.tr('Team Name (Optional)', 'اسم الفريق (اختياري)'),
                               icon: Icons.group_rounded,
                             ),
+                            if (_voucherRequired) ...[
+                              const SizedBox(height: 16),
+                              _buildField(
+                                controller: _voucherController,
+                                label: s.tr('Access Code *', 'رمز الدخول *'),
+                                icon: Icons.vpn_key_rounded,
+                                validator: (v) => (v == null || v.trim().isEmpty)
+                                    ? s.tr('Access code required', 'رمز الدخول مطلوب')
+                                    : null,
+                              ),
+                            ],
                           ],
 
                           const SizedBox(height: 24),

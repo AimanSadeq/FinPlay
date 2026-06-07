@@ -276,10 +276,14 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
   Future<void> _submitProgress() async {
     try {
       final repo = ref.read(educationRepositoryProvider);
+      final prefs = await SharedPreferences.getInstance();
+      final teamId = prefs.getInt('gov_team_id') ?? 1;
       await repo.submitQuiz(
-        teamId: 1,
+        teamId: teamId,
         moduleId: widget.moduleId,
-        answers: [],
+        answers: const [],
+        score: _quizScore,
+        total: _module.quizQuestions.length,
       );
     } catch (_) {
       // Progress submission is non-critical — silently ignore
