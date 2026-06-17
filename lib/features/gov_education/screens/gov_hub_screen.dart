@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -7,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 
@@ -24,6 +26,12 @@ class _GovHubScreenState extends ConsumerState<GovHubScreen>
   bool _loadingData = true;
   int _teamId = 1; // selected gov team (from the lobby)
   late AnimationController _pulseController;
+
+  // Modules unlocked by the facilitator, fetched from /gov-education/status
+  // (the same source the web app and Education hub use). Polled so that
+  // unlocking a module on the site reflects live in the app.
+  List<int> _unlockedModules = [];
+  Timer? _statusPollTimer;
 
   // Matches website education hub exactly
   static const _modules = [
@@ -49,12 +57,32 @@ class _GovHubScreenState extends ConsumerState<GovHubScreen>
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
     _loadData();
+    // Poll the facilitator unlock list so site changes appear without a reopen.
+    _statusPollTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _fetchUnlockStatus(),
+    );
   }
 
   @override
   void dispose() {
+    _statusPollTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchUnlockStatus() async {
+    try {
+      final api = ref.read(apiClientProvider);
+      final res = await api.get(ApiEndpoints.govEducationStatus);
+      final modules = (res['govEducationModulesUnlocked'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          [];
+      if (mounted) setState(() => _unlockedModules = modules);
+    } catch (_) {
+      // Keep existing state on error.
+    }
   }
 
   Future<void> _loadData() async {
@@ -65,6 +93,7 @@ class _GovHubScreenState extends ConsumerState<GovHubScreen>
       _teamId = teamId;
       final progress = await repo.fetchGovProgress(teamId);
       final leaderboard = await repo.fetchGovLeaderboard();
+      await _fetchUnlockStatus();
       if (mounted) {
         setState(() {
           _progress = progress;
@@ -167,7 +196,12 @@ class _GovHubScreenState extends ConsumerState<GovHubScreen>
                         final module = _modules[index];
                         final isCompleted = _isModuleCompleted(module.number);
                         final isCurrent = module.number == currentModuleId;
-                        final isLocked = module.number > currentModuleId && !isCompleted;
+                        // Unlock is driven by the facilitator's list from the
+                        // site (same as the web app), not local sequential
+                        // progress. Completed modules stay accessible.
+                        final isLocked =
+                            !_unlockedModules.contains(module.number) &&
+                                !isCompleted;
 
                         return _buildModuleItem(
                           context, module, isCompleted, isCurrent, isLocked,
