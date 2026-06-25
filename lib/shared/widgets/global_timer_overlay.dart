@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_colors.dart';
 import '../../providers/socket_provider.dart';
+import '../../providers/timer_provider.dart';
 
 class GlobalTimerOverlay extends ConsumerWidget {
   final Widget child;
@@ -11,6 +12,9 @@ class GlobalTimerOverlay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Keep the /timer/status poller alive for the app lifetime (this overlay
+    // wraps the whole app). The backend never pushes the timer over a socket.
+    ref.watch(timerPollProvider);
     final timerSeconds = ref.watch(timerSecondsProvider);
 
     return Stack(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../data/models/financial_data.dart';
 import '../../../providers/auth_provider.dart';
@@ -293,6 +294,32 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
+  /// Opens the print-ready round report (HTML) in the browser, where it can be
+  /// saved as PDF. Mirrors the website's window.open of the same endpoint.
+  Future<void> _openRoundReport(BuildContext context, String teamId) async {
+    final s = ref.read(stringsProvider);
+    final raw = _selectedRound > 0 ? _selectedRound : _activeRound;
+    final round = raw < 1 ? 1 : (raw > 3 ? 3 : raw);
+    final uri = Uri.parse(
+      '${AppConstants.baseUrl}${AppConstants.apiPrefix}/reports/round-report/$teamId/$round',
+    );
+    bool ok = false;
+    try {
+      ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.tr('Could not open report', 'تعذّر فتح التقرير')),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final teamState = ref.watch(teamProvider);
@@ -358,22 +385,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           IconButton(
                             icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
                             tooltip: s.tr('Download Report', 'تنزيل التقرير'),
-                            onPressed: () {
-                              final round = _selectedRound > 0 ? _selectedRound : _activeRound;
-                              final url = '${AppConstants.baseUrl}${AppConstants.apiPrefix}/report/export?teamId=${team.id}&round=$round';
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${s.tr('Report: ', 'التقرير: ')}$url'),
-                                  backgroundColor: AppColors.primary,
-                                  behavior: SnackBarBehavior.floating,
-                                  action: SnackBarAction(
-                                    label: s.tr('OK', 'حسنًا'),
-                                    textColor: Colors.white,
-                                    onPressed: () {},
-                                  ),
-                                ),
-                              );
-                            },
+                            onPressed: () => _openRoundReport(context, team.id),
                           ),
                       ],
                     ),
@@ -606,7 +618,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: PdfReportButton(teamId: team.id, teamName: team.name),
+                      child: PdfReportButton(
+                        teamId: team.id,
+                        teamName: team.name,
+                        round: _selectedRound > 0 ? _selectedRound : _activeRound,
+                      ),
                     ),
                   ),
 

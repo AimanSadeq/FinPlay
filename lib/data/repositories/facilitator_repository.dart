@@ -358,9 +358,10 @@ class FacilitatorRepository {
   }
 
   // ── Excel worksheet viewer ──
-  /// Fetch the raw Excel workbook data (direct read).
+  /// Fetch the Excel workbook financials (baseline read). Returns
+  /// `{ success, data:{ incomeStatement, balanceSheet, cashFlow, ... } }`.
   Future<Map<String, dynamic>> fetchExcelData() async {
-    return await _api.get('/excel/direct');
+    return await _api.get('/excel/baseline-financials');
   }
 
   // ── Scenario results visibility ──

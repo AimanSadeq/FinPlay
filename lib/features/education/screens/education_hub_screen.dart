@@ -324,8 +324,8 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   Future<void> _fetchEducationStatus() async {
     try {
       final api = ref.read(apiClientProvider);
-      final res = await api.get(ApiEndpoints.govEducationStatus);
-      final modules = (res['govEducationModulesUnlocked'] as List<dynamic>?)
+      final res = await api.get(ApiEndpoints.educationModulesStatus);
+      final modules = (res['educationModulesUnlocked'] as List<dynamic>?)
           ?.map((e) => (e as num).toInt())
           .toList() ?? [];
       if (mounted) setState(() => _unlockedModules = modules);

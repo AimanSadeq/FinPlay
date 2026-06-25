@@ -47,7 +47,7 @@ class _ExcelViewScreenState extends ConsumerState<ExcelViewScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final api = ref.read(apiClientProvider);
-      final response = await api.get('/excel/direct');
+      final response = await api.get('/excel/baseline-financials');
       if (response['success'] == true) {
         setState(() {
           _excelData = response['data'] as Map<String, dynamic>;
@@ -69,9 +69,25 @@ class _ExcelViewScreenState extends ConsumerState<ExcelViewScreen> {
 
   Color get _activeColor => _sheetColors[_activeSheet] ?? const Color(0xFF3B82F6);
 
+  // Maps a tab label to the key used by /excel/baseline-financials
+  // (`{ incomeStatement, balanceSheet, cashFlow, ratios }`).
+  static const _sheetKeyMap = {
+    'Income Statement': 'incomeStatement',
+    'Balance Sheet': 'balanceSheet',
+    'Cash Flow': 'cashFlow',
+    'Ratios': 'ratios',
+  };
+
+  dynamic _sheetDataFor(String sheet) {
+    if (_excelData == null) return null;
+    final camel = _sheetKeyMap[sheet];
+    // Try camelCase key, snake_case fallback, then the whole payload.
+    return _excelData![camel] ??
+        _excelData![sheet.toLowerCase().replaceAll(' ', '_')];
+  }
+
   int _getItemCount() {
-    final sheetKey = _activeSheet.toLowerCase().replaceAll(' ', '_');
-    final sheetData = _excelData?[sheetKey] ?? _excelData?['data'];
+    final sheetData = _sheetDataFor(_activeSheet);
     if (sheetData is List) return sheetData.length;
     if (sheetData is Map) return sheetData.length;
     return 0;
@@ -362,8 +378,7 @@ class _ExcelViewScreenState extends ConsumerState<ExcelViewScreen> {
   }
 
   Widget _buildDataTable() {
-    final sheetKey = _activeSheet.toLowerCase().replaceAll(' ', '_');
-    final sheetData = _excelData?[sheetKey] ?? _excelData?['data'];
+    final sheetData = _sheetDataFor(_activeSheet);
 
     if (sheetData == null) {
       return _buildEmptyState();

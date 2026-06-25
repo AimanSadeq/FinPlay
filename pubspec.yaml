@@ -38,6 +38,9 @@ dependencies:
   # Utilities
   path_provider: ^2.1.5
 
+  # Open external URLs (PDF/HTML report + Excel file downloads via the browser)
+  url_launcher: ^6.3.1
+
   # Native Splash
   flutter_native_splash: ^2.4.4
 

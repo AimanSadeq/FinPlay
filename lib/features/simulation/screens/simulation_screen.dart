@@ -47,14 +47,42 @@ class CaseStudyConstraints {
     this.description,
   });
 
+  /// Parses the backend `/case-study/active` response:
+  /// `{ active, template:{id,name,narrative,...}, constraints:{financing,investing,operating} }`
+  /// where each module constraint is `{ maxBudget, maxSelections }`.
   factory CaseStudyConstraints.fromJson(Map<String, dynamic> json) {
+    final template = json['template'] as Map<String, dynamic>? ?? const {};
+    final constraints = json['constraints'] as Map<String, dynamic>? ?? const {};
+
+    double budget = 0;
+    final maxSel = <String, int>{};
+    for (final m in const ['financing', 'investing', 'operating']) {
+      final c = constraints[m] as Map<String, dynamic>?;
+      if (c == null) continue;
+      final b = (c['maxBudget'] as num?)?.toDouble() ?? 0;
+      if (b > budget) budget = b;
+      final sel = (c['maxSelections'] as num?)?.toInt();
+      if (sel != null) maxSel[m] = sel;
+    }
+
+    // Short description from the English narrative background; the expandable
+    // toggle renders the full localized narrative separately.
+    String? desc;
+    final narrative = template['narrative'];
+    if (narrative is Map) {
+      final en = narrative['en'];
+      if (en is Map) {
+        desc = en['background']?.toString() ?? en['challenge']?.toString();
+      } else if (en is String) {
+        desc = en;
+      }
+    }
+
     return CaseStudyConstraints(
-      caseStudyId: json['caseStudyId']?.toString() ?? '',
-      budgetLimit: (json['budgetLimit'] as num?)?.toDouble() ?? 0,
-      maxSelectionsPerModule: (json['maxSelectionsPerModule'] as Map<String, dynamic>?)
-              ?.map((k, v) => MapEntry(k, (v as num).toInt())) ??
-          {},
-      description: json['description'] as String?,
+      caseStudyId: template['id']?.toString() ?? '',
+      budgetLimit: budget,
+      maxSelectionsPerModule: maxSel,
+      description: desc,
     );
   }
 }
@@ -93,6 +121,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
   CaseStudyConstraints? _caseStudyConstraints;
   // ignore: unused_field
   bool _loadingConstraints = false;
+  Timer? _caseStudyPollTimer;
 
   // Case study narrative toggle
   bool _caseStudyExpanded = false;
@@ -246,6 +275,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
       _fetchBaselineFinancials(team.id);
     }
     _fetchCaseStudyConstraints();
+    // Poll for case-study activation/deactivation from admin (no socket push
+    // exists server-side; the website polls this endpoint the same way).
+    _caseStudyPollTimer ??= Timer.periodic(
+      const Duration(seconds: 12),
+      (_) => _fetchCaseStudyConstraints(silent: true),
+    );
   }
 
   Future<void> _fetchBaselineFinancials(String teamId) async {
@@ -269,22 +304,28 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     }
   }
 
-  Future<void> _fetchCaseStudyConstraints() async {
-    setState(() => _loadingConstraints = true);
+  Future<void> _fetchCaseStudyConstraints({bool silent = false}) async {
+    if (!silent) setState(() => _loadingConstraints = true);
     try {
       final api = ref.read(apiClientProvider);
       final response = await api.get(ApiEndpoints.caseStudyActive);
-      if (mounted && response['caseStudyId'] != null) {
+      if (!mounted) return;
+      if (response['active'] == true) {
         setState(() {
           _caseStudyConstraints = CaseStudyConstraints.fromJson(response);
           _caseStudyData = response;
           _loadingConstraints = false;
         });
       } else {
-        if (mounted) setState(() => _loadingConstraints = false);
+        // Deactivated from admin — clear so the panel disappears.
+        setState(() {
+          _caseStudyConstraints = null;
+          _caseStudyData = null;
+          _loadingConstraints = false;
+        });
       }
     } catch (_) {
-      if (mounted) setState(() => _loadingConstraints = false);
+      if (mounted && !silent) setState(() => _loadingConstraints = false);
     }
   }
 
@@ -507,7 +548,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
         .where((s) => scenarioState.selectedScenarioIds.contains(s.id))
         .map((s) => <String, dynamic>{
               'title': s.title,
-              'amount': s.amount ?? 0,
+              'amount': scenarioState.amountFor(s),
             })
         .toList();
     _moduleSelections[currentModule] = selected;
@@ -515,6 +556,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
 
   @override
   void dispose() {
+    _caseStudyPollTimer?.cancel();
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
@@ -524,8 +566,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
   double _selectedTotal(ScenarioState scenarioState) {
     double total = 0;
     for (final s in scenarioState.scenarios) {
-      if (scenarioState.selectedScenarioIds.contains(s.id) && s.amount != null) {
-        total += s.amount!;
+      if (scenarioState.selectedScenarioIds.contains(s.id)) {
+        total += scenarioState.amountFor(s);
       }
     }
     return total;
@@ -789,9 +831,9 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
       _lastLoadedRound = currentRound;
     }
 
-    // Check case study from game state
-    final activeCaseStudyId = gameState.whenData((g) => g.activeCaseStudyId).value;
-    final hasCaseStudy = !isSelfPacedMode && activeCaseStudyId != null && activeCaseStudyId.isNotEmpty;
+    // Case study active state comes from /case-study/active (polled); the
+    // round-state payload does not carry activeCaseStudyId.
+    final hasCaseStudy = !isSelfPacedMode && _caseStudyConstraints != null;
 
     // Module lock status
     final isModuleLocked = !isSelfPacedMode && gameState.whenData((g) {
@@ -1434,9 +1476,35 @@ class _CaseStudyNarrativeToggle extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
-    final title = data['title']?.toString() ?? data['caseStudyId']?.toString() ?? s.tr('Case Study', 'دراسة حالة');
-    final narrative = data['narrative']?.toString() ?? data['description']?.toString() ?? '';
-    final objectives = data['objectives'] as List<dynamic>? ?? [];
+    final template = data['template'] as Map<String, dynamic>? ?? const {};
+
+    // Title: template.name is { en, ar }.
+    String title = s.tr('Case Study', 'دراسة حالة');
+    final name = template['name'];
+    if (name is Map) {
+      title = (s.ar ? name['ar'] : name['en'])?.toString() ?? name['en']?.toString() ?? title;
+    } else if (name is String && name.isNotEmpty) {
+      title = name;
+    }
+
+    // Narrative: template.narrative is { en:{background,industry,goals,challenge}, ar:{...} }.
+    final objectives = <String>[];
+    final parts = <String>[];
+    final narrativeRoot = template['narrative'];
+    if (narrativeRoot is Map) {
+      final loc = (s.ar ? narrativeRoot['ar'] : narrativeRoot['en']) ?? narrativeRoot['en'];
+      if (loc is Map) {
+        for (final key in const ['background', 'industry', 'challenge']) {
+          final v = loc[key]?.toString();
+          if (v != null && v.isNotEmpty) parts.add(v);
+        }
+        final goals = loc['goals']?.toString();
+        if (goals != null && goals.isNotEmpty) objectives.add(goals);
+      } else if (loc is String) {
+        parts.add(loc);
+      }
+    }
+    final narrative = parts.join('\n\n');
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -1642,7 +1710,7 @@ class _RoundProgressBoxes extends ConsumerWidget {
                 .where((s) => currentScenarioState.selectedScenarioIds.contains(s.id))
                 .map((s) => <String, dynamic>{
                       'title': s.title,
-                      'amount': s.amount ?? 0,
+                      'amount': currentScenarioState.amountFor(s),
                     })
                 .toList();
           } else {

@@ -1,17 +1,21 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/constants.dart';
-import '../../../providers/repository_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 
 class PdfReportButton extends ConsumerStatefulWidget {
   final String teamId;
   final String teamName;
+  final int round;
 
-  const PdfReportButton({super.key, required this.teamId, required this.teamName});
+  const PdfReportButton({
+    super.key,
+    required this.teamId,
+    required this.teamName,
+    required this.round,
+  });
 
   @override
   ConsumerState<PdfReportButton> createState() => _PdfReportButtonState();
@@ -19,56 +23,37 @@ class PdfReportButton extends ConsumerStatefulWidget {
 
 class _PdfReportButtonState extends ConsumerState<PdfReportButton> {
   bool _downloading = false;
-  double _progress = 0;
+  final double _progress = 0;
   String? _error;
 
+  /// Opens the print-ready round report in the browser. The backend serves an
+  /// HTML report at /api/reports/round-report/:teamId/:round (the website opens
+  /// it in a new tab; the user saves it as PDF via the print dialog).
   Future<void> _downloadReport() async {
     setState(() {
       _downloading = true;
-      _progress = 0;
       _error = null;
     });
 
+    // Backend only accepts rounds 1–3.
+    final round = widget.round < 1 ? 1 : (widget.round > 3 ? 3 : widget.round);
+    final uri = Uri.parse(
+      '${AppConstants.baseUrl}${AppConstants.apiPrefix}/reports/round-report/${widget.teamId}/$round',
+    );
+
     try {
-      final api = ref.read(apiClientProvider);
-      final dir = await getApplicationDocumentsDirectory();
-      final filePath = '${dir.path}/finplay_report_team${widget.teamId}.pdf';
-
-      await api.dio.download(
-        '${AppConstants.baseUrl}${AppConstants.apiPrefix}/reports/pdf?teamId=${widget.teamId}',
-        filePath,
-        onReceiveProgress: (received, total) {
-          if (total > 0 && mounted) {
-            setState(() => _progress = received / total);
-          }
-        },
-      );
-
-      if (mounted) {
-        setState(() => _downloading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Report saved to $filePath'),
-            backgroundColor: AppColors.secondary,
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(label: 'OK', textColor: Colors.white, onPressed: () {}),
-          ),
-        );
-      }
-    } on DioException catch (e) {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (mounted) {
         setState(() {
           _downloading = false;
-          _error = e.response?.statusCode == 404
-              ? 'Report not available yet'
-              : 'Download failed';
+          if (!ok) _error = 'Could not open report';
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _downloading = false;
-          _error = 'Download failed';
+          _error = 'Could not open report';
         });
       }
     }
