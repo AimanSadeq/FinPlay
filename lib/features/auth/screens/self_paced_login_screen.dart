@@ -28,6 +28,9 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
   bool _isRegister = false;
   bool _obscurePassword = true;
   bool _voucherRequired = false; // self-paced sign-up gated behind an access code
+  bool _voucherChecking = false;
+  bool? _voucherValid; // null = unchecked, true = applied, false = invalid
+  String? _voucherCheckedCode;
   late AnimationController _bgController;
 
   // Blue theme matching website (bg-blue-600, from-blue-50, to-indigo-100)
@@ -57,6 +60,26 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
         _isRegister = true;
       });
     }
+  }
+
+  /// Pre-validate the typed access code and show applied/invalid feedback.
+  Future<void> _validateVoucher(String raw) async {
+    final code = raw.trim();
+    if (code.length < 4) {
+      if (mounted) setState(() { _voucherValid = null; _voucherCheckedCode = null; });
+      return;
+    }
+    if (code == _voucherCheckedCode) return; // already checked this exact code
+    setState(() { _voucherChecking = true; });
+    final res = await ref.read(facilitatorRepositoryProvider).validateVoucher(code);
+    if (!mounted) return;
+    // Ignore a stale result if the user kept typing.
+    if (_voucherController.text.trim() != code) return;
+    setState(() {
+      _voucherChecking = false;
+      _voucherValid = res.valid;
+      _voucherCheckedCode = code;
+    });
   }
 
   @override
@@ -385,9 +408,24 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                                     textCapitalization: TextCapitalization.characters,
                                     style: GoogleFonts.jetBrainsMono(
                                         fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+                                    onChanged: _validateVoucher,
                                     decoration: InputDecoration(
                                       labelText: s.tr('Access Code', 'رمز الدخول'),
                                       prefixIcon: const Icon(Icons.vpn_key_rounded, size: 20),
+                                      suffixIcon: _voucherChecking
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(12),
+                                              child: SizedBox(
+                                                  width: 16, height: 16,
+                                                  child: CircularProgressIndicator(strokeWidth: 2)),
+                                            )
+                                          : _voucherValid == true
+                                              ? const Icon(Icons.check_circle_rounded,
+                                                  color: AppColors.secondary, size: 20)
+                                              : _voucherValid == false
+                                                  ? const Icon(Icons.error_rounded,
+                                                      color: AppColors.danger, size: 20)
+                                                  : null,
                                       hintText: s.tr('Enter your access code', 'أدخل رمز الدخول'),
                                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                                       filled: true,
@@ -399,9 +437,20 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
-                                    s.tr('A valid access code is required to create an account.',
-                                        'مطلوب رمز دخول صالح لإنشاء حساب.'),
-                                    style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+                                    _voucherValid == true
+                                        ? s.tr('✓ Access code applied.', '✓ تم تطبيق رمز الدخول.')
+                                        : _voucherValid == false
+                                            ? s.tr('This access code is not valid.',
+                                                'رمز الدخول هذا غير صالح.')
+                                            : s.tr('A valid access code is required to create an account.',
+                                                'مطلوب رمز دخول صالح لإنشاء حساب.'),
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        color: _voucherValid == true
+                                            ? AppColors.secondary
+                                            : _voucherValid == false
+                                                ? AppColors.danger
+                                                : AppColors.textTertiary(context)),
                                   ),
                                 ],
                               ),

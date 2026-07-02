@@ -246,16 +246,28 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   // Self-paced simulation unlocks once every content module's Learn is complete.
   bool _selfPacedSimUnlocked = false;
   Timer? _statusPollTimer;
+  // Whether the facilitator has enabled research mode (gates the research entry).
+  bool _researchEnabled = false;
 
   bool get _isSelfPaced {
     final auth = ref.read(authProvider);
     return auth.user != null && !auth.isFacilitator;
   }
 
+  Future<void> _fetchResearchConfig() async {
+    try {
+      final res = await ref.read(apiClientProvider).get(ApiEndpoints.researchConfig);
+      if (mounted) setState(() => _researchEnabled = res['enabled'] == true);
+    } catch (_) {
+      // Default off when unknown.
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _loadProgress();
+    _fetchResearchConfig();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkMandatedAssessment());
     if (_isSelfPaced) {
       // Self-paced: progressive unlock — each module opens once the previous
@@ -468,6 +480,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                         completionPercent: completion,
                         isPassed: passed,
                         ar: ref.watch(stringsProvider).ar,
+                        isSelfPaced: _isSelfPaced,
                         // Refresh progressive unlocks when returning from a module.
                         onTap: () => context.push(m.route).then((_) {
                           if (mounted) _loadProgress();
@@ -1215,15 +1228,19 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        _ExtraButton(
-          icon: Icons.science_rounded,
-          label: s.tr('Research Participation', 'المشاركة في البحث'),
-          sublabel: s.tr('Consent & questionnaires (voluntary)',
-              'الموافقة والاستبيانات (اختياري)'),
-          color: AppColors.purple,
-          onTap: () => context.push('/research'),
-        ),
+        // Research participation is only offered when the facilitator has
+        // enabled RESEARCH_MODE (website parity — off by default).
+        if (_researchEnabled) ...[
+          const SizedBox(height: 12),
+          _ExtraButton(
+            icon: Icons.science_rounded,
+            label: s.tr('Research Participation', 'المشاركة في البحث'),
+            sublabel: s.tr('Consent & questionnaires (voluntary)',
+                'الموافقة والاستبيانات (اختياري)'),
+            color: AppColors.purple,
+            onTap: () => context.push('/research'),
+          ),
+        ],
       ],
     );
   }
@@ -1293,6 +1310,7 @@ class _ModuleCard extends StatefulWidget {
   final int completionPercent;
   final bool isPassed;
   final bool ar;
+  final bool isSelfPaced;
   final VoidCallback? onTap;
 
   const _ModuleCard({
@@ -1301,6 +1319,7 @@ class _ModuleCard extends StatefulWidget {
     required this.completionPercent,
     required this.isPassed,
     required this.ar,
+    this.isSelfPaced = false,
     this.onTap,
   });
 
@@ -1653,11 +1672,18 @@ class _ModuleCardState extends State<_ModuleCard> {
                               size: 11,
                               color: AppColors.textTertiary(context)),
                           const SizedBox(width: 4),
-                          Text(
-                            widget.ar ? 'مقفل من قبل الميسّر' : 'Locked by facilitator',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppColors.textTertiary(context),
+                          Flexible(
+                            child: Text(
+                              widget.isSelfPaced
+                                  ? (widget.ar
+                                      ? 'أكمل الوحدة السابقة لفتحها'
+                                      : 'Complete the previous module to unlock')
+                                  : (widget.ar ? 'مقفل من قبل الميسّر' : 'Locked by facilitator'),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: AppColors.textTertiary(context),
+                              ),
                             ),
                           ),
                         ],

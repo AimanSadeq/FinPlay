@@ -16,6 +16,7 @@ import '../../widgets/games/ordering_game.dart';
 import '../../widgets/games/quiz_widget.dart';
 import '../../widgets/games/statement_builder_game.dart';
 import '../../widgets/games/case_scenario_game.dart';
+import '../../widgets/slide_narration_bar.dart';
 import 'gov_module_data.dart';
 import 'case_scenario_data.dart';
 
@@ -505,6 +506,19 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
                     ),
                   ),
                 ],
+                const SizedBox(height: 16),
+                // AI audio narration for this slide (website parity). Keyed per
+                // slide so navigating away disposes the player (auto-stop).
+                SlideNarrationBar(
+                  key: ValueKey('narration-${_module.id}-$_currentSlide'),
+                  moduleId: _module.id,
+                  sectionId: '$_currentSlide',
+                  text: [
+                    slides[_currentSlide]['title'],
+                    slides[_currentSlide]['content'],
+                    slides[_currentSlide]['keyPoint'],
+                  ].where((t) => t != null && t.isNotEmpty).join('\n\n'),
+                ),
                 const SizedBox(height: 20),
                 Row(
                   children: [

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../providers/self_paced_provider.dart';
 import '../../../providers/repository_providers.dart';
@@ -175,21 +176,24 @@ class _SelfPacedScenarioPanelState
     try {
       final repo = ref.read(selfPacedRepositoryProvider);
 
-      // Step 1: Save each selected scenario
+      // Step 1: Save all selected decisions in ONE batch request (website
+      // parity, 82ee448 — replaces the per-scenario POST loop).
+      final batch = <Map<String, dynamic>>[];
       for (final id in _selectedIds) {
         final scenario = _scenarios.firstWhere(
           (s) => _scenarioId(s) == id,
           orElse: () => <String, dynamic>{},
         );
-        await repo.saveDecision(
-          round: widget.round,
-          module: widget.module,
-          scenarioId: id,
-          data: {
-            'amount': _amounts[id] ?? scenario['amount'] ?? 0,
-          },
-        );
+        batch.add({
+          'scenarioId': id,
+          'amount': _amounts[id] ?? scenario['amount'] ?? 0,
+        });
       }
+      await repo.saveDecisionsBulk(
+        round: widget.round,
+        module: widget.module,
+        decisions: batch,
+      );
 
       // Step 2: Complete module on backend — returns the NEW state
       // Response: { success, progress: { currentRound, currentModule } }
@@ -461,7 +465,9 @@ class _SelfPacedScenarioPanelState
           _OperatingCompleteAlert(
             round: widget.round,
             decisionCount: _selectedIds.length,
-            onMoveToNext: _moveToNext,
+            // The round ends on the dashboard (results review) before the next
+            // round begins — website parity (5e0c6f4).
+            onMoveToNext: () => context.go('/dashboard'),
           ),
 
         const SizedBox(height: 8),
@@ -671,7 +677,9 @@ class _OperatingCompleteAlert extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLastRound = round >= 3;
-    final nextLabel = isLastRound ? 'Complete Game' : 'Continue to Round ${round + 1}';
+    // Route to the dashboard to review results; the dashboard then proceeds to
+    // the next round (website parity — no in-place round skip).
+    final nextLabel = isLastRound ? 'View Final Results' : 'View Round $round Results';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

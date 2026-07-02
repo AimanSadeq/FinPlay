@@ -11,6 +11,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/financial_provider.dart';
 import '../../../providers/game_state_provider.dart';
+import '../../../providers/self_paced_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../providers/game_metrics_provider.dart';
 import '../../../shared/widgets/animated_counter.dart';
@@ -61,12 +62,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _loadedTabs.add(tabIndex);
     // Lazy-load the statement for this tab
     final team = ref.read(teamProvider).selectedTeam;
-    final auth = ref.read(authProvider);
-    final teamId = team?.id ?? (auth.user != null ? 'Team 1' : null);
-    if (teamId == null) return;
+    // Self-paced learners have no per-statement endpoint; the per-learner batch
+    // dashboard already populated all four statements, so skip lazy loading.
+    if (team == null) return;
     final round = _selectedRound > 0 ? _selectedRound : _activeRound;
     const statements = ['income', 'balance', 'cashflow', 'ratios'];
-    ref.read(financialProvider.notifier).fetchStatement(teamId, statements[tabIndex], round: round);
+    ref.read(financialProvider.notifier).fetchStatement(team.id, statements[tabIndex], round: round);
   }
 
   static const _analyticsItems = <(String, String, IconData, Color, String)>[
@@ -217,11 +218,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     if (team != null) {
       ref.read(financialProvider.notifier).refreshAll(team.id, round: round);
     } else if (auth.user != null && !auth.isFacilitator) {
-      // Self-paced: use Team 1 data as proxy
-      ref.read(financialProvider.notifier).refreshAll('Team 1', round: round);
+      _loadSelfPacedData();
     } else {
       ref.read(financialProvider.notifier).fetchLeaderboard(round: round);
     }
+  }
+
+  /// Self-paced: per-learner dashboard computed from the learner's OWN decisions
+  /// (shock-isolated). The displayed round is the latest COMPLETED round
+  /// (currentRound-1), matching the website's spDisplayRound.
+  Future<void> _loadSelfPacedData() async {
+    await ref.read(selfPacedProvider.notifier).fetchProgress();
+    if (!mounted) return;
+    final round = _selectedRound > 0 ? _selectedRound : _activeRound;
+    if (round <= 0) return; // no completed rounds yet — nothing to display
+    ref.read(financialProvider.notifier).refreshAll('self', round: round, selfPaced: true);
   }
 
   void _onRoundSelected(int round) {
@@ -234,7 +245,64 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     _loadData();
   }
 
+  /// Self-paced mid-game "Continue to Round N" CTA. The round ends on the
+  /// dashboard (results review) before proceeding to the next round (5e0c6f4).
+  Widget _buildSelfPacedContinueCta(BuildContext context, AppStrings s) {
+    final sp = ref.watch(selfPacedProvider);
+    final isComplete = sp.currentRound >= 3 && sp.currentModule == 'complete';
+    final displayRound = _activeRound; // latest completed round
+    if (isComplete || displayRound <= 0) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: GlassCard(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              const Icon(Icons.flag_circle_rounded, color: AppColors.secondary, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      s.tr('Round $displayRound results are in',
+                          'نتائج الجولة $displayRound جاهزة'),
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      s.tr('Review your statements & analytics below, then continue.',
+                          'راجع قوائمك وتحليلاتك أدناه، ثم تابع.'),
+                      style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: () => context.go('/simulation'),
+                icon: const Icon(Icons.trending_up_rounded, size: 16),
+                label: Text(s.tr('Continue to Round ${sp.currentRound}',
+                    'متابعة إلى الجولة ${sp.currentRound}')),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.secondary),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   int get _activeRound {
+    // Self-paced: the active round to DISPLAY is the latest completed round
+    // (currentRound-1), or 3 when the game is complete — website's spDisplayRound.
+    final team = ref.read(teamProvider).selectedTeam;
+    final auth = ref.read(authProvider);
+    if (team == null && auth.user != null && !auth.isFacilitator) {
+      final sp = ref.read(selfPacedProvider);
+      final complete = sp.currentRound >= 3 && sp.currentModule == 'complete';
+      return complete ? 3 : (sp.currentRound - 1).clamp(0, 3);
+    }
     final gs = ref.read(gameStateProvider);
     return gs.whenOrNull(data: (g) => g.currentRound) ?? 1;
   }
@@ -391,6 +459,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                   ),
                 ),
+
+                // Self-paced: the round ends here on the dashboard. Once results
+                // are in, this proceeds to the next round (website parity).
+                if (isSelfPaced) _buildSelfPacedContinueCta(context, s),
 
                 // Feature 1: Round Selector
                 SliverToBoxAdapter(

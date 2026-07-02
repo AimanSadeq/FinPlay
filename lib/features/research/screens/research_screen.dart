@@ -11,6 +11,7 @@ import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../data/research_instruments.dart';
 import '../../../app/i18n/app_strings.dart';
+import '../../../providers/locale_provider.dart';
 
 /// Research / DBA data-collection flow: consent → instrument hub → forms.
 /// Responses are stored locally and submitted to the backend best-effort.
@@ -45,24 +46,59 @@ class _ResearchScreenState extends ConsumerState<ResearchScreen> {
   Future<void> _markConsented() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('research_consented', true);
+    final lang = ref.read(isArabicProvider) ? 'ar' : 'en';
     try {
-      await ref.read(apiClientProvider).post(ApiEndpoints.researchConsent,
-          data: {'consentToParticipate': true, 'consentToDataUse': true});
+      // The backend mints a pseudonymous participant code on consent; every
+      // later descriptor/response POST is keyed by it, so persist it.
+      final res = await ref.read(apiClientProvider).post(
+        ApiEndpoints.researchConsent,
+        data: {
+          'consentToParticipate': true,
+          'consentToDataUse': true,
+          'language': lang,
+        },
+      );
+      final code = res['participantCode'] as String?;
+      if (code != null) await prefs.setString('research_participant_code', code);
     } catch (_) {}
     if (mounted) setState(() => _consented = true);
   }
 
+  /// hubKey is the hub entry (e.g. self_efficacy_pre); instrument.key is the
+  /// backend instrument key (self_efficacy). Descriptors POST flat fields; all
+  /// other instruments POST to /research/response with phase/day + version.
   Future<void> _completeInstrument(
-      String key, Map<String, dynamic> answers) async {
+      String hubKey, ResearchInstrument instrument,
+      Map<String, dynamic> answers) async {
     final prefs = await SharedPreferences.getInstance();
-    _completed.add(key);
+    _completed.add(hubKey);
     await prefs.setStringList('research_completed', _completed.toList());
+    final code = prefs.getString('research_participant_code');
     try {
-      final path = key == 'descriptors'
-          ? ApiEndpoints.researchDescriptors
-          : ApiEndpoints.researchResponse;
-      await ref.read(apiClientProvider).post(path,
-          data: {'instrumentKey': key, 'answers': answers});
+      final api = ref.read(apiClientProvider);
+      if (hubKey == 'descriptors') {
+        await api.post(ApiEndpoints.researchDescriptors, data: {
+          'participantCode': code,
+          'role': answers['role'],
+          'orgType': answers['orgType'],
+          'sector': answers['sector'],
+          'experienceBand': answers['experienceBand'],
+          'education': answers['education'],
+          'priorFinanceTraining': answers['priorFinanceTraining'],
+          'priorFinanceHours': answers['priorFinanceHours'],
+        });
+      } else {
+        String? phase;
+        if (hubKey == 'self_efficacy_pre') phase = 'pre';
+        if (hubKey == 'self_efficacy_post') phase = 'post';
+        await api.post(ApiEndpoints.researchResponse, data: {
+          'participantCode': code,
+          'instrumentKey': instrument.key,
+          'phase': ?phase,
+          'version': kResearchInstrumentsVersion,
+          'answers': answers,
+        });
+      }
     } catch (_) {}
     if (mounted) setState(() {});
   }
@@ -277,7 +313,7 @@ class _ResearchScreenState extends ConsumerState<ResearchScreen> {
       ),
     );
     if (result != null) {
-      await _completeInstrument(key, result);
+      await _completeInstrument(key, instrument, result);
     }
   }
 

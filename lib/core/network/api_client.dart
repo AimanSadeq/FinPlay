@@ -126,6 +126,15 @@ class ApiClient {
     return {'success': true, 'data': response.data};
   }
 
+  /// PATCH
+  Future<Map<String, dynamic>> patch(String path, {dynamic data}) async {
+    final response = await _dio.patch(path, data: data);
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {'success': true, 'data': response.data};
+  }
+
   /// DELETE
   Future<Map<String, dynamic>> delete(String path) async {
     final response = await _dio.delete(path);

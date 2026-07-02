@@ -3,6 +3,7 @@ import '../data/models/financial_data.dart';
 import 'repository_providers.dart';
 import 'team_provider.dart';
 import 'auth_provider.dart';
+import 'self_paced_provider.dart';
 
 /// Per-round financials for the current team, indexed by round
 /// (0 = baseline, 1..3 = rounds). This is the "game-data binding" layer that
@@ -50,13 +51,20 @@ class GameMetricsNotifier extends StateNotifier<GameMetricsState> {
   GameMetricsNotifier(this.ref) : super(const GameMetricsState());
 
   /// Resolve the team whose history we should plot. Team mode uses the selected
-  /// team; self-paced users map to "Team 1" (matching the dashboard).
+  /// team. Self-paced learners have no team — their history is computed from
+  /// their OWN decisions via the per-learner endpoint (see [_isSelfPaced]).
   String? _resolveTeamId() {
     final team = ref.read(teamProvider).selectedTeam;
     if (team != null) return team.id;
     final auth = ref.read(authProvider);
-    if (auth.user != null) return 'Team 1';
+    if (auth.user != null) return 'self'; // sentinel; not sent for self-paced
     return null;
+  }
+
+  bool get _isSelfPaced {
+    final team = ref.read(teamProvider).selectedTeam;
+    final auth = ref.read(authProvider);
+    return team == null && auth.user != null;
   }
 
   Future<void> load({bool force = false}) async {
@@ -67,14 +75,27 @@ class GameMetricsNotifier extends StateNotifier<GameMetricsState> {
       state = state.copyWith(loaded: true);
       return;
     }
+    final selfPaced = _isSelfPaced;
+
+    // Self-paced learners must only see rounds they've actually played; the
+    // engine can project future rounds but the website hides them (eb0bf79).
+    int maxRound = 3;
+    if (selfPaced) {
+      final sp = ref.read(selfPacedProvider);
+      maxRound = sp.currentModule == 'complete'
+          ? 3
+          : (sp.currentRound - 1).clamp(0, 3);
+    }
+
     state = state.copyWith(isLoading: true);
     final repo = ref.read(gameRepositoryProvider);
     final results = List<FinancialData?>.filled(4, null);
     await Future.wait([
       for (var r = 0; r < 4; r++)
         () async {
+          if (r > maxRound) return; // unplayed future round — leave null
           try {
-            results[r] = await repo.fetchFinancialData(teamId, round: r);
+            results[r] = await repo.fetchFinancialData(teamId, round: r, selfPaced: selfPaced);
           } catch (_) {
             // Round not played / unavailable — leave null.
           }

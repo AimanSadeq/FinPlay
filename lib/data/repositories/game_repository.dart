@@ -37,20 +37,31 @@ class GameRepository {
     return list.map((e) => Team.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// Fetch ALL financial data in one batch call (like website's /dashboard-data)
-  Future<FinancialData> fetchDashboardData(String teamId, {int? round}) async {
+  /// Fetch ALL financial data in one batch call (like website's /dashboard-data).
+  /// When [selfPaced] is true, hits the per-learner endpoint (scoped to the
+  /// learner's OWN decisions, shock-isolated) which returns the same shape; the
+  /// learner is identified by the auth bearer, so teamId is not sent.
+  Future<FinancialData> fetchDashboardData(String teamId,
+      {int? round, bool selfPaced = false}) async {
     final effectiveRound = round ?? 1;
-    final cacheKey = 'dashboard_${teamId}_r$effectiveRound';
+    final cacheKey = selfPaced
+        ? 'sp_dashboard_r$effectiveRound'
+        : 'dashboard_${teamId}_r$effectiveRound';
     final cached = await _cache.get(cacheKey, maxAge: const Duration(minutes: 2));
     if (cached != null && cached.containsKey('data')) {
       return _parseDashboardResponse(cached, teamId, effectiveRound);
     }
 
-    final response = await _api.get(ApiEndpoints.dashboardData, params: {
-      'teamId': teamId,
-      'currentRound': effectiveRound,
-      'previousRound': effectiveRound > 1 ? effectiveRound - 1 : 0,
-    });
+    final response = selfPaced
+        ? await _api.get(ApiEndpoints.selfPacedProgressDashboardData, params: {
+            'currentRound': effectiveRound,
+            'previousRound': effectiveRound > 1 ? effectiveRound - 1 : 0,
+          })
+        : await _api.get(ApiEndpoints.dashboardData, params: {
+            'teamId': teamId,
+            'currentRound': effectiveRound,
+            'previousRound': effectiveRound > 1 ? effectiveRound - 1 : 0,
+          });
     await _cache.set(cacheKey, response);
     return _parseDashboardResponse(response, teamId, effectiveRound);
   }
@@ -87,9 +98,10 @@ class GameRepository {
   }
 
   /// Fetch all 4 statement types in parallel (use for full refresh)
-  Future<FinancialData> fetchFinancialData(String teamId, {int? round}) async {
+  Future<FinancialData> fetchFinancialData(String teamId,
+      {int? round, bool selfPaced = false}) async {
     // Use the batch endpoint for speed
-    return fetchDashboardData(teamId, round: round);
+    return fetchDashboardData(teamId, round: round, selfPaced: selfPaced);
   }
 
   Future<List<LeaderboardEntry>> fetchLeaderboard({int? round}) async {

@@ -2,6 +2,10 @@
 /// Used by the consent → demographics → questionnaire flow.
 library;
 
+/// Mirrors shared/research-instruments.ts RESEARCH_INSTRUMENTS_VERSION on the
+/// website. Sent with every instrument response so analysis can version answers.
+const int kResearchInstrumentsVersion = 1;
+
 enum FieldType { likert5, text, singleSelect, boolean, nps }
 
 class ResearchField {

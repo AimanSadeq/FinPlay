@@ -52,10 +52,10 @@ class FinancialNotifier extends StateNotifier<FinancialState> {
 
   FinancialNotifier(this._repo) : super(const FinancialState());
 
-  Future<void> fetchTeamFinancials(String teamId, {int? round}) async {
+  Future<void> fetchTeamFinancials(String teamId, {int? round, bool selfPaced = false}) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final data = await _repo.fetchFinancialData(teamId, round: round);
+      final data = await _repo.fetchFinancialData(teamId, round: round, selfPaced: selfPaced);
       state = state.copyWith(teamFinancials: data, isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -98,10 +98,12 @@ class FinancialNotifier extends StateNotifier<FinancialState> {
     }
   }
 
-  /// Fast initial load: fetch dashboard + leaderboard in true parallel
-  Future<void> refreshAll(String teamId, {int? round}) async {
+  /// Fast initial load: fetch dashboard + leaderboard in true parallel.
+  /// For self-paced learners the dashboard is per-learner and there is no team
+  /// leaderboard, so the leaderboard fetch is skipped.
+  Future<void> refreshAll(String teamId, {int? round, bool selfPaced = false}) async {
     // ignore: avoid_print
-    print('[FinancialProvider] refreshAll called: teamId=$teamId, round=$round');
+    print('[FinancialProvider] refreshAll called: teamId=$teamId, round=$round, selfPaced=$selfPaced');
     // Keep previous leaderboard visible while loading new data
     state = state.copyWith(
       isLoading: true,
@@ -111,9 +113,10 @@ class FinancialNotifier extends StateNotifier<FinancialState> {
     );
 
     // Launch both requests simultaneously
-    final dashboardFuture = _repo.fetchDashboardData(teamId, round: round);
-    final leaderboardFuture = _repo.fetchLeaderboard(round: round)
-        .timeout(const Duration(seconds: 15));
+    final dashboardFuture = _repo.fetchDashboardData(teamId, round: round, selfPaced: selfPaced);
+    final leaderboardFuture = selfPaced
+        ? null
+        : _repo.fetchLeaderboard(round: round).timeout(const Duration(seconds: 15));
 
     // Dashboard data arrives first (1 API call) → unblock the UI
     try {
@@ -127,6 +130,7 @@ class FinancialNotifier extends StateNotifier<FinancialState> {
       if (mounted) state = state.copyWith(isLoading: false, error: e.toString());
     }
 
+    if (leaderboardFuture == null) return;
     // Leaderboard arrives later (calculates scores for all teams) → update when ready
     try {
       final lb = await leaderboardFuture;

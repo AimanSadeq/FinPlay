@@ -53,6 +53,26 @@ class SelfPacedRepository {
     });
   }
 
+  /// POST /self-paced/progress/decisions — batch save all of a module's
+  /// decisions in one request (website parity, 82ee448). [decisions] is a list
+  /// of { scenarioId, amount }.
+  Future<Map<String, dynamic>> saveDecisionsBulk({
+    required int round,
+    required String module,
+    required List<Map<String, dynamic>> decisions,
+  }) async {
+    return _api.post(ApiEndpoints.selfPacedProgressDecisions, data: {
+      'roundNum': round,
+      'module': module,
+      'decisions': decisions
+          .map((d) => {
+                'scenarioId': d['scenarioId'],
+                'amount': d['amount'] ?? 0,
+              })
+          .toList(),
+    });
+  }
+
   /// POST /self-paced/progress/complete-module
   Future<Map<String, dynamic>> completeModule() async {
     return _api.post(ApiEndpoints.selfPacedCompleteModule);

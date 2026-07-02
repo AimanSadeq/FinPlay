@@ -102,6 +102,11 @@ class ApiEndpoints {
   static const String govEducationQuiz = '/gov-education/quiz';
   static const String govEducationLeaderboard = '/gov-education/leaderboard';
 
+  // Narration (AI audio for Learn slides)
+  // POST /narration/prepare {moduleId,sectionId,language,text} -> {audioUrl,...}
+  static const String narrationPrepare = '/narration/prepare';
+  static const String narrationAudio = '/narration/audio';
+
   // Cache
   static const String cacheClear = '/cache/clear';
 
@@ -130,6 +135,10 @@ class ApiEndpoints {
   static const String researchConsent = '/research/consent';
   static const String researchDescriptors = '/research/descriptors';
   static const String researchResponse = '/research/response';
+  // GET /research/participant/{code} -> resume status; facilitator-only below.
+  static const String researchParticipant = '/research/participant';
+  static const String researchMode = '/research/mode'; // facilitator toggle
+  static const String researchExport = '/research/export.xlsx'; // facilitator
 
   // Facilitator model editor (admin)
   static const String modelAssumptions = '/facilitator/model/assumptions';
@@ -160,6 +169,8 @@ class ApiEndpoints {
   static const String vouchers = '/vouchers';
   static const String vouchersGating = '/vouchers/gating';
   static const String vouchersRedemptions = '/vouchers/redemptions';
+  // Pre-validate an access code at sign-up: POST {code} -> { valid, reason }.
+  static const String vouchersValidate = '/vouchers/validate';
 
   // Assessments admin
   static const String assessmentsAdminList = '/assessments/admin/list';
@@ -179,6 +190,9 @@ class ApiEndpoints {
   static const String selfPacedProgressReset = '/self-paced/progress/reset';
   static const String selfPacedProgressEducation = '/self-paced/progress/education';
   static const String selfPacedProgressEducationComplete = '/self-paced/progress/education/complete';
+  // Per-learner dashboard (same shape as /dashboard-data, scoped to the
+  // learner's own decisions + shock-isolated).
+  static const String selfPacedProgressDashboardData = '/self-paced/progress/dashboard-data';
 
   // Gamification
   static const String gamificationStart = '/sheets/gamification/start';

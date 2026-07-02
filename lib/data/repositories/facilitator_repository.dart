@@ -512,8 +512,20 @@ class FacilitatorRepository {
   }
 
   Future<bool> updateVoucher(String id, Map<String, dynamic> changes) async {
-    final res = await _api.put('${ApiEndpoints.vouchers}/${Uri.encodeComponent(id)}', data: changes);
+    // Backend exposes PATCH /vouchers/:id (no PUT route).
+    final res = await _api.patch('${ApiEndpoints.vouchers}/${Uri.encodeComponent(id)}', data: changes);
     return res['success'] == true;
+  }
+
+  /// Pre-validate an access code (used by the self-paced sign-up screen to show
+  /// applied/invalid feedback). Returns (valid, reason).
+  Future<({bool valid, String? reason})> validateVoucher(String code) async {
+    try {
+      final res = await _api.post(ApiEndpoints.vouchersValidate, data: {'code': code});
+      return (valid: res['valid'] == true, reason: res['reason'] as String?);
+    } catch (_) {
+      return (valid: false, reason: null);
+    }
   }
 
   Future<bool> deleteVoucher(String id) async {

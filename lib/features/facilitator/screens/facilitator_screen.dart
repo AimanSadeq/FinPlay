@@ -12,6 +12,7 @@ import '../../../core/utils/constants.dart';
 import '../../../data/models/game_state.dart';
 import '../../../data/models/shock.dart';
 import '../../../data/repositories/facilitator_repository.dart';
+import '../../../core/network/api_endpoints.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/game_state_provider.dart';
@@ -973,6 +974,10 @@ class _ControlsTabState extends State<_ControlsTab> {
             ),
           ]),
         ),
+        const SizedBox(height: 12),
+
+        // Research (DBA) mode toggle — gates the learner-facing research flow.
+        const _ResearchModeCard(),
       ],
     );
     });
@@ -4320,6 +4325,74 @@ class _CheckStat extends StatelessWidget {
         Text(value, style: GoogleFonts.jetBrainsMono(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
         Text(label, style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context))),
       ],
+    );
+  }
+}
+
+/// Facilitator toggle for RESEARCH_MODE (DBA study). Mirrors the website's
+/// ResearchModeToggle — when on, learners are offered the research flow.
+class _ResearchModeCard extends ConsumerStatefulWidget {
+  const _ResearchModeCard();
+
+  @override
+  ConsumerState<_ResearchModeCard> createState() => _ResearchModeCardState();
+}
+
+class _ResearchModeCardState extends ConsumerState<_ResearchModeCard> {
+  bool _enabled = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final res = await ref.read(apiClientProvider).get(ApiEndpoints.researchConfig);
+      if (mounted) setState(() { _enabled = res['enabled'] == true; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _toggle(bool value) async {
+    setState(() => _enabled = value);
+    try {
+      await ref.read(apiClientProvider).post(ApiEndpoints.researchMode, data: {'enabled': value});
+    } catch (_) {
+      if (mounted) setState(() => _enabled = !value); // revert on failure
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(children: [
+        Container(
+          width: 44, height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.purple.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.science_rounded, color: AppColors.purple, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(s.tr('Research Mode (DBA)', 'وضع البحث'), style: Theme.of(context).textTheme.titleMedium),
+            Text(s.tr('Offer consent & questionnaires to learners', 'عرض الموافقة والاستبيانات على المتعلمين'),
+                style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+          ],
+        )),
+        _loading
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+            : Switch(value: _enabled, activeThumbColor: AppColors.purple, onChanged: _toggle),
+      ]),
     );
   }
 }
