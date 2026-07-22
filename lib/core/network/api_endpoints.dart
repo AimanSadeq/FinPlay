@@ -118,6 +118,9 @@ class ApiEndpoints {
 
   // Self-Paced Auth (backend mounts at /api/self-paced)
   static const String selfPacedRegister = '/self-paced/register';
+  // Step 1 of verified sign-up: emails a 6-digit code. POST {email} ->
+  // { success, message }. 15-min expiry, 60s resend cooldown, 5-attempt cap.
+  static const String selfPacedRequestVerification = '/self-paced/request-verification';
   static const String selfPacedLogin = '/self-paced/login';
   static const String selfPacedLogout = '/self-paced/logout';
   static const String selfPacedProfile = '/self-paced/profile';

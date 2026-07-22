@@ -3,6 +3,14 @@ class SelfPacedUser {
   final String email;
   final String displayName;
   final String? teamName;
+  // Verified self-paced registration profile (website parity). The server
+  // derives displayName as "$firstName $lastName" and returns these on the user.
+  final String? firstName;
+  final String? lastName;
+  final String? title;
+  final String? company;
+  final String? phone;
+  final String? city;
   final String role;
   final int currentRound;
   final String currentModule;
@@ -15,6 +23,12 @@ class SelfPacedUser {
     required this.email,
     required this.displayName,
     this.teamName,
+    this.firstName,
+    this.lastName,
+    this.title,
+    this.company,
+    this.phone,
+    this.city,
     this.role = 'participant',
     this.currentRound = 1,
     this.currentModule = 'financing',
@@ -29,6 +43,12 @@ class SelfPacedUser {
       email: json['email'] as String? ?? '',
       displayName: json['displayName'] as String? ?? '',
       teamName: json['teamName'] as String?,
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
+      title: json['title'] as String?,
+      company: json['company'] as String?,
+      phone: json['phone'] as String?,
+      city: json['city'] as String?,
       role: json['role'] as String? ?? 'participant',
       currentRound: json['currentRound'] as int? ?? 1,
       currentModule: json['currentModule'] as String? ?? 'financing',
@@ -54,6 +74,12 @@ class SelfPacedUser {
     'email': email,
     'displayName': displayName,
     'teamName': teamName,
+    'firstName': firstName,
+    'lastName': lastName,
+    'title': title,
+    'company': company,
+    'phone': phone,
+    'city': city,
     'role': role,
     'currentRound': currentRound,
     'currentModule': currentModule,

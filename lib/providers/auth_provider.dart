@@ -104,7 +104,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         'password': password,
       });
       if (response['success'] == true) {
-        return _parseAuthResponse(response);
+        final ok = _parseAuthResponse(response);
+        // Cross-device parity: pull server-side progress on login so work
+        // follows the learner across devices (website hydrates on login too).
+        if (ok) _hydrateProgress();
+        return ok;
       }
       state = state.copyWith(
         status: AuthStatus.unauthenticated,
@@ -120,16 +124,70 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> registerSelfPaced(String email, String password, String displayName,
-      {String? teamName, String? voucherCode}) async {
+  /// Fire-and-forget: refresh the self-paced game progress from the server after
+  /// a login so a fresh device shows the learner's saved round/module + decisions.
+  void _hydrateProgress() {
+    try {
+      _ref.read(selfPacedProvider.notifier).fetchProgress();
+    } catch (_) {/* non-critical; the self-paced screens also hydrate */}
+  }
+
+  /// Step 1 of verified sign-up (website parity): request a 6-digit code emailed
+  /// to [email]. Returns true when the server confirms the code was sent. On
+  /// failure the reason (invalid email, already registered, resend cooldown,
+  /// email service down) is surfaced via [state.error].
+  Future<bool> requestVerification(String email) async {
+    state = state.copyWith(status: AuthStatus.loading, error: null);
+    try {
+      final response = await _api.post(
+        ApiEndpoints.selfPacedRequestVerification,
+        data: {'email': email},
+      );
+      if (response['success'] == true) {
+        state = state.copyWith(status: AuthStatus.unauthenticated, error: null);
+        return true;
+      }
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: response['error']?.toString() ?? 'Could not send verification code',
+      );
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: e.toString(),
+      );
+      return false;
+    }
+  }
+
+  /// Step 2 of verified sign-up: create the account with the emailed
+  /// [verificationCode]. The server derives displayName as "$firstName $lastName".
+  Future<bool> registerSelfPaced({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String title,
+    required String company,
+    required String phone,
+    required String city,
+    required String verificationCode,
+    String? voucherCode,
+  }) async {
     state = state.copyWith(status: AuthStatus.loading, error: null);
     try {
       final data = <String, dynamic>{
         'email': email,
         'password': password,
-        'displayName': displayName,
+        'firstName': firstName,
+        'lastName': lastName,
+        'title': title,
+        'company': company,
+        'phone': phone,
+        'city': city,
+        'verificationCode': verificationCode,
       };
-      if (teamName != null) data['teamName'] = teamName;
       if (voucherCode != null && voucherCode.isNotEmpty) data['voucherCode'] = voucherCode;
       final response = await _api.post(ApiEndpoints.selfPacedRegister, data: data);
       if (response['success'] == true) {

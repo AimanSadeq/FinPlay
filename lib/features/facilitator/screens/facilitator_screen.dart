@@ -4341,6 +4341,10 @@ class _ResearchModeCard extends ConsumerStatefulWidget {
 class _ResearchModeCardState extends ConsumerState<_ResearchModeCard> {
   bool _enabled = false;
   bool _loading = true;
+  // Who the consent flow gates: 'corporate' (default) or 'all'. Research mode is
+  // scoped per-cohort server-side; this toggle applies to the cohort below.
+  String _audience = 'corporate';
+  String? _cohortLabel; // which cohort this toggle applies to (null = main site)
 
   @override
   void initState() {
@@ -4351,48 +4355,123 @@ class _ResearchModeCardState extends ConsumerState<_ResearchModeCard> {
   Future<void> _load() async {
     try {
       final res = await ref.read(apiClientProvider).get(ApiEndpoints.researchConfig);
-      if (mounted) setState(() { _enabled = res['enabled'] == true; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _enabled = res['enabled'] == true;
+          final audience = res['audience']?.toString();
+          _audience = audience == 'all' ? 'all' : 'corporate';
+          _cohortLabel = _readCohortLabel(res['cohort']);
+          _loading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
   }
 
+  String? _readCohortLabel(dynamic cohort) {
+    if (cohort is Map) {
+      final display = cohort['displayName']?.toString();
+      if (display != null && display.trim().isNotEmpty) return display;
+      final sub = cohort['subdomain']?.toString();
+      if (sub != null && sub.trim().isNotEmpty) return sub;
+    }
+    return null;
+  }
+
   Future<void> _toggle(bool value) async {
+    final prev = _enabled;
     setState(() => _enabled = value);
     try {
-      await ref.read(apiClientProvider).post(ApiEndpoints.researchMode, data: {'enabled': value});
+      // Send audience so the server keeps the current scoping on toggle.
+      await ref.read(apiClientProvider).post(ApiEndpoints.researchMode,
+          data: {'enabled': value, 'audience': _audience});
     } catch (_) {
-      if (mounted) setState(() => _enabled = !value); // revert on failure
+      if (mounted) setState(() => _enabled = prev); // revert on failure
+    }
+  }
+
+  Future<void> _setAudience(String value) async {
+    if (value == _audience) return;
+    final prev = _audience;
+    setState(() => _audience = value);
+    try {
+      await ref.read(apiClientProvider).post(ApiEndpoints.researchMode,
+          data: {'enabled': _enabled, 'audience': value});
+    } catch (_) {
+      if (mounted) setState(() => _audience = prev); // revert on failure
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
+    final appliesTo = _cohortLabel ?? s.tr('main site', 'الموقع الرئيسي');
     return GlassCard(
       padding: const EdgeInsets.all(16),
-      child: Row(children: [
-        Container(
-          width: 44, height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.purple.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.science_rounded, color: AppColors.purple, size: 22),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(s.tr('Research Mode (DBA)', 'وضع البحث'), style: Theme.of(context).textTheme.titleMedium),
-            Text(s.tr('Offer consent & questionnaires to learners', 'عرض الموافقة والاستبيانات على المتعلمين'),
-                style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.purple.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.science_rounded, color: AppColors.purple, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.tr('Research Mode (DBA)', 'وضع البحث'), style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  s.tr('Applies to: $appliesTo', 'ينطبق على: $appliesTo'),
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
+                ),
+              ],
+            )),
+            _loading
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Switch(value: _enabled, activeThumbColor: AppColors.purple, onChanged: _toggle),
+          ]),
+          // Audience selector — who sees the consent flow when research is on.
+          if (_enabled && !_loading) ...[
+            const SizedBox(height: 12),
+            Text(
+              s.tr('Who is asked to participate', 'من يُطلب منه المشاركة'),
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textTertiary(context)),
+            ),
+            const SizedBox(height: 6),
+            SegmentedButton<String>(
+              segments: [
+                ButtonSegment(
+                    value: 'corporate',
+                    label: Text(s.tr('Corporate only', 'الشركات فقط'),
+                        style: const TextStyle(fontSize: 12))),
+                ButtonSegment(
+                    value: 'all',
+                    label: Text(s.tr('Everyone', 'الجميع'),
+                        style: const TextStyle(fontSize: 12))),
+              ],
+              selected: {_audience},
+              onSelectionChanged: (sel) => _setAudience(sel.first),
+              showSelectedIcon: false,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _audience == 'corporate'
+                  ? s.tr('Self-paced learners are not asked.',
+                      'لا يُطلب من متعلمي التعلم الذاتي.')
+                  : s.tr('Corporate and self-paced learners are asked.',
+                      'يُطلب من متعلمي الشركات والتعلم الذاتي.'),
+              style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+            ),
           ],
-        )),
-        _loading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-            : Switch(value: _enabled, activeThumbColor: AppColors.purple, onChanged: _toggle),
-      ]),
+        ],
+      ),
     );
   }
 }

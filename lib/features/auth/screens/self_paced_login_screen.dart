@@ -22,11 +22,20 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
-  final _teamNameController = TextEditingController();
+  // Verified self-paced registration profile (website parity).
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _titleController = TextEditingController();
+  final _companyController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _codeController = TextEditingController(); // 6-digit email verification code
   final _voucherController = TextEditingController();
   bool _isRegister = false;
   bool _obscurePassword = true;
+  // Two-step sign-up: false = enter details / "Send Verification Code",
+  // true = code emailed, show code field / "Verify & Create Account".
+  bool _codeSent = false;
   bool _voucherRequired = false; // self-paced sign-up gated behind an access code
   bool _voucherChecking = false;
   bool? _voucherValid; // null = unchecked, true = applied, false = invalid
@@ -86,8 +95,13 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _nameController.dispose();
-    _teamNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _titleController.dispose();
+    _companyController.dispose();
+    _phoneController.dispose();
+    _cityController.dispose();
+    _codeController.dispose();
     _voucherController.dispose();
     _bgController.dispose();
     super.dispose();
@@ -97,33 +111,49 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
     if (!_formKey.currentState!.validate()) return;
 
     final auth = ref.read(authProvider.notifier);
-    bool success;
 
     if (_isRegister) {
-      final teamName = _teamNameController.text.trim();
+      // Step 1: details entered but no code yet — email the verification code.
+      if (!_codeSent) {
+        final sent = await auth.requestVerification(_emailController.text.trim());
+        if (sent && mounted) setState(() => _codeSent = true);
+        return;
+      }
+      // Step 2: create the account with the emailed code.
       final voucher = _voucherController.text.trim();
-      success = await auth.registerSelfPaced(
-        _emailController.text.trim(),
-        _passwordController.text,
-        _nameController.text.trim(),
-        teamName: teamName.isEmpty ? null : teamName,
+      final success = await auth.registerSelfPaced(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        title: _titleController.text.trim(),
+        company: _companyController.text.trim(),
+        phone: _phoneController.text.trim(),
+        city: _cityController.text.trim(),
+        verificationCode: _codeController.text.trim(),
         voucherCode: voucher.isEmpty ? null : voucher,
       );
-    } else {
-      success = await auth.loginSelfPaced(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      if (success && mounted) context.go('/self-paced-progress');
+      return;
     }
 
-    if (success && mounted) {
-      context.go('/self-paced-progress');
-    }
+    final success = await auth.loginSelfPaced(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
+    if (success && mounted) context.go('/self-paced-progress');
   }
 
-  /// One-tap demo, matching the website's demo-mode.js exactly: try to log in
-  /// the demo user, and if that fails (account doesn't exist yet), register it,
-  /// then continue. Credentials: demo@viftraining.com / demo@2026.
+  /// Re-request a fresh verification code (server enforces a 60s cooldown and
+  /// surfaces a message via auth state.error if you ask too soon).
+  Future<void> _resendCode() async {
+    await ref.read(authProvider.notifier).requestVerification(_emailController.text.trim());
+  }
+
+  /// One-tap demo: log in with the public demo account. Credentials:
+  /// demo@viftraining.com / demo@2026. (Sign-up now requires an emailed
+  /// verification code, so the demo account is provisioned server-side rather
+  /// than self-registered on the fly.)
   Future<void> _tryDemo() async {
     const demoEmail = 'demo@viftraining.com';
     const demoPassword = 'demo@2026';
@@ -132,22 +162,7 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
     _passwordController.text = demoPassword;
 
     final auth = ref.read(authProvider.notifier);
-    var success = await auth.loginSelfPaced(demoEmail, demoPassword);
-    if (!success) {
-      // Login failed — register the demo user (web does the same). The register
-      // flow logs the user in on success.
-      success = await auth.registerSelfPaced(
-        demoEmail,
-        demoPassword,
-        'Demo User',
-        teamName: 'Demo Team',
-      );
-      // If register failed because the account already exists (i.e. the earlier
-      // login was a transient miss), try logging in once more.
-      if (!success) {
-        success = await auth.loginSelfPaced(demoEmail, demoPassword);
-      }
-    }
+    final success = await auth.loginSelfPaced(demoEmail, demoPassword);
     if (success && mounted) {
       context.go('/self-paced-progress');
     } else if (mounted) {
@@ -459,11 +474,31 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                           ],
 
                           if (_isRegister) ...[
-                            _buildField(
-                              controller: _nameController,
-                              label: s.tr('Your Name', 'اسمك'),
-                              icon: Icons.badge_rounded,
-                              validator: (v) => v?.isEmpty == true ? s.tr('Name required', 'الاسم مطلوب') : null,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _buildField(
+                                    controller: _firstNameController,
+                                    label: s.tr('First Name', 'الاسم الأول'),
+                                    icon: Icons.badge_rounded,
+                                    validator: (v) => v?.trim().isEmpty == true
+                                        ? s.tr('Required', 'مطلوب')
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildField(
+                                    controller: _lastNameController,
+                                    label: s.tr('Last Name', 'اسم العائلة'),
+                                    icon: Icons.badge_outlined,
+                                    validator: (v) => v?.trim().isEmpty == true
+                                        ? s.tr('Required', 'مطلوب')
+                                        : null,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                           ],
@@ -473,6 +508,16 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                             label: s.tr('Email', 'البريد الإلكتروني'),
                             icon: Icons.email_rounded,
                             keyboardType: TextInputType.emailAddress,
+                            // Changing the email after a code was sent invalidates
+                            // it — a new address needs a fresh code (website parity).
+                            onChanged: _isRegister && _codeSent
+                                ? (_) {
+                                    setState(() {
+                                      _codeSent = false;
+                                      _codeController.clear();
+                                    });
+                                  }
+                                : null,
                             validator: (v) {
                               if (v?.isEmpty == true) return s.tr('Email required', 'البريد الإلكتروني مطلوب');
                               if (!v!.contains('@')) return s.tr('Invalid email', 'بريد إلكتروني غير صالح');
@@ -508,10 +553,80 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                           if (_isRegister) ...[
                             const SizedBox(height: 16),
                             _buildField(
-                              controller: _teamNameController,
-                              label: s.tr('Team Name (Optional)', 'اسم الفريق (اختياري)'),
-                              icon: Icons.group_rounded,
+                              controller: _titleController,
+                              label: s.tr('Job Title', 'المسمى الوظيفي'),
+                              icon: Icons.work_rounded,
+                              validator: (v) => v?.trim().isEmpty == true
+                                  ? s.tr('Title required', 'المسمى الوظيفي مطلوب')
+                                  : null,
                             ),
+                            const SizedBox(height: 16),
+                            _buildField(
+                              controller: _companyController,
+                              label: s.tr('Company', 'الشركة'),
+                              icon: Icons.business_rounded,
+                              validator: (v) => v?.trim().isEmpty == true
+                                  ? s.tr('Company required', 'الشركة مطلوبة')
+                                  : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildField(
+                              controller: _phoneController,
+                              label: s.tr('Phone', 'الهاتف'),
+                              icon: Icons.phone_rounded,
+                              keyboardType: TextInputType.phone,
+                              validator: (v) => (v == null || v.trim().length < 5)
+                                  ? s.tr('A valid phone number is required',
+                                      'مطلوب رقم هاتف صالح')
+                                  : null,
+                            ),
+                            const SizedBox(height: 16),
+                            _buildField(
+                              controller: _cityController,
+                              label: s.tr('City', 'المدينة'),
+                              icon: Icons.location_city_rounded,
+                              validator: (v) => v?.trim().isEmpty == true
+                                  ? s.tr('City required', 'المدينة مطلوبة')
+                                  : null,
+                            ),
+                            // Step 2: verification code field + resend, shown once
+                            // the 6-digit code has been emailed.
+                            if (_codeSent) ...[
+                              const SizedBox(height: 16),
+                              _buildField(
+                                controller: _codeController,
+                                label: s.tr('Verification Code', 'رمز التحقق'),
+                                icon: Icons.mark_email_read_rounded,
+                                keyboardType: TextInputType.number,
+                                validator: (v) => v?.trim().isEmpty == true
+                                    ? s.tr('Enter the 6-digit code', 'أدخل الرمز المكوّن من 6 أرقام')
+                                    : null,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      s.tr(
+                                        'Code sent to ${_emailController.text.trim()}. It expires in 15 minutes.',
+                                        'تم إرسال الرمز إلى ${_emailController.text.trim()}. تنتهي صلاحيته خلال 15 دقيقة.',
+                                      ),
+                                      style: TextStyle(
+                                          fontSize: 11, color: AppColors.textTertiary(context)),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: authState.status == AuthStatus.loading
+                                        ? null
+                                        : _resendCode,
+                                    child: Text(s.tr('Resend', 'إعادة إرسال'),
+                                        style: const TextStyle(
+                                            color: _blue600, fontWeight: FontWeight.w600)),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
 
                           const SizedBox(height: 24),
@@ -541,10 +656,16 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                               ),
                             ),
 
-                          // Submit
+                          // Submit — label reflects the two-step sign-up flow.
                           GradientButton(
-                            text: _isRegister ? s.tr('Create Account', 'إنشاء حساب') : s.tr('Sign In', 'تسجيل الدخول'),
-                            icon: _isRegister ? Icons.person_add_rounded : Icons.login_rounded,
+                            text: !_isRegister
+                                ? s.tr('Sign In', 'تسجيل الدخول')
+                                : (_codeSent
+                                    ? s.tr('Verify & Create Account', 'تحقّق وأنشئ الحساب')
+                                    : s.tr('Send Verification Code', 'إرسال رمز التحقق')),
+                            icon: !_isRegister
+                                ? Icons.login_rounded
+                                : (_codeSent ? Icons.person_add_rounded : Icons.send_rounded),
                             isLoading: authState.status == AuthStatus.loading,
                             width: double.infinity,
                             gradient: const LinearGradient(colors: [_blue600, _blue700]),
@@ -576,6 +697,9 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                   TextButton(
                     onPressed: () => setState(() {
                       _isRegister = !_isRegister;
+                      // Reset the verification step when switching modes.
+                      _codeSent = false;
+                      _codeController.clear();
                       ref.read(authProvider.notifier).clearError();
                     }),
                     child: Text.rich(
@@ -628,12 +752,14 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
     Widget? suffix,
     String? hint,
     String? Function(String?)? validator,
+    void Function(String)? onChanged,
   }) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscure,
       validator: validator,
+      onChanged: onChanged,
       style: TextStyle(fontSize: 15, color: AppColors.textPrimary(context)),
       decoration: InputDecoration(
         labelText: label,
