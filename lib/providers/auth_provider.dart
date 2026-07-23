@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_client.dart';
 import '../core/network/api_endpoints.dart';
+import '../core/services/education_progress_sync.dart';
 import '../core/utils/constants.dart';
 import '../data/models/user.dart';
 import '../app/router/app_router.dart';
@@ -130,6 +131,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       _ref.read(selfPacedProvider.notifier).fetchProgress();
     } catch (_) {/* non-critical; the self-paced screens also hydrate */}
+    // Education modules live in their own store — restore them too, keyed by
+    // email like the website, so a fresh device opens the hub already caught up.
+    final email = state.user?.email;
+    if (email != null && email.isNotEmpty) {
+      EducationProgressSync(_api).hydrate(teamName: email, scope: 'sp');
+    }
   }
 
   /// Step 1 of verified sign-up (website parity): request a 6-digit code emailed

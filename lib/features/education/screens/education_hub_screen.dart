@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/services/education_progress_sync.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/team_provider.dart';
@@ -288,6 +289,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   void initState() {
     super.initState();
     _loadProgress();
+    _syncProgress();
     _fetchResearchConfig();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkMandatedAssessment());
     if (_isSelfPaced) {
@@ -365,6 +367,32 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     } catch (_) {
       // Keep existing state on error
     }
+  }
+
+  /// Who this device's education progress belongs to on the server. Self-paced
+  /// learners are keyed by email; corporate teams by "Team N", and only when
+  /// this device actually signed in to a team, so a stray visitor never pulls a
+  /// team's data down (website parity).
+  Future<({String teamName, String scope})?> _progressIdentity() async {
+    if (_isSelfPaced) {
+      final email = ref.read(authProvider).user?.email ?? '';
+      return email.isEmpty ? null : (teamName: email, scope: 'sp');
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final teamId = prefs.getInt('gov_team_id');
+    if (teamId == null) return null;
+    return (teamName: 'Team $teamId', scope: '$teamId');
+  }
+
+  /// Pull the saved progress from the database and push anything newer back, so
+  /// work follows the learner across devices and between the website and the app.
+  Future<void> _syncProgress() async {
+    final id = await _progressIdentity();
+    if (id == null) return;
+    final changed = await ref
+        .read(educationProgressSyncProvider)
+        .sync(teamName: id.teamName, scope: id.scope);
+    if (changed && mounted) await _loadProgress();
   }
 
   Future<void> _loadProgress() async {
@@ -502,9 +530,13 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                         isPassed: passed,
                         ar: ref.watch(stringsProvider).ar,
                         isSelfPaced: _isSelfPaced,
-                        // Refresh progressive unlocks when returning from a module.
+                        // Refresh progressive unlocks when returning from a
+                        // module, and push the new work to the server.
                         onTap: () => context.push(m.route).then((_) {
-                          if (mounted) _loadProgress();
+                          if (mounted) {
+                            _loadProgress();
+                            _syncProgress();
+                          }
                         }),
                       ).animate().fadeIn(
                             delay: (300 + 60 * index).ms,
@@ -752,36 +784,46 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   children: [
                     // Team color dot + name
                     if (teamName.isNotEmpty) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: teamColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                              color: teamColor.withValues(alpha: 0.25)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: teamColor,
-                                shape: BoxShape.circle,
+                      // Single-line truncating pill (website parity): a
+                      // self-paced learner's full "First Last" name goes here,
+                      // and must never overflow the header row.
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: teamColor.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: teamColor.withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: teamColor,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              teamName,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: teamColor,
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  teamName,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: teamColor,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),

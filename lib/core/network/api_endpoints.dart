@@ -102,6 +102,12 @@ class ApiEndpoints {
   static const String govEducationQuiz = '/gov-education/quiz';
   static const String govEducationLeaderboard = '/gov-education/leaderboard';
 
+  // Cross-device education progress (website parity: hydrateProgressFromServer /
+  // syncProgressToDatabase). {teamName} is the self-paced learner's email or a
+  // corporate team name ("Team 1"); self-paced calls need the bearer token.
+  static const String educationProgressSaved = '/education/progress/{teamName}/saved';
+  static const String educationProgressSync = '/education/progress/{teamName}/sync';
+
   // Narration (AI audio for Learn slides)
   // POST /narration/prepare {moduleId,sectionId,language,text} -> {audioUrl,...}
   static const String narrationPrepare = '/narration/prepare';

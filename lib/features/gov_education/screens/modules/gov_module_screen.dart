@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -7,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/i18n/app_strings.dart';
+import '../../../../core/services/education_progress_sync.dart';
 import '../../../../providers/repository_providers.dart';
 import '../../../../providers/auth_provider.dart';
 import '../../../../shared/widgets/glass_card.dart';
@@ -141,6 +144,28 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
         .where((b) => b).length;
     await prefs.setInt('edu_progress_${widget.moduleId}', done * 25);
     await prefs.setBool('edu_passed_${widget.moduleId}', done == 4);
+    _queueServerSync();
+  }
+
+  // Debounce so a burst of saves (finishing a game updates several keys) results
+  // in a single round-trip.
+  Timer? _serverSyncDebounce;
+
+  /// Push this module's progress to the database so it survives a reinstall and
+  /// shows up on the learner's other devices / the website. Fire-and-forget:
+  /// SharedPreferences stays the source of truth until the next successful sync.
+  void _queueServerSync() {
+    _serverSyncDebounce?.cancel();
+    _serverSyncDebounce = Timer(const Duration(seconds: 2), () async {
+      if (!mounted) return;
+      final auth = ref.read(authProvider);
+      final isSelfPaced = auth.user != null && !auth.isFacilitator;
+      final teamName = isSelfPaced ? (auth.user?.email ?? '') : 'Team $_scope';
+      if (isSelfPaced && teamName.isEmpty) return;
+      await ref
+          .read(educationProgressSyncProvider)
+          .sync(teamName: teamName, scope: _scope);
+    });
   }
 
   @override
@@ -178,6 +203,7 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
   void dispose() {
     _tabController.removeListener(_guardLockedTabs);
     _tabController.dispose();
+    _serverSyncDebounce?.cancel();
     super.dispose();
   }
 
