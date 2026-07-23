@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/api_client.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/decision_repository.dart';
+import '../data/repositories/earnings_call_repository.dart';
 import '../data/repositories/education_repository.dart';
 import '../data/repositories/facilitator_repository.dart';
 import '../data/repositories/game_repository.dart';
@@ -31,4 +32,8 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 final selfPacedRepositoryProvider = Provider<SelfPacedRepository>((ref) {
   return SelfPacedRepository(ref.watch(apiClientProvider));
+});
+
+final earningsCallRepositoryProvider = Provider<EarningsCallRepository>((ref) {
+  return EarningsCallRepository(ref.watch(apiClientProvider));
 });

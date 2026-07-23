@@ -22,6 +22,7 @@ import '../../../shared/widgets/connection_badge.dart';
 import '../../../shared/widgets/header_timer.dart';
 import '../../../shared/widgets/active_shocks_display.dart';
 import '../../../shared/widgets/team_leader_banner.dart';
+import '../../earnings_call/widgets/earnings_call_banner.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/self_paced_provider.dart';
@@ -160,10 +161,14 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
   }
 
   /// Initial REST fetch of active/unacknowledged market shocks. The app
-  /// otherwise only receives shocks via socket pushes, so a player who opens
-  /// the simulation after a shock was triggered (common in self-paced mode)
-  /// would never see it. Populates [activeShocksProvider] for both modes.
+  /// otherwise only receives shocks via socket pushes, so a team that opens the
+  /// simulation after a shock was triggered would never see it.
+  ///
+  /// Corporate teams only: the server excludes every shock row when it computes
+  /// a self-paced learner's financials, so surfacing shocks there would announce
+  /// an event that cannot move their numbers (website parity).
   Future<void> _loadActiveShocks() async {
+    if (_isSelfPaced) return;
     try {
       final api = ref.read(apiClientProvider);
       final results = await Future.wait([
@@ -953,6 +958,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
               // Active Shocks from facilitator
               if (!isSelfPacedMode) const TeamLeaderBanner(),
               if (!isSelfPacedMode) const ActiveShocksDisplay(),
+              // Earnings Call (post-Round-2): only visible once the facilitator
+              // opens the call, and only for corporate teams — the event is a
+              // team presentation, so self-paced learners never see it.
+              if (!isSelfPacedMode) const EarningsCallBanner(),
 
               // Timer Expired Alert
               if (isTimerExpired)

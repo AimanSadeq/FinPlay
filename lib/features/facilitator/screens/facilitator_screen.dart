@@ -19,6 +19,7 @@ import '../../../providers/game_state_provider.dart';
 
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
+import '../../earnings_call/widgets/earnings_call_facilitator_card.dart';
 import '../../../app/i18n/app_strings.dart';
 
 class FacilitatorScreen extends ConsumerStatefulWidget {
@@ -978,6 +979,10 @@ class _ControlsTabState extends State<_ControlsTab> {
 
         // Research (DBA) mode toggle — gates the learner-facing research flow.
         const _ResearchModeCard(),
+        const SizedBox(height: 12),
+
+        // Earnings Call — stage machine, analyst questions, ratings, rubric.
+        const EarningsCallFacilitatorCard(),
       ],
     );
     });
@@ -2731,18 +2736,126 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
     if (mounted) setState(() { _vouchers = vouchers; _gating = gating; _loading = false; });
   }
 
+  /// Website parity: "one code per user" mints N single-use codes, "one shared
+  /// code" mints a single code with N uses.
   Future<void> _generate() async {
     if (_busy) return;
+    final s = ref.read(stringsProvider);
+    final countController = TextEditingController(text: '1');
+    var shared = false;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(s.tr('Generate access codes', 'إنشاء رموز دخول')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(
+                      value: false,
+                      label: Text(s.tr('One per user', 'رمز لكل مستخدم'),
+                          style: const TextStyle(fontSize: 12))),
+                  ButtonSegment(
+                      value: true,
+                      label: Text(s.tr('One shared code', 'رمز مشترك واحد'),
+                          style: const TextStyle(fontSize: 12))),
+                ],
+                selected: {shared},
+                onSelectionChanged: (sel) => setLocal(() => shared = sel.first),
+                showSelectedIcon: false,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: countController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  isDense: true,
+                  labelText: shared
+                      ? s.tr('How many people can redeem it', 'كم شخصًا يمكنه استخدامه')
+                      : s.tr('How many codes', 'عدد الرموز'),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(s.tr('Cancel', 'إلغاء'))),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(s.tr('Generate', 'إنشاء'))),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final n = (int.tryParse(countController.text.trim()) ?? 1).clamp(1, 500);
     setState(() => _busy = true);
-    final created = await widget.repo.createVouchers(count: 1, maxUses: 1);
+    final created = shared
+        ? await widget.repo.createVouchers(count: 1, maxUses: n)
+        : await widget.repo.createVouchers(count: n, maxUses: 1);
     await _load();
     if (mounted) {
       setState(() => _busy = false);
       if (created.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Created code: ${created.first['code']}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(created.length == 1
+              ? '${s.tr('Created code', 'تم إنشاء الرمز')}: ${created.first['code']}'
+              : '${created.length} ${s.tr('codes created', 'رمزًا تم إنشاؤه')}'),
+        ));
       }
     }
+  }
+
+  /// Shareable redemption link — opens self-paced sign-up with the code
+  /// pre-filled and validated (same URL shape the website copies).
+  String _linkFor(String code) {
+    final base = ref
+        .read(apiClientProvider)
+        .baseUrl
+        .replaceFirst(RegExp('${RegExp.escape(AppConstants.apiPrefix)}/*\$'), '');
+    return '$base/self-paced-login?code=${Uri.encodeComponent(code)}';
+  }
+
+  Future<void> _copy(String text, String toast) async {
+    await Clipboard.setData(ClipboardData(text: text));
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(toast)));
+    }
+  }
+
+  /// Extend or clear a code's expiry (website parity with the inline Edit action).
+  Future<void> _editExpiry(Map<String, dynamic> voucher) async {
+    final s = ref.read(stringsProvider);
+    final current = DateTime.tryParse(voucher['expiresAt']?.toString() ?? '');
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? now.add(const Duration(days: 30)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365 * 3)),
+      helpText: s.tr('Code expires on', 'ينتهي الرمز في'),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _busy = true);
+    await widget.repo.updateVoucher(
+      voucher['id'].toString(),
+      {'expiresAt': picked.toUtc().toIso8601String()},
+    );
+    await _load();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _clearExpiry(Map<String, dynamic> voucher) async {
+    setState(() => _busy = true);
+    await widget.repo.updateVoucher(voucher['id'].toString(), {'expiresAt': null});
+    await _load();
+    if (mounted) setState(() => _busy = false);
   }
 
   Future<void> _delete(String id) async {
@@ -2804,21 +2917,63 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
             final used = v['usedCount'] ?? 0;
             final max = v['maxUses'] ?? 1;
             final active = v['isActive'] != false;
+            final expires = DateTime.tryParse(v['expiresAt']?.toString() ?? '');
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: GlassCard(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: Row(children: [
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(code, style: GoogleFonts.jetBrainsMono(fontWeight: FontWeight.w700, fontSize: 15)),
-                    Text('${v['label'] ?? ''}  ·  $used/$max ${s.tr('used', 'مستخدم')}${active ? '' : ' · ${s.tr('revoked', 'ملغى')}'}',
-                        style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context))),
-                  ])),
-                  IconButton(
-                    onPressed: _busy ? null : () => _delete(v['id'].toString()),
-                    icon: const Icon(Icons.delete_outline_rounded, size: 20),
-                    color: AppColors.dangerLight,
-                    visualDensity: VisualDensity.compact,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      GestureDetector(
+                        onTap: () => _copy(code, s.tr('Code copied', 'تم نسخ الرمز')),
+                        child: Text(code,
+                            style: GoogleFonts.jetBrainsMono(
+                                fontWeight: FontWeight.w700, fontSize: 15)),
+                      ),
+                      Text(
+                        '${v['label'] ?? ''}  ·  $used/$max ${s.tr('used', 'مستخدم')}'
+                        '${active ? '' : ' · ${s.tr('revoked', 'ملغى')}'}'
+                        '${expires == null ? '' : ' · ${s.tr('expires', 'ينتهي')} ${expires.toLocal().toString().split(' ').first}'}',
+                        style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+                      ),
+                    ])),
+                    IconButton(
+                      tooltip: s.tr('Copy redemption link', 'نسخ رابط الاستخدام'),
+                      onPressed: _busy
+                          ? null
+                          : () => _copy(_linkFor(code),
+                              s.tr('Link copied', 'تم نسخ الرابط')),
+                      icon: const Icon(Icons.link_rounded, size: 20),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
+                      tooltip: expires == null
+                          ? s.tr('Set expiry', 'تحديد تاريخ الانتهاء')
+                          : s.tr('Change expiry', 'تغيير تاريخ الانتهاء'),
+                      onPressed: _busy ? null : () => _editExpiry(v),
+                      icon: const Icon(Icons.event_rounded, size: 20),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    if (expires != null)
+                      IconButton(
+                        tooltip: s.tr('Clear expiry', 'إزالة تاريخ الانتهاء'),
+                        onPressed: _busy ? null : () => _clearExpiry(v),
+                        icon: const Icon(Icons.event_busy_rounded, size: 20),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    IconButton(
+                      onPressed: _busy ? null : () => _delete(v['id'].toString()),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                      color: AppColors.dangerLight,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ]),
+                  // The full link, selectable, so a facilitator can read it out
+                  // or select it directly (website shows it under each code).
+                  SelectableText(
+                    _linkFor(code),
+                    style: TextStyle(fontSize: 10, color: AppColors.textTertiary(context)),
                   ),
                 ]),
               ),

@@ -102,6 +102,23 @@ class ApiEndpoints {
   static const String govEducationQuiz = '/gov-education/quiz';
   static const String govEducationLeaderboard = '/gov-education/leaderboard';
 
+  // Earnings Call (post-Round-2 analyst event). Stage machine off -> prep -> live,
+  // driven by the facilitator and polled by teams.
+  static const String earningsCallStatus = '/earnings-call/status';
+  static const String earningsCallStage = '/earnings-call/stage'; // facilitator
+  // GET /earnings-call/team/{teamId} -> the same payload the AI analyst is prompted
+  // with: R1-vs-R2 statements, ratios, decisions, shocks, talking points.
+  static const String earningsCallTeam = '/earnings-call/team';
+  // GET /earnings-call/questions/{teamId} -> released question sets only.
+  static const String earningsCallQuestions = '/earnings-call/questions';
+  // POST /earnings-call/answer { teamId, questionIndex, answerText }
+  static const String earningsCallAnswer = '/earnings-call/answer';
+  // POST /earnings-call/feedback { presenterTeamId, raterTeamId, clarity, insight, confidence }
+  static const String earningsCallFeedback = '/earnings-call/feedback';
+  static const String earningsCallFeedbackSummary = '/earnings-call/feedback/summary';
+  static const String earningsCallFacilitatorScore = '/earnings-call/facilitator-score';
+  static const String earningsCallFacilitatorScores = '/earnings-call/facilitator-scores';
+
   // Cross-device education progress (website parity: hydrateProgressFromServer /
   // syncProgressToDatabase). {teamName} is the self-paced learner's email or a
   // corporate team name ("Team 1"); self-paced calls need the bearer token.

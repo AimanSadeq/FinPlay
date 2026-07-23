@@ -31,6 +31,7 @@ import '../../features/education/screens/dividends_screen.dart';
 import '../../features/education/screens/ratios_category_screen.dart';
 import '../../features/assessment/screens/assessment_screen.dart';
 import '../../features/research/screens/research_screen.dart';
+import '../../features/earnings_call/screens/earnings_call_screen.dart';
 import '../../features/facilitator/screens/admin_model_screen.dart';
 import '../../features/gov_education/screens/gov_hub_screen.dart';
 import '../../features/gov_education/screens/gov_lobby_screen.dart';
@@ -127,6 +128,15 @@ class AppRouter {
         name: 'simulation',
         pageBuilder: (context, state) => _buildPage(
           const SimulationScreen(),
+          state,
+        ),
+      ),
+      // Earnings Call — the post-Round-2 analyst event (facilitator-driven stages).
+      GoRoute(
+        path: '/earnings-call',
+        name: 'earnings-call',
+        pageBuilder: (context, state) => _buildPage(
+          const EarningsCallScreen(),
           state,
         ),
       ),

@@ -41,10 +41,13 @@ class SocketManager {
       }),
     );
 
-    // Shock triggered notification
+    // Shock triggered notification. Market shocks are a corporate-mode mechanic:
+    // the server zeroes every shock row when it computes a self-paced learner's
+    // financials, so a shock alert there would announce an event that provably
+    // never touches their numbers (website parity — it skips the display too).
     _subscriptions.add(
       _socket.on<dynamic>('shock-triggered').listen((data) {
-        if (data is Map<String, dynamic>) {
+        if (data is Map<String, dynamic> && _ref.read(teamProvider).selectedTeam != null) {
           _ref.read(activeShocksProvider.notifier).state = [
             ..._ref.read(activeShocksProvider),
             data,
