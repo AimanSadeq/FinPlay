@@ -17,8 +17,18 @@ class GovModuleContent {
   final String gameTitle;
   final String gameDescription;
   final GameType gameType;
+  // Each slide is a map with 'title'/'content'/'keyPoint' (English) and optional
+  // 'titleAr'/'contentAr'/'keyPointAr' (Arabic). The renderer picks by locale and
+  // falls back to English when an Arabic value is absent — so partially-translated
+  // modules still work. Optional Arabic title too: 'title'/'titleAr'.
   final List<Map<String, String>> slides;
   final List<Map<String, dynamic>> quizQuestions;
+  // Optional bilingual module title (falls back to `title` when null).
+  final String? titleAr;
+  // Key Terms glossary for this module (website parity). Each entry:
+  // { 'term', 'termAr', 'def', 'defAr' }. When present, the Learn tab shows a
+  // "Key Terms" pill that opens these in a modal.
+  final List<Map<String, String>>? keyTerms;
 
   // Memory match
   final List<Map<String, String>>? memoryPairs;
@@ -40,6 +50,8 @@ class GovModuleContent {
     required this.gameType,
     required this.slides,
     required this.quizQuestions,
+    this.titleAr,
+    this.keyTerms,
     this.memoryPairs,
     this.classificationCategories,
     this.classificationItems,

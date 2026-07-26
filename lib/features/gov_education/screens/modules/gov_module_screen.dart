@@ -468,9 +468,94 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
     );
   }
 
+  /// Localized value for a slide field: Arabic (`<field>Ar`) when the UI is Arabic
+  /// and a translation exists, else the English value. Falls back gracefully so a
+  /// partially-translated module still renders (website parity).
+  String _slideText(Map<String, String> slide, String field) {
+    final ar = ref.read(stringsProvider).ar;
+    if (ar) {
+      final v = slide['${field}Ar'];
+      if (v != null && v.trim().isNotEmpty) return v;
+    }
+    return slide[field] ?? '';
+  }
+
+  /// Show the module's Key Terms glossary in a bottom sheet (website's Key Terms panel).
+  void _showKeyTerms() {
+    final s = ref.read(stringsProvider);
+    final terms = _module.keyTerms;
+    if (terms == null || terms.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Directionality(
+        textDirection: s.ar ? TextDirection.rtl : TextDirection.ltr,
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          builder: (ctx, scrollController) => Column(
+            children: [
+              const SizedBox(height: 10),
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary(ctx).withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.menu_book_rounded, color: AppColors.purple, size: 20),
+                    const SizedBox(width: 8),
+                    Text(s.tr('Key Terms', 'المصطلحات الرئيسية'),
+                        style: Theme.of(ctx).textTheme.titleMedium),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.separated(
+                  controller: scrollController,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  itemCount: terms.length,
+                  separatorBuilder: (_, i) => const Divider(height: 20),
+                  itemBuilder: (_, i) {
+                    final t = terms[i];
+                    final term = s.ar && (t['termAr']?.isNotEmpty ?? false) ? t['termAr']! : (t['term'] ?? '');
+                    final def = s.ar && (t['defAr']?.isNotEmpty ?? false) ? t['defAr']! : (t['def'] ?? '');
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(term,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                        if (def.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(def,
+                              style: TextStyle(
+                                  fontSize: 13, height: 1.4, color: AppColors.textSecondary(ctx))),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLearnTab() {
     final s = ref.watch(stringsProvider);
     final slides = _module.slides;
+    final hasKeyTerms = _module.keyTerms?.isNotEmpty ?? false;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -492,6 +577,31 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
                       child: Text('${_currentSlide + 1}/${slides.length}',
                         style: const TextStyle(fontSize: 11, color: Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
                     ),
+                    if (hasKeyTerms) ...[
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: _showKeyTerms,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppColors.purple.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: AppColors.purple.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.menu_book_rounded, size: 12, color: Color(0xFFA78BFA)),
+                              const SizedBox(width: 4),
+                              Text(s.tr('Key Terms', 'المصطلحات'),
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     if (_currentSlide == slides.length - 1 && !_lessonComplete)
                       TextButton(
@@ -507,12 +617,24 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
                   ],
                 ),
                 const SizedBox(height: 16),
-                Text(slides[_currentSlide]['title']!,
-                  style: Theme.of(context).textTheme.headlineSmall),
+                // Slide text renders in the UI language; Arabic flips to RTL.
+                Align(
+                  alignment: s.ar ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Text(
+                    _slideText(slides[_currentSlide], 'title'),
+                    textAlign: s.ar ? TextAlign.right : TextAlign.left,
+                    textDirection: s.ar ? TextDirection.rtl : TextDirection.ltr,
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                ),
                 const SizedBox(height: 12),
-                Text(slides[_currentSlide]['content']!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6)),
-                if (slides[_currentSlide]['keyPoint'] != null) ...[
+                Text(
+                  _slideText(slides[_currentSlide], 'content'),
+                  textAlign: s.ar ? TextAlign.right : TextAlign.left,
+                  textDirection: s.ar ? TextDirection.rtl : TextDirection.ltr,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6),
+                ),
+                if (_slideText(slides[_currentSlide], 'keyPoint').isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -526,7 +648,10 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
                       children: [
                         const Icon(Icons.lightbulb_rounded, color: AppColors.accentLight, size: 18),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(slides[_currentSlide]['keyPoint']!,
+                        Expanded(child: Text(
+                          _slideText(slides[_currentSlide], 'keyPoint'),
+                          textAlign: s.ar ? TextAlign.right : TextAlign.left,
+                          textDirection: s.ar ? TextDirection.rtl : TextDirection.ltr,
                           style: const TextStyle(fontSize: 13, color: AppColors.accentLight, height: 1.4))),
                       ],
                     ),
@@ -540,10 +665,10 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
                   moduleId: _module.id,
                   sectionId: '$_currentSlide',
                   text: [
-                    slides[_currentSlide]['title'],
-                    slides[_currentSlide]['content'],
-                    slides[_currentSlide]['keyPoint'],
-                  ].where((t) => t != null && t.isNotEmpty).join('\n\n'),
+                    _slideText(slides[_currentSlide], 'title'),
+                    _slideText(slides[_currentSlide], 'content'),
+                    _slideText(slides[_currentSlide], 'keyPoint'),
+                  ].where((t) => t.isNotEmpty).join('\n\n'),
                 ),
                 const SizedBox(height: 20),
                 Row(
