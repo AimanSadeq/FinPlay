@@ -220,6 +220,13 @@ class ApiEndpoints {
   static const String selfPacedProgressReset = '/self-paced/progress/reset';
   static const String selfPacedProgressEducation = '/self-paced/progress/education';
   static const String selfPacedProgressEducationComplete = '/self-paced/progress/education/complete';
+
+  // Billing (self-paced subscription — MamoPay). Auth via the self-paced bearer token.
+  static const String billingPlans = '/billing/plans';
+  static const String billingCheckout = '/billing/checkout';
+  static const String billingVerify = '/billing/verify';
+  static const String billingStatus = '/billing/status';
+  static const String billingStudentVerify = '/billing/student/verify';
   // Per-learner dashboard (same shape as /dashboard-data, scoped to the
   // learner's own decisions + shock-isolated).
   static const String selfPacedProgressDashboardData = '/self-paced/progress/dashboard-data';

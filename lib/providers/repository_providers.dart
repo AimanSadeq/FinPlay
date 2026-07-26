@@ -7,8 +7,13 @@ import '../data/repositories/education_repository.dart';
 import '../data/repositories/facilitator_repository.dart';
 import '../data/repositories/game_repository.dart';
 import '../data/repositories/self_paced_repository.dart';
+import '../data/repositories/billing_repository.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
+final billingRepositoryProvider = Provider<BillingRepository>((ref) {
+  return BillingRepository(ref.watch(apiClientProvider));
+});
 
 final gameRepositoryProvider = Provider<GameRepository>((ref) {
   return GameRepository(ref.watch(apiClientProvider));

@@ -41,6 +41,9 @@ dependencies:
   # Open external URLs (PDF/HTML report + Excel file downloads via the browser)
   url_launcher: ^6.3.1
 
+  # In-app WebView for the MamoPay hosted subscription checkout (self-paced billing)
+  webview_flutter: ^4.10.0
+
   # Audio playback for AI slide narration (self-paced Learn slides)
   just_audio: ^0.9.42
 

@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../providers/self_paced_provider.dart';
 
-/// Reflects self-paced access state on-screen. iOS is web-only billing, so this NEVER shows a
-/// price, a "Subscribe" button, or a purchase link (App Store policy). It only informs:
-///   • on trial  → a countdown ("N days left in your free trial")
-///   • lapsed     → an "access ended, manage on the website" notice
+/// Reflects self-paced access state and offers to subscribe (in-app MamoPay checkout):
+///   • on trial  → a countdown ("N days left") + a Subscribe button
+///   • lapsed     → an "access ended" notice + a Subscribe button
 ///   • otherwise  → nothing (active subscription / student / comp / enforcement off)
-///
-/// Website parity: mirrors the web trial banner + paywall, minus any purchase UI.
 class EntitlementBanner extends ConsumerWidget {
   const EntitlementBanner({super.key});
-
-  static const String _manageDomain = 'finplay.viftraining.com';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,27 +19,24 @@ class EntitlementBanner extends ConsumerWidget {
     final s = ref.watch(stringsProvider);
 
     if (ent.isLapsed) {
-      return _AccessEndedCard(strings: s, domain: _manageDomain);
+      return _AccessEndedCard(strings: s);
     }
     if (ent.isTrial && ent.enforced) {
-      return _TrialCountdownCard(strings: s, days: ent.daysRemaining, domain: _manageDomain);
+      return _TrialCountdownCard(strings: s, days: ent.daysRemaining);
     }
     return const SizedBox.shrink();
   }
 }
 
 class _TrialCountdownCard extends StatelessWidget {
-  const _TrialCountdownCard({required this.strings, required this.days, required this.domain});
+  const _TrialCountdownCard({required this.strings, required this.days});
   final AppStrings strings;
   final int days;
-  final String domain;
 
   @override
   Widget build(BuildContext context) {
-    // Urgency colour: red at ≤1 day, amber otherwise.
     final urgent = days <= 1;
     final accent = urgent ? const Color(0xFFDC2626) : const Color(0xFFD97706);
-    final bg = urgent ? const Color(0xFFDC2626) : const Color(0xFFD97706);
 
     final headline = days <= 0
         ? strings.tr('Your free trial has ended', 'انتهت تجربتك المجانية')
@@ -56,7 +49,7 @@ class _TrialCountdownCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: bg.withValues(alpha: 0.08),
+        color: accent.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: accent.withValues(alpha: 0.35)),
       ),
@@ -78,15 +71,14 @@ class _TrialCountdownCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  strings.tr(
-                    'Keep full access — manage your plan at $domain',
-                    'حافظ على وصولك الكامل — أدر اشتراكك على $domain',
-                  ),
+                  strings.tr('Subscribe to keep full access', 'اشترك للحفاظ على وصولك الكامل'),
                   style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          _SubscribePill(strings: strings, color: accent),
         ],
       ),
     );
@@ -94,9 +86,8 @@ class _TrialCountdownCard extends StatelessWidget {
 }
 
 class _AccessEndedCard extends StatelessWidget {
-  const _AccessEndedCard({required this.strings, required this.domain});
+  const _AccessEndedCard({required this.strings});
   final AppStrings strings;
-  final String domain;
 
   @override
   Widget build(BuildContext context) {
@@ -128,28 +119,48 @@ class _AccessEndedCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  strings.tr(
-                    'To continue learning, manage your subscription at $domain',
-                    'لمواصلة التعلّم، أدر اشتراكك على $domain',
-                  ),
+                  strings.tr('Subscribe to continue learning', 'اشترك لمواصلة التعلّم'),
                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
+          _SubscribePill(strings: strings, color: accent),
         ],
       ),
     );
   }
 }
 
-/// Full-screen "access ended" gate — shown in place of paid content (simulation / dashboard)
-/// when the backend returns 402 SUBSCRIPTION_REQUIRED. No purchase UI (App Store policy).
+class _SubscribePill extends StatelessWidget {
+  const _SubscribePill({required this.strings, required this.color});
+  final AppStrings strings;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/pricing'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
+        child: Text(
+          strings.tr('Subscribe', 'اشترك'),
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-screen "access ended" gate — shown in place of paid content when the backend returns
+/// 402 SUBSCRIPTION_REQUIRED. Offers the in-app subscription checkout.
 class AccessEndedView extends ConsumerWidget {
   const AccessEndedView({super.key, this.onBack});
   final VoidCallback? onBack;
-
-  static const String _manageDomain = 'finplay.viftraining.com';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -184,30 +195,26 @@ class AccessEndedView extends ConsumerWidget {
             const SizedBox(height: 10),
             Text(
               s.tr(
-                'Your free trial or subscription is no longer active. To continue learning, manage your plan on our website:',
-                'لم تعد تجربتك المجانية أو اشتراكك نشطاً. لمواصلة التعلّم، أدر خطتك على موقعنا:',
+                'Your free trial or subscription is no longer active. Subscribe to continue learning.',
+                'لم تعد تجربتك المجانية أو اشتراكك نشطاً. اشترك لمواصلة التعلّم.',
               ),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
             ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.textPrimary(context).withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                _manageDomain,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary(context),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => context.push('/pricing'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.purple,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
+                child: Text(s.tr('View plans & subscribe', 'عرض الخطط والاشتراك')),
               ),
             ),
             if (onBack != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 10),
               TextButton.icon(
                 onPressed: onBack,
                 icon: const Icon(Icons.arrow_back_rounded, size: 18),

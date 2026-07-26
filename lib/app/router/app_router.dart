@@ -9,6 +9,8 @@ import '../../features/auth/screens/self_paced_progress_screen.dart';
 import '../../features/auth/screens/site_access_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
+import '../../features/billing/screens/pricing_screen.dart';
+import '../../features/billing/screens/checkout_screen.dart';
 import '../../features/lobby/screens/lobby_screen.dart';
 import '../../features/simulation/screens/simulation_screen.dart';
 import '../../features/facilitator/screens/facilitator_screen.dart';
@@ -110,6 +112,21 @@ class AppRouter {
         name: 'self-paced-progress',
         pageBuilder: (context, state) => _buildPage(
           const SelfPacedProgressScreen(),
+          state,
+        ),
+      ),
+
+      // Self-paced subscription (MamoPay hosted checkout)
+      GoRoute(
+        path: '/pricing',
+        name: 'pricing',
+        pageBuilder: (context, state) => _buildPage(const PricingScreen(), state),
+      ),
+      GoRoute(
+        path: '/billing-checkout',
+        name: 'billing-checkout',
+        pageBuilder: (context, state) => _buildPage(
+          CheckoutScreen(planId: state.uri.queryParameters['plan'] ?? ''),
           state,
         ),
       ),
