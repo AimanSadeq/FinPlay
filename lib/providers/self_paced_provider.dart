@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/self_paced_repository.dart';
 import '../data/models/user.dart';
+import '../data/models/entitlement.dart';
 import 'repository_providers.dart' show selfPacedRepositoryProvider;
 
 class SelfPacedState {
@@ -11,6 +12,10 @@ class SelfPacedState {
   final Map<String, List<Map<String, dynamic>>> decisions;
   final String? error;
 
+  /// Access state from the backend (trial countdown / lapsed gate). iOS never sells in-app;
+  /// this only reflects state. Defaults permissive so unknown state never locks anyone out.
+  final Entitlement entitlement;
+
   const SelfPacedState({
     this.currentRound = 1,
     this.currentModule = 'financing',
@@ -18,6 +23,7 @@ class SelfPacedState {
     this.isGameComplete = false,
     this.decisions = const {},
     this.error,
+    this.entitlement = Entitlement.unknown,
   });
 
   SelfPacedState copyWith({
@@ -27,6 +33,7 @@ class SelfPacedState {
     bool? isGameComplete,
     Map<String, List<Map<String, dynamic>>>? decisions,
     String? error,
+    Entitlement? entitlement,
   }) {
     return SelfPacedState(
       currentRound: currentRound ?? this.currentRound,
@@ -35,6 +42,7 @@ class SelfPacedState {
       isGameComplete: isGameComplete ?? this.isGameComplete,
       decisions: decisions ?? this.decisions,
       error: error,
+      entitlement: entitlement ?? this.entitlement,
     );
   }
 }
@@ -55,11 +63,17 @@ class SelfPacedNotifier extends StateNotifier<SelfPacedState> {
       final module = userData['currentModule'] as String? ?? 'financing';
       final complete = round >= 3 && module == 'complete';
 
+      final entJson = response['entitlement'];
+      final entitlement = entJson is Map<String, dynamic>
+          ? Entitlement.fromJson(entJson)
+          : state.entitlement;
+
       state = state.copyWith(
         currentRound: round,
         currentModule: module,
         isLoading: false,
         isGameComplete: complete,
+        entitlement: entitlement,
       );
 
       // Load all decisions for this round so progress boxes show details

@@ -12,7 +12,9 @@ import '../../../core/services/education_progress_sync.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/team_provider.dart';
+import '../../../providers/self_paced_provider.dart';
 import '../../../app/i18n/app_strings.dart';
+import '../../self_paced/widgets/entitlement_banner.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for each education module
@@ -297,6 +299,12 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
       // module's Learn section is complete (website parity). _loadProgress
       // computes the set; seed the first module + tools so something is open.
       _selfPacedUnlocked = {_modules.first.govModuleNum, 11, 12};
+      // Refresh entitlement (trial countdown / lapsed state) from /me so the
+      // access banner reflects live billing state. /me is not gated, so this is
+      // safe even for a lapsed learner. Fail-quiet — never blocks the hub.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => ref.read(selfPacedProvider.notifier).fetchProgress(),
+      );
     } else {
       _fetchEducationStatus();
       _statusPollTimer = Timer.periodic(
@@ -475,6 +483,29 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
         ? (auth.user?.displayName ?? ref.watch(stringsProvider).tr('Self-Paced', 'التعلّم الذاتي'))
         : (teamState.selectedTeam?.name ?? '');
 
+    // Lapsed self-paced learner (trial ended, no subscription, enforcement on): block the paid
+    // modules and show an informational gate. Website parity (web redirects to /checkout); here
+    // we point to the website to manage the plan — no in-app purchase UI (App Store policy).
+    final entitlement = ref.watch(selfPacedProvider).entitlement;
+    if (isSelfPaced && entitlement.isLapsed) {
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isDark
+                  ? [AppColors.darkBg, AppColors.darkSurface]
+                  : [const Color(0xFFF0F4FF), const Color(0xFFF5F0FF), Colors.white],
+            ),
+          ),
+          child: SafeArea(
+            child: AccessEndedView(onBack: () => Navigator.of(context).maybePop()),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -494,6 +525,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
               SliverToBoxAdapter(
                 child: _buildHeader(context, isSelfPaced, unlockedModules),
               ),
+
+              // ── Access banner (self-paced only): trial countdown / access-ended notice.
+              //    Informational only — no purchase UI (web-only billing). ──
+              if (isSelfPaced)
+                const SliverToBoxAdapter(child: EntitlementBanner()),
 
               // ── Progress Section ──
               SliverToBoxAdapter(

@@ -137,7 +137,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
 
                   // Title
                   Text(
-                    _sent ? s.tr('Email Sent!', 'تم إرسال البريد!') : s.tr('Forgot Password', 'نسيت كلمة المرور'),
+                    _sent ? s.tr('Check Your Email', 'تحقق من بريدك') : s.tr('Forgot Password', 'نسيت كلمة المرور'),
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
@@ -150,7 +150,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                   // Subtitle
                   Text(
                     _sent
-                        ? s.tr('Check your email for a password reset link', 'تحقق من بريدك الإلكتروني للحصول على رابط إعادة تعيين كلمة المرور')
+                        ? s.tr('If an account exists for this email, a reset link is on the way', 'إذا كان هناك حساب مرتبط بهذا البريد، فسيصلك رابط إعادة التعيين')
                         : s.tr('Enter your email to receive a reset link', 'أدخل بريدك الإلكتروني لتلقي رابط إعادة التعيين'),
                     style: TextStyle(
                       fontSize: 14,
@@ -263,7 +263,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                           ).animate().scale(begin: const Offset(0, 0), curve: Curves.elasticOut, duration: 600.ms),
                           const SizedBox(height: 16),
                           Text(
-                            s.tr('A reset link has been sent to', 'تم إرسال رابط إعادة التعيين إلى'),
+                            s.tr('If an account exists for', 'إذا كان هناك حساب مرتبط بـ'),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
@@ -280,7 +280,35 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen>
                               color: AppColors.textPrimary(context),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 4),
+                          Text(
+                            s.tr("we've sent a password reset link to it.", 'فقد أرسلنا رابط إعادة تعيين كلمة المرور إليه.'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.textTertiary(context),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Honest hint: a "sent" screen must not imply an account definitely exists.
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: _purple1.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: _purple1.withValues(alpha: 0.15)),
+                            ),
+                            child: Text(
+                              s.tr(
+                                "Didn't get an email? You may not have an account yet — go back and create one.",
+                                'لم يصلك بريد؟ قد لا يكون لديك حساب بعد — ارجع وأنشئ حساباً.',
+                              ),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 13, color: AppColors.textTertiary(context)),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
                           GradientButton(
                             text: s.tr('Back to Login', 'العودة لتسجيل الدخول'),
                             icon: Icons.arrow_back_rounded,

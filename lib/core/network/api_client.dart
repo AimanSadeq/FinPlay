@@ -65,12 +65,29 @@ class ApiClient {
 
   /// GET that returns a Map response
   Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? params}) async {
-    final response = await _dio.get(path, queryParameters: params);
-    if (response.data is Map<String, dynamic>) {
-      return response.data as Map<String, dynamic>;
+    try {
+      final response = await _dio.get(path, queryParameters: params);
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      // Wrap non-map responses
+      return {'success': true, 'data': response.data};
+    } on DioException catch (e) {
+      // Preserve the server's error body for 4xx (e.g. a 402 SUBSCRIPTION_REQUIRED carries
+      // {success:false, code:'SUBSCRIPTION_REQUIRED', ...} that the UI acts on) instead of
+      // letting the exception bubble up and break the screen.
+      if (e.response?.data is Map<String, dynamic>) {
+        return e.response!.data as Map<String, dynamic>;
+      }
+      if (e.response?.data is Map) {
+        return Map<String, dynamic>.from(e.response!.data as Map);
+      }
+      final statusCode = e.response?.statusCode;
+      if (statusCode != null && statusCode >= 400 && statusCode < 500) {
+        return {'success': false, 'error': 'Request failed ($statusCode)'};
+      }
+      rethrow;
     }
-    // Wrap non-map responses
-    return {'success': true, 'data': response.data};
   }
 
   /// GET that returns a List response
