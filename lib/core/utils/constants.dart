@@ -26,6 +26,9 @@ class AppConstants {
   // Team-member token minted by /facilitator/register-signin; required as a
   // Bearer on decision-write endpoints (confirm/unlock) and select-leader.
   static const String teamMemberTokenKey = 'team_member_token';
+  // Cohort access code the facilitator shares in the room; validated once at the
+  // mode-selector gate and replayed on team sign-in while a training is live.
+  static const String corporateAccessCodeKey = 'corporate_access_code';
 
   // Animation Durations
   static const Duration quickAnimation = Duration(milliseconds: 200);

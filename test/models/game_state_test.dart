@@ -67,6 +67,7 @@ void main() {
         expect(gs.govEducationModulesUnlocked, isEmpty);
         expect(gs.gameMode, 'facilitator');
         expect(gs.corporateModeEnabled, false);
+        expect(gs.corporateAccessCode, isNull);
       });
     });
 
@@ -84,6 +85,7 @@ void main() {
           'siteAccessEnabled': true,
           'gameMode': 'self-paced',
           'corporateModeEnabled': true,
+          'corporateAccessCode': 'X7K2M9',
         };
 
         final gs = GameState.fromJson(json);
@@ -97,6 +99,7 @@ void main() {
         expect(gs.siteAccessEnabled, true);
         expect(gs.gameMode, 'self-paced');
         expect(gs.corporateModeEnabled, true);
+        expect(gs.corporateAccessCode, 'X7K2M9');
       });
     });
 

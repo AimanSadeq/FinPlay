@@ -21,6 +21,9 @@ class GameState {
   final String? activeCaseStudyId;
   final String gameMode;
   final bool corporateModeEnabled;
+  // Cohort access code (facilitator status only — never on public reads). Set
+  // when corporate mode is live; participants must present it to sign in.
+  final String? corporateAccessCode;
 
   const GameState({
     this.currentRound = 1,
@@ -45,6 +48,7 @@ class GameState {
     this.activeCaseStudyId,
     this.gameMode = 'facilitator',
     this.corporateModeEnabled = false,
+    this.corporateAccessCode,
   });
 
   factory GameState.fromJson(Map<String, dynamic> json) {
@@ -76,6 +80,7 @@ class GameState {
       activeCaseStudyId: json['activeCaseStudyId'] as String?,
       gameMode: json['gameMode'] as String? ?? 'facilitator',
       corporateModeEnabled: json['corporateModeEnabled'] as bool? ?? false,
+      corporateAccessCode: json['corporateAccessCode'] as String?,
     );
   }
 

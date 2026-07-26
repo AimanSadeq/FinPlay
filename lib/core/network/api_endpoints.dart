@@ -41,6 +41,10 @@ class ApiEndpoints {
   // Facilitator
   static const String facilitatorLobbyStatus = '/facilitator/lobby-status';
   static const String facilitatorRegisterSignin = '/facilitator/register-signin';
+  // Public: verify a corporate cohort access code (rate-limited, never returns
+  // the code). POST {code} -> { success, valid }. Gates corporate team sign-in
+  // while a training is live.
+  static const String facilitatorVerifyCorporateCode = '/facilitator/verify-corporate-code';
   static const String facilitatorResetEpoch = '/facilitator/reset-epoch';
   static const String facilitatorAuth = '/facilitator/authenticate';
   static const String facilitatorAdminAuth = '/facilitator/admin-authenticate';

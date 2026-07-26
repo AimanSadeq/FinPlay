@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../shared/widgets/app_settings_button.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../core/utils/constants.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../core/network/api_endpoints.dart';
 
@@ -32,6 +34,9 @@ class _ModeSelectorScreenState extends ConsumerState<ModeSelectorScreen>
 
   bool _corporateEnabled = true;
   bool _checkingCorporate = true;
+  // When a training is live the facilitator sets a cohort access code; corporate
+  // entry then requires it (also enforced server-side on team sign-in).
+  bool _corporateCodeRequired = false;
 
   // Page controller for swipeable cards
   late PageController _pageController;
@@ -97,11 +102,147 @@ class _ModeSelectorScreenState extends ConsumerState<ModeSelectorScreen>
       if (mounted) {
         setState(() {
           _corporateEnabled = res['corporateModeEnabled'] == true;
+          _corporateCodeRequired = res['corporateCodeRequired'] == true;
           _checkingCorporate = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _checkingCorporate = false);
+    }
+  }
+
+  /// Corporate entry. When a cohort access code is required and this device
+  /// hasn't cleared the gate yet, prompt for it and verify against the server
+  /// before proceeding — the same code is re-checked when joining a team.
+  Future<void> _enterCorporate() async {
+    if (!_corporateCodeRequired) {
+      if (mounted) context.push('/home');
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(AppConstants.corporateAccessCodeKey);
+    if (stored != null && stored.isNotEmpty) {
+      if (mounted) context.push('/home');
+      return;
+    }
+    if (mounted) await _promptForAccessCode();
+  }
+
+  Future<void> _promptForAccessCode() async {
+    final s = ref.read(stringsProvider);
+    final controller = TextEditingController();
+    String? error;
+    var loading = false;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.workspace_premium_rounded,
+                  color: Color(0xFFF59E0B), size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: Text(s.tr('Cohort Access Code', 'رمز الدخول للجلسة'),
+                      style: const TextStyle(fontSize: 18))),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                s.tr(
+                  'This session is for a live training cohort. Enter the access code your facilitator shared with you.',
+                  'هذه الجلسة مخصصة لمجموعة تدريبية. أدخل رمز الدخول الذي شاركه الميسّر معك.',
+                ),
+                style: TextStyle(fontSize: 13, color: AppColors.textTertiary(context)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                textAlign: TextAlign.center,
+                maxLength: 12,
+                style: GoogleFonts.jetBrainsMono(
+                    fontSize: 18, letterSpacing: 4, fontWeight: FontWeight.w700),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: s.tr('e.g. X7K2M9', 'مثال: X7K2M9'),
+                  errorText: error,
+                ),
+                onChanged: (_) {
+                  if (error != null) setLocal(() => error = null);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: loading ? null : () => Navigator.pop(ctx, false),
+              child: Text(s.tr('Cancel', 'إلغاء')),
+            ),
+            FilledButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      final code = controller.text.trim().toUpperCase();
+                      if (code.isEmpty) {
+                        setLocal(() => error = s.tr('Enter the code', 'أدخل الرمز'));
+                        return;
+                      }
+                      setLocal(() {
+                        loading = true;
+                        error = null;
+                      });
+                      final result = await _verifyCode(code);
+                      if (result == null) {
+                        if (ctx.mounted) Navigator.pop(ctx, true);
+                      } else {
+                        setLocal(() {
+                          loading = false;
+                          error = result;
+                        });
+                      }
+                    },
+              child: loading
+                  ? const SizedBox(
+                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(s.tr('Continue', 'متابعة')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok == true && mounted) context.push('/home');
+  }
+
+  /// Verifies the code with the server and stores it on success. Returns null
+  /// when valid, or a localized error message.
+  Future<String?> _verifyCode(String code) async {
+    final s = ref.read(stringsProvider);
+    try {
+      final res = await ref
+          .read(apiClientProvider)
+          .post(ApiEndpoints.facilitatorVerifyCorporateCode, data: {'code': code});
+      if (res['valid'] == true) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(AppConstants.corporateAccessCodeKey, code);
+        return null;
+      }
+      // The API client maps 429 to a generic "Request failed (429)" — surface a
+      // clearer rate-limit hint when that is what came back.
+      final err = res['error']?.toString() ?? '';
+      if (err.contains('429') || err.toLowerCase().contains('many')) {
+        return s.tr('Too many attempts. Try again in a few minutes.',
+            'محاولات كثيرة. حاول مرة أخرى بعد دقائق.');
+      }
+      return s.tr('Invalid code. Check the code with your facilitator.',
+          'رمز غير صحيح. تحقق من الرمز مع الميسّر.');
+    } catch (_) {
+      return s.tr('Could not verify. Please try again.', 'تعذر التحقق. حاول مرة أخرى.');
     }
   }
 
@@ -309,7 +450,7 @@ class _ModeSelectorScreenState extends ConsumerState<ModeSelectorScreen>
                                 onTap: () {
                                   HapticFeedback.mediumImpact();
                                   if (_corporateEnabled) {
-                                    context.push('/home');
+                                    _enterCorporate();
                                   } else {
                                     _showLockedSheet();
                                   }

@@ -589,6 +589,33 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                                   ? s.tr('City required', 'المدينة مطلوبة')
                                   : null,
                             ),
+                            // Recovery path: _codeSent is in-memory, so a learner
+                            // who received the email but relaunched the app would
+                            // otherwise have no way back to the code field.
+                            if (!_codeSent) ...[
+                              const SizedBox(height: 12),
+                              Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: TextButton(
+                                  onPressed: authState.status == AuthStatus.loading
+                                      ? null
+                                      : () => setState(() => _codeSent = true),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(0, 0),
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    s.tr('Already received a verification code? Enter it here',
+                                        'استلمت رمز التحقق بالفعل؟ أدخله هنا'),
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: _blue600,
+                                        decoration: TextDecoration.underline),
+                                  ),
+                                ),
+                              ),
+                            ],
                             // Step 2: verification code field + resend, shown once
                             // the 6-digit code has been emailed.
                             if (_codeSent) ...[

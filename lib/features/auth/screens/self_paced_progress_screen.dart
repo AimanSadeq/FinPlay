@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../providers/auth_provider.dart';
@@ -22,6 +23,12 @@ class _SelfPacedProgressScreenState
     with SingleTickerProviderStateMixin {
   late AnimationController _bgController;
 
+  // The Simulation tile is EARNED (website parity): it stays locked until every
+  // content module's Learn section is done, then opens. Same criterion the
+  // education hub uses to unlock its Simulation tile.
+  static const List<int> _simGateModules = [1, 2, 3, 4, 6, 7, 9, 10];
+  bool _simUnlocked = false;
+
   @override
   void initState() {
     super.initState();
@@ -29,6 +36,14 @@ class _SelfPacedProgressScreenState
       duration: const Duration(seconds: 14),
       vsync: this,
     )..repeat(reverse: true);
+    _loadSimGate();
+  }
+
+  Future<void> _loadSimGate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final unlocked = _simGateModules
+        .every((n) => prefs.getBool('gov_module_sp_${n}_learn') ?? false);
+    if (mounted) setState(() => _simUnlocked = unlocked);
   }
 
   @override
@@ -118,7 +133,9 @@ class _SelfPacedProgressScreenState
                         ],
                         onTap: () {
                           HapticFeedback.mediumImpact();
-                          context.push('/education');
+                          // Recompute the Simulation gate on return — a lesson may
+                          // have been completed in the education area.
+                          context.push('/education').then((_) => _loadSimGate());
                         },
                       )
                           .animate()
@@ -129,17 +146,28 @@ class _SelfPacedProgressScreenState
 
                       _ActionCard(
                         title: s.tr('Enter Simulation', 'ادخل المحاكاة'),
-                        subtitle:
-                            s.tr('Strategic finance game with real IFRS statements', 'لعبة مالية استراتيجية بقوائم مالية حقيقية وفق معايير IFRS'),
+                        subtitle: _simUnlocked
+                            ? s.tr('Strategic finance game with real IFRS statements',
+                                'لعبة مالية استراتيجية بقوائم مالية حقيقية وفق معايير IFRS')
+                            : s.tr('Finish every module lesson to unlock',
+                                'أكمل دروس جميع الوحدات لفتح المحاكاة'),
                         icon: Icons.play_circle_rounded,
                         accentColor: const Color(0xFFF59E0B),
                         gradient: const [
                           Color(0xFFF59E0B),
                           Color(0xFFEA580C)
                         ],
+                        locked: !_simUnlocked,
                         onTap: () {
                           HapticFeedback.mediumImpact();
-                          context.push('/simulation');
+                          // Earned tile: while locked, route to the modules
+                          // instead (website parity — the dimmed tile sends the
+                          // learner to finish their lessons).
+                          if (_simUnlocked) {
+                            context.push('/simulation');
+                          } else {
+                            context.push('/education').then((_) => _loadSimGate());
+                          }
                         },
                       )
                           .animate()
@@ -449,6 +477,7 @@ class _ActionCard extends StatefulWidget {
   final Color accentColor;
   final List<Color> gradient;
   final VoidCallback onTap;
+  final bool locked;
 
   const _ActionCard({
     required this.title,
@@ -457,6 +486,7 @@ class _ActionCard extends StatefulWidget {
     required this.accentColor,
     required this.gradient,
     required this.onTap,
+    this.locked = false,
   });
 
   @override
@@ -480,7 +510,9 @@ class _ActionCardState extends State<_ActionCard> {
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1.0,
         duration: const Duration(milliseconds: 120),
-        child: Container(
+        child: Opacity(
+          opacity: widget.locked ? 0.55 : 1.0,
+          child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkSurface : Colors.white,
@@ -561,7 +593,7 @@ class _ActionCardState extends State<_ActionCard> {
 
               const SizedBox(width: 8),
 
-              // Arrow
+              // Arrow, or a lock when the tile is not yet earned
               Container(
                 width: 36,
                 height: 36,
@@ -571,12 +603,15 @@ class _ActionCardState extends State<_ActionCard> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
-                  Icons.arrow_forward_rounded,
+                  widget.locked
+                      ? Icons.lock_rounded
+                      : Icons.arrow_forward_rounded,
                   size: 18,
                   color: widget.accentColor,
                 ),
               ),
             ],
+          ),
           ),
         ),
       ),

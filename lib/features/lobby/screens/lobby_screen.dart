@@ -177,6 +177,99 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     }
   }
 
+  /// Prompt for the cohort access code and verify it, then store it so the next
+  /// Join attempt carries it. Used when the server rejects a sign-in with 403.
+  Future<void> _promptForAccessCode() async {
+    final s = ref.read(stringsProvider);
+    final controller = TextEditingController();
+    String? error;
+    var loading = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(s.tr('Cohort Access Code', 'رمز الدخول للجلسة'),
+              style: const TextStyle(fontSize: 18)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                s.tr('Enter the access code your facilitator shared with you.',
+                    'أدخل رمز الدخول الذي شاركه الميسّر معك.'),
+                style: TextStyle(fontSize: 13, color: AppColors.textTertiary(context)),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                textAlign: TextAlign.center,
+                maxLength: 12,
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: s.tr('e.g. X7K2M9', 'مثال: X7K2M9'),
+                  errorText: error,
+                ),
+                onChanged: (_) {
+                  if (error != null) setLocal(() => error = null);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: loading ? null : () => Navigator.pop(ctx),
+              child: Text(s.tr('Cancel', 'إلغاء')),
+            ),
+            FilledButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      final code = controller.text.trim().toUpperCase();
+                      if (code.isEmpty) {
+                        setLocal(() => error = s.tr('Enter the code', 'أدخل الرمز'));
+                        return;
+                      }
+                      setLocal(() {
+                        loading = true;
+                        error = null;
+                      });
+                      try {
+                        final res = await ref.read(apiClientProvider).post(
+                            ApiEndpoints.facilitatorVerifyCorporateCode,
+                            data: {'code': code});
+                        if (res['valid'] == true) {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setString(
+                              AppConstants.corporateAccessCodeKey, code);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        } else {
+                          setLocal(() {
+                            loading = false;
+                            error = s.tr('Invalid code. Check with your facilitator.',
+                                'رمز غير صحيح. تحقق منه مع الميسّر.');
+                          });
+                        }
+                      } catch (_) {
+                        setLocal(() {
+                          loading = false;
+                          error = s.tr('Could not verify. Try again.',
+                              'تعذر التحقق. حاول مرة أخرى.');
+                        });
+                      }
+                    },
+              child: loading
+                  ? const SizedBox(
+                      width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(s.tr('Verify', 'تحقق')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _joinTeam() async {
     final s = ref.read(stringsProvider);
     final name = _nameController.text.trim();
@@ -212,10 +305,29 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     // server mints a team-member token that decision-write endpoints require, and
     // it lets us reject a name already taken on this team.
     try {
+      // Replay the cohort access code (validated at the mode-selector gate) — the
+      // server requires it on every new sign-in while a training is live.
+      final accessCode = prefs.getString(AppConstants.corporateAccessCodeKey);
       final reg = await api.post(ApiEndpoints.facilitatorRegisterSignin, data: {
         'teamId': team.id,
         'playerName': name,
+        if (accessCode != null && accessCode.isNotEmpty) 'accessCode': accessCode,
       });
+      // A 403 here means the code is required but missing/stale (e.g. reset
+      // between sessions). Prompt for it, then let the user tap Join again.
+      if (reg['code'] == 'ACCESS_CODE_REQUIRED') {
+        await prefs.remove(AppConstants.corporateAccessCodeKey);
+        if (mounted) {
+          setState(() {
+            _joining = false;
+            _nameError = s.tr(
+                'A cohort access code is required. Ask your facilitator, then rejoin.',
+                'يلزم رمز دخول للجلسة. اطلبه من الميسّر ثم أعد الانضمام.');
+          });
+          await _promptForAccessCode();
+        }
+        return;
+      }
       final token = reg['token'];
       if (token is String && token.isNotEmpty) {
         await prefs.setString(AppConstants.teamMemberTokenKey, token);

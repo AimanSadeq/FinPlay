@@ -30,6 +30,7 @@ void main() {
           ApiEndpoints.govEducationQuiz,
           ApiEndpoints.govEducationLeaderboard,
           ApiEndpoints.facilitatorAuth,
+          ApiEndpoints.facilitatorVerifyCorporateCode,
           ApiEndpoints.facilitatorStartGame,
           ApiEndpoints.facilitatorPauseGame,
           ApiEndpoints.facilitatorResetGame,

@@ -356,6 +356,9 @@ class _ControlsTab extends StatefulWidget {
 class _ControlsTabState extends State<_ControlsTab> {
   bool _siteAccessEnabled = false;
   bool _corporateModeEnabled = false;
+  // Cohort access code minted when corporate mode is turned on — shared with the
+  // room and required for team sign-in. Empty when corporate mode is off.
+  String _corporateAccessCode = '';
   bool _lobbyOpen = false;
   String _gameStatus = 'stopped';
   bool _loading = false;
@@ -438,6 +441,9 @@ class _ControlsTabState extends State<_ControlsTab> {
         setState(() {
           _siteAccessEnabled = data.siteAccessEnabled;
           _corporateModeEnabled = data.corporateModeEnabled;
+          if (data.corporateAccessCode != null) {
+            _corporateAccessCode = data.corporateAccessCode!;
+          }
           _gameStatus = data.isActive ? 'playing' : 'stopped';
         });
       }
@@ -464,8 +470,12 @@ class _ControlsTabState extends State<_ControlsTab> {
   Future<void> _toggleCorporateMode(bool val) async {
     setState(() => _loading = true);
     try {
-      await widget.repo.toggleCorporateMode(val);
-      setState(() => _corporateModeEnabled = val);
+      final res = await widget.repo.toggleCorporateMode(val);
+      setState(() {
+        _corporateModeEnabled = val;
+        // Server mints a fresh code on enable, clears it on disable.
+        _corporateAccessCode = val ? (res['corporateAccessCode']?.toString() ?? '') : '';
+      });
       widget.onRefreshState();
     } catch (e) {
       if (mounted) {
@@ -599,6 +609,39 @@ class _ControlsTabState extends State<_ControlsTab> {
             ),
           ]),
         ),
+        // Cohort access code — shown only to the facilitator, to read out to the
+        // room. Participants must enter it to join a team while corporate is live.
+        if (_corporateModeEnabled && _corporateAccessCode.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          GlassCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(children: [
+              const Icon(Icons.vpn_key_rounded, color: Color(0xFFF59E0B), size: 20),
+              const SizedBox(width: 12),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(s.tr('Cohort access code', 'رمز الدخول للجلسة'),
+                      style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+                  SelectableText(
+                    _corporateAccessCode,
+                    style: GoogleFonts.jetBrainsMono(
+                        fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 3),
+                  ),
+                ],
+              )),
+              IconButton(
+                tooltip: s.tr('Copy', 'نسخ'),
+                icon: const Icon(Icons.copy_rounded, size: 18),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: _corporateAccessCode));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(s.tr('Code copied', 'تم نسخ الرمز'))));
+                },
+              ),
+            ]),
+          ),
+        ],
         const SizedBox(height: 16),
 
         // Game Controls
