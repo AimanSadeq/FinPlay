@@ -8,8 +8,13 @@ import '../data/repositories/facilitator_repository.dart';
 import '../data/repositories/game_repository.dart';
 import '../data/repositories/self_paced_repository.dart';
 import '../data/repositories/billing_repository.dart';
+import '../data/repositories/certificate_repository.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
+final certificateRepositoryProvider = Provider<CertificateRepository>((ref) {
+  return CertificateRepository(ref.watch(apiClientProvider));
+});
 
 final billingRepositoryProvider = Provider<BillingRepository>((ref) {
   return BillingRepository(ref.watch(apiClientProvider));

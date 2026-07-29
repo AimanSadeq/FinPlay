@@ -87,6 +87,12 @@ class ApiEndpoints {
   static const String shocksUnacknowledged = '/shocks/unacknowledged';
   static const String shocksClear = '/shocks/clear';
 
+  // Certificate — awarded once every learning module is complete.
+  // /me is authenticated AND entitlement-gated (a lapsed learner gets 402), because issuing a
+  // certificate is a paid outcome. The public view/verify pages are deliberately NOT gated: an
+  // already-issued certificate must stay verifiable by an employer forever.
+  static const String certificateMe = '/certificate/me';
+
   // Education
   static const String education = '/education';
   static const String educationModulesStatus = '/education-modules/status';

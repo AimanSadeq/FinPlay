@@ -1191,26 +1191,42 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildExtraButtons(BuildContext context) {
     final s = ref.watch(stringsProvider);
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _ExtraButton(
-            icon: Icons.menu_book_rounded,
-            label: s.tr('Financial Glossary', 'القاموس المالي'),
-            sublabel: s.tr('180+ terms', 'أكثر من 180 مصطلحًا'),
-            color: AppColors.accentLight,
-            onTap: () => context.push('/education/glossary'),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: _ExtraButton(
+                icon: Icons.menu_book_rounded,
+                label: s.tr('Financial Glossary', 'القاموس المالي'),
+                sublabel: s.tr('180+ terms', 'أكثر من 180 مصطلحًا'),
+                color: AppColors.accentLight,
+                onTap: () => context.push('/education/glossary'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ExtraButton(
+                icon: Icons.table_chart_rounded,
+                label: s.tr('Excel Data', 'بيانات إكسل'),
+                sublabel: s.tr('IFRS Statements', 'قوائم IFRS'),
+                color: AppColors.dangerLight,
+                onTap: () => context.push('/education/excel'),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _ExtraButton(
-            icon: Icons.table_chart_rounded,
-            label: s.tr('Excel Data', 'بيانات إكسل'),
-            sublabel: s.tr('IFRS Statements', 'قوائم IFRS'),
-            color: AppColors.dangerLight,
-            onTap: () => context.push('/education/excel'),
-          ),
+        const SizedBox(height: 12),
+        // Certificate — full width. The screen itself handles every state (progress while
+        // incomplete, the award once earned, revoked, or access-lapsed), so it is always
+        // reachable rather than appearing only after completion. A learner who finished the
+        // work previously had no way to collect it on iOS at all.
+        _ExtraButton(
+          icon: Icons.workspace_premium_rounded,
+          label: s.tr('Certificate', 'الشهادة'),
+          sublabel: s.tr('Your completion award', 'شهادة إتمام البرنامج'),
+          color: AppColors.secondaryLight,
+          onTap: () => context.push('/education/certificate'),
         ),
       ],
     );

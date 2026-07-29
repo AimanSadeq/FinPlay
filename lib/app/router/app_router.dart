@@ -23,6 +23,7 @@ import '../../features/education/screens/break_even_screen.dart';
 import '../../features/education/screens/capital_budgeting_screen.dart';
 import '../../features/education/screens/excel_view_screen.dart';
 import '../../features/education/screens/financial_glossary_screen.dart';
+import '../../features/education/screens/certificate_screen.dart';
 import '../../features/education/screens/wacc_screen.dart';
 import '../../features/education/screens/dupont_screen.dart';
 import '../../features/education/screens/working_capital_screen.dart';
@@ -230,6 +231,14 @@ class AppRouter {
         name: 'glossary',
         pageBuilder: (context, state) => _buildPage(
           const FinancialGlossaryScreen(),
+          state,
+        ),
+      ),
+      GoRoute(
+        path: '/education/certificate',
+        name: 'certificate',
+        pageBuilder: (context, state) => _buildPage(
+          const CertificateScreen(),
           state,
         ),
       ),
