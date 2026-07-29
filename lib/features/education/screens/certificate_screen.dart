@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -84,6 +85,7 @@ class _CertificateScreenState extends ConsumerState<CertificateScreen> {
 
   Widget _body(CertificateStatus s, bool isArabic) {
     if (s.subscriptionRequired) return _lapsed(isArabic);
+    if (s.sessionExpired) return _signedOut(isArabic);
     if (s.error != null) return _message(Icons.error_outline, AppColors.danger, s.error!);
     if (s.revoked) {
       return _message(
@@ -254,6 +256,37 @@ class _CertificateScreenState extends ConsumerState<CertificateScreen> {
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
         ),
       ],
+    );
+  }
+
+  /// Signed out or session expired (7-day sessions, so this is routine). Offers the way back in
+  /// rather than reporting the server's raw "Not authenticated" and leaving the learner stuck.
+  Widget _signedOut(bool isArabic) {
+    return GlassCard(
+      padding: const EdgeInsets.all(22),
+      child: Column(
+        children: [
+          const Icon(Icons.person_off_outlined, color: AppColors.warning, size: 40),
+          const SizedBox(height: 12),
+          Text(
+            isArabic
+                ? 'انتهت جلستك. سجّل الدخول مرة أخرى لعرض شهادتك.'
+                : 'Your session has ended. Sign in again to view your certificate.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(fontSize: 15, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => context.go('/self-paced-login'),
+            icon: const Icon(Icons.login),
+            label: Text(isArabic ? 'تسجيل الدخول' : 'Sign in'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              backgroundColor: AppColors.primary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -1,6 +1,11 @@
 import 'package:dio/dio.dart';
 import '../utils/constants.dart';
 
+/// Key under which ApiClient stamps the HTTP status onto a preserved 4xx response body, so a
+/// caller can distinguish (say) an expired session from a generic failure. Underscore-prefixed
+/// to make clear it is added by the client and never sent by the server.
+const String httpStatusKey = '_httpStatus';
+
 class ApiClient {
   static ApiClient? _instance;
   late final Dio _dio;
@@ -76,15 +81,19 @@ class ApiClient {
       // Preserve the server's error body for 4xx (e.g. a 402 SUBSCRIPTION_REQUIRED carries
       // {success:false, code:'SUBSCRIPTION_REQUIRED', ...} that the UI acts on) instead of
       // letting the exception bubble up and break the screen.
-      if (e.response?.data is Map<String, dynamic>) {
-        return e.response!.data as Map<String, dynamic>;
-      }
-      if (e.response?.data is Map) {
-        return Map<String, dynamic>.from(e.response!.data as Map);
-      }
+      //
+      // The status is stamped under [httpStatusKey] because not every error carries a `code`:
+      // a 401 is just {success:false, error:'Not authenticated'}, which a caller otherwise
+      // cannot tell apart from any other failure — and so ends up showing the raw server
+      // string instead of offering the learner a way to sign in again.
       final statusCode = e.response?.statusCode;
+      if (e.response?.data is Map) {
+        final body = Map<String, dynamic>.from(e.response!.data as Map);
+        if (statusCode != null) body[httpStatusKey] = statusCode;
+        return body;
+      }
       if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-        return {'success': false, 'error': 'Request failed ($statusCode)'};
+        return {'success': false, 'error': 'Request failed ($statusCode)', httpStatusKey: statusCode};
       }
       rethrow;
     }

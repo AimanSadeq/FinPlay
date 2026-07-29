@@ -16,39 +16,7 @@ class CertificateRepository {
   /// because "your access ended" is a different message from "something went wrong".
   Future<CertificateStatus> fetch() async {
     try {
-      final res = await _api.get(ApiEndpoints.certificateMe);
-
-      if (res['code'] == 'SUBSCRIPTION_REQUIRED') {
-        return const CertificateStatus(subscriptionRequired: true);
-      }
-      if (res['success'] != true) {
-        return CertificateStatus(error: res['error']?.toString() ?? 'Could not load certificate');
-      }
-
-      final completed = (res['completed'] as num?)?.toInt() ?? 0;
-      final total = (res['total'] as num?)?.toInt() ?? 0;
-      final eligible = res['eligible'] == true;
-
-      if (!eligible) {
-        return CertificateStatus(completed: completed, total: total, eligible: false);
-      }
-      if (res['revoked'] == true) {
-        return CertificateStatus(
-          completed: completed,
-          total: total,
-          eligible: true,
-          revoked: true,
-        );
-      }
-
-      final raw = res['certificate'];
-      return CertificateStatus(
-        completed: completed,
-        total: total,
-        eligible: true,
-        certificate:
-            raw is Map ? Certificate.fromJson(Map<String, dynamic>.from(raw)) : null,
-      );
+      return CertificateStatus.fromResponse(await _api.get(ApiEndpoints.certificateMe));
     } catch (e) {
       return CertificateStatus(error: e.toString());
     }

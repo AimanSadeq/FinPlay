@@ -1,3 +1,4 @@
+import '../../core/network/api_client.dart' show httpStatusKey;
 import '../../core/utils/constants.dart';
 
 /// A learner's completion certificate, mirrored from GET /api/certificate/me.
@@ -64,6 +65,11 @@ class CertificateStatus {
   /// the work; the server just will not mint a certificate without an active entitlement.
   final bool subscriptionRequired;
 
+  /// Session expired or missing (HTTP 401). Sessions last 7 days, so this is routine rather than
+  /// exceptional, and it needs its own state: without it the screen falls through to [error] and
+  /// shows the server's raw "Not authenticated", which is a dead end rather than an instruction.
+  final bool sessionExpired;
+
   /// Anything else that went wrong, for display.
   final String? error;
 
@@ -74,10 +80,45 @@ class CertificateStatus {
     this.certificate,
     this.revoked = false,
     this.subscriptionRequired = false,
+    this.sessionExpired = false,
     this.error,
   });
 
   /// 0.0–1.0 progress toward eligibility. Guards total == 0 so a not-yet-loaded state renders
   /// an empty bar rather than throwing.
   double get progress => total <= 0 ? 0 : (completed / total).clamp(0, 1).toDouble();
+
+  /// Map a GET /certificate/me response (or a preserved 4xx body) onto a status.
+  ///
+  /// Pure and separate from the repository so every branch is testable without mocking the
+  /// network — the branch that matters most is 401, where falling through to [error] would show
+  /// the server's raw "Not authenticated" instead of offering a way to sign in.
+  factory CertificateStatus.fromResponse(Map<String, dynamic> res) {
+    if (res['code'] == 'SUBSCRIPTION_REQUIRED') {
+      return const CertificateStatus(subscriptionRequired: true);
+    }
+    if (res[httpStatusKey] == 401) {
+      return const CertificateStatus(sessionExpired: true);
+    }
+    if (res['success'] != true) {
+      return CertificateStatus(error: res['error']?.toString() ?? 'Could not load certificate');
+    }
+
+    final completed = (res['completed'] as num?)?.toInt() ?? 0;
+    final total = (res['total'] as num?)?.toInt() ?? 0;
+    if (res['eligible'] != true) {
+      return CertificateStatus(completed: completed, total: total, eligible: false);
+    }
+    if (res['revoked'] == true) {
+      return CertificateStatus(
+          completed: completed, total: total, eligible: true, revoked: true);
+    }
+    final raw = res['certificate'];
+    return CertificateStatus(
+      completed: completed,
+      total: total,
+      eligible: true,
+      certificate: raw is Map ? Certificate.fromJson(Map<String, dynamic>.from(raw)) : null,
+    );
+  }
 }
