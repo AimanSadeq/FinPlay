@@ -49,5 +49,13 @@
 		<false/>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
+		<!-- FinPlay never records audio. Apple requires this string because linked components
+		     reference microphone APIs even when unused (App Store error 90683): just_audio's
+		     audio_session touches AVAudioSession.requestRecordPermission for lesson narration
+		     playback, and WKWebView (used for the hosted checkout page) references getUserMedia.
+		     The app requests no microphone permission, so this prompt should never be shown —
+		     but the wording is written to be truthful if it ever is. -->
+		<key>NSMicrophoneUsageDescription</key>
+		<string>FinPlay does not record audio. This entry is required by the audio playback components used for lesson narration.</string>
 	</dict>
 </plist>
