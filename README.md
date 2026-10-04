@@ -71,8 +71,7 @@ lib/
     ├── simulation/           # Core simulation gameplay
     ├── facilitator/          # Facilitator controls + admin model editor
     ├── dashboard/            # Team comparison, multi-round, game map
-    ├── education/            # Education hub + finance tool screens
-    ├── gov_education/        # Education module screens + games (legacy folder name)
+    ├── education/            # Education hub, module screens + games, finance tools
     ├── assessment/           # Pre/post knowledge tests
     ├── research/             # Research data collection
     └── shocks/               # Market shock UI

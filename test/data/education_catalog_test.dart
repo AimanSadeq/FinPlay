@@ -27,7 +27,7 @@ void main() {
 
     test('in-app routes carry the catalog id, never the position', () {
       for (final m in inAppContentModules) {
-        expect(m.appRoute, '/gov-education/module/${m.num}');
+        expect(m.appRoute, '/education/module/${m.num}');
       }
       expect(inAppContentModules.map((m) => m.num), [1, 3, 4, 6, 7, 2, 9, 10]);
     });

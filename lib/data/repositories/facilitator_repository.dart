@@ -45,13 +45,6 @@ class FacilitatorRepository {
     }
   }
 
-  Future<void> unlockEducation(String feature, bool unlocked) async {
-    await _api.post(ApiEndpoints.facilitatorToggleGovModule, data: {
-      'feature': feature,
-      'enabled': unlocked,
-    });
-  }
-
   Future<void> setTimer(int seconds, {String? action}) async {
     if (action == 'start') {
       await _api.post(ApiEndpoints.facilitatorStartTimer, data: {

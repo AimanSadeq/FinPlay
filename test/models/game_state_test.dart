@@ -63,8 +63,6 @@ void main() {
         expect(gs.nextDecisionsUnlocked, false);
         expect(gs.breakEvenUnlocked, false);
         expect(gs.capitalBudgetingUnlocked, false);
-        expect(gs.govEducationUnlocked, false);
-        expect(gs.govEducationModulesUnlocked, isEmpty);
         expect(gs.gameMode, 'facilitator');
         expect(gs.corporateModeEnabled, false);
         expect(gs.corporateAccessCode, isNull);
@@ -79,8 +77,6 @@ void main() {
           'nextDecisionsUnlocked': true,
           'breakEvenUnlocked': true,
           'capitalBudgetingUnlocked': true,
-          'govEducationUnlocked': true,
-          'govEducationModulesUnlocked': [1, 2, 3, 5],
           'educationRetryUnlocked': true,
           'siteAccessEnabled': true,
           'gameMode': 'self-paced',
@@ -93,8 +89,6 @@ void main() {
         expect(gs.nextDecisionsUnlocked, true);
         expect(gs.breakEvenUnlocked, true);
         expect(gs.capitalBudgetingUnlocked, true);
-        expect(gs.govEducationUnlocked, true);
-        expect(gs.govEducationModulesUnlocked, [1, 2, 3, 5]);
         expect(gs.educationRetryUnlocked, true);
         expect(gs.siteAccessEnabled, true);
         expect(gs.gameMode, 'self-paced');

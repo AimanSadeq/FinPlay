@@ -9,7 +9,7 @@ import 'data/module10_data.dart';
 
 enum GameType { memoryMatch, classification, ordering }
 
-class GovModuleContent {
+class EducationModuleContent {
   final int id;
   final String title;
   final String gameTitle;
@@ -40,7 +40,7 @@ class GovModuleContent {
   final List<String>? statementBuilderCategories;
   final List<Map<String, String>>? statementBuilderItems;
 
-  const GovModuleContent({
+  const EducationModuleContent({
     required this.id,
     required this.title,
     required this.gameTitle,
@@ -66,7 +66,7 @@ class GovModuleContent {
 // as id 2, which the server and the hub read as Sector Finance Comparison.
 // Listed in hub order. Time Value of Money (id 5) and ids 14-18 have no ported
 // content yet; the hub opens them on the website. Id 8 is retired.
-final govModuleContents = <int, GovModuleContent>{
+final educationModuleContents = <int, EducationModuleContent>{
   1:  module1Data,   // Financial Management Primer
   3:  module3Data,   // Understanding Financial Statements
   4:  module4Data,   // Analysis of Financial Statements

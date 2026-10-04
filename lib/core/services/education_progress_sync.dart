@@ -63,9 +63,9 @@ class EducationProgressSync {
   /// website; every other module is `module` followed by its catalog id.
   static String _moduleKey(int n) => n == 5 ? 'tvm' : 'module$n';
 
-  /// Pref key used by gov_module_screen: `gov_module_<scope>_<moduleId>_<activity>`.
+  /// Pref key used by edu_module_screen: `edu_module_` + scope + id + activity.
   static String _prefKey(String scope, int module, String activity) =>
-      'gov_module_${scope}_${module}_$activity';
+      'edu_module_${scope}_${module}_$activity';
 
   /// Badge ids restored from the server, echoed back on push so a mobile sync
   /// never wipes badges the learner earned on the website.

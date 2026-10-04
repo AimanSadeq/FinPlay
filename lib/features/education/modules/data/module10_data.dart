@@ -1,6 +1,6 @@
-import '../gov_module_data.dart';
+import '../education_module_data.dart';
 
-const module10Data = GovModuleContent(
+const module10Data = EducationModuleContent(
   id: 10,
   title: 'Financial Auditing & Review',
   titleAr: 'التدقيق المالي والمراجعة',

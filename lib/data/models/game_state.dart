@@ -9,8 +9,6 @@ class GameState {
   final bool nextDecisionsUnlocked;
   final bool breakEvenUnlocked;
   final bool capitalBudgetingUnlocked;
-  final bool govEducationUnlocked;
-  final List<int> govEducationModulesUnlocked;
   final bool educationUnlocked; // master education gate
   final List<int> educationModulesUnlocked; // per-module unlock ids
   final bool educationRetryUnlocked;
@@ -36,8 +34,6 @@ class GameState {
     this.nextDecisionsUnlocked = false,
     this.breakEvenUnlocked = false,
     this.capitalBudgetingUnlocked = false,
-    this.govEducationUnlocked = false,
-    this.govEducationModulesUnlocked = const [],
     this.educationUnlocked = false,
     this.educationModulesUnlocked = const [],
     this.educationRetryUnlocked = false,
@@ -66,9 +62,6 @@ class GameState {
       nextDecisionsUnlocked: json['nextDecisionsUnlocked'] as bool? ?? false,
       breakEvenUnlocked: json['breakEvenUnlocked'] as bool? ?? false,
       capitalBudgetingUnlocked: json['capitalBudgetingUnlocked'] as bool? ?? false,
-      govEducationUnlocked: json['govEducationUnlocked'] as bool? ?? false,
-      govEducationModulesUnlocked: (json['govEducationModulesUnlocked'] as List<dynamic>?)
-          ?.map((e) => e as int).toList() ?? [],
       educationUnlocked: json['educationUnlocked'] as bool? ?? false,
       educationModulesUnlocked: (json['educationModulesUnlocked'] as List<dynamic>?)
           ?.map((e) => (e as num).toInt()).toList() ?? [],

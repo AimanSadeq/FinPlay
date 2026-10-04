@@ -10,8 +10,8 @@
 ///    "id 4", never by a bare "Module 4".
 ///
 /// The id is permanent: it is what the facilitator's unlock list, cohort module
-/// plans, the progress sync (`module<id>`) and the local progress keys
-/// (`edu_progress_<id>`, `gov_module_<scope>_<id>_<activity>`) all store.
+/// plans, the progress sync (`module` + id) and the local progress keys
+/// (`edu_progress_` + id, `edu_module_` + scope + id + activity) all store.
 /// The hub card position is deliberately NOT the id: Sector Finance Comparison
 /// is id 2 and sits ninth, id 8 is retired and id 13 is the game. Positions
 /// shift whenever a cohort's module plan hides cards, so they are never used as
@@ -21,7 +21,7 @@ library;
 enum EducationModuleKind { content, workshop, simulation }
 
 class EducationCatalogEntry {
-  /// Permanent identifier. Same value as `govModuleNum` throughout the app.
+  /// Permanent identifier. Same value as `catalogId` throughout the app.
   final int num;
   final String titleEn;
   final String titleAr;
@@ -69,7 +69,7 @@ const List<EducationCatalogEntry> educationCatalog = [
     titleAr: 'تمهيد الإدارة المالية',
     href: '/education/fundamentals',
     kind: EducationModuleKind.content,
-    appRoute: '/gov-education/module/1',
+    appRoute: '/education/module/1',
   ),
   EducationCatalogEntry(
     num: 3,
@@ -77,7 +77,7 @@ const List<EducationCatalogEntry> educationCatalog = [
     titleAr: 'فهم القوائم المالية',
     href: '/education/financial-statements',
     kind: EducationModuleKind.content,
-    appRoute: '/gov-education/module/3',
+    appRoute: '/education/module/3',
   ),
   EducationCatalogEntry(
     num: 4,
@@ -85,7 +85,7 @@ const List<EducationCatalogEntry> educationCatalog = [
     titleAr: 'تحليل القوائم المالية',
     href: '/education/financial-analysis',
     kind: EducationModuleKind.content,
-    appRoute: '/gov-education/module/4',
+    appRoute: '/education/module/4',
   ),
   EducationCatalogEntry(
     num: 5,
@@ -116,7 +116,7 @@ const List<EducationCatalogEntry> educationCatalog = [
     titleAr: 'الموازنة والتخطيط المالي',
     href: '/education/budgeting',
     kind: EducationModuleKind.content,
-    appRoute: '/gov-education/module/6',
+    appRoute: '/education/module/6',
   ),
   EducationCatalogEntry(
     num: 7,
@@ -124,7 +124,7 @@ const List<EducationCatalogEntry> educationCatalog = [
     titleAr: 'معايير IFRS مقابل IPSAS',
     href: '/education/reporting-standards',
     kind: EducationModuleKind.content,
-    appRoute: '/gov-education/module/7',
+    appRoute: '/education/module/7',
   ),
   EducationCatalogEntry(
     num: 2,
@@ -132,7 +132,7 @@ const List<EducationCatalogEntry> educationCatalog = [
     titleAr: 'مقارنة مالية القطاعات',
     href: '/education/sector-comparison',
     kind: EducationModuleKind.content,
-    appRoute: '/gov-education/module/2',
+    appRoute: '/education/module/2',
   ),
   EducationCatalogEntry(
     num: 9,
@@ -140,7 +140,7 @@ const List<EducationCatalogEntry> educationCatalog = [
     titleAr: 'الامتثال والضوابط الداخلية',
     href: '/education/compliance',
     kind: EducationModuleKind.content,
-    appRoute: '/gov-education/module/9',
+    appRoute: '/education/module/9',
   ),
   EducationCatalogEntry(
     num: 10,
@@ -148,7 +148,7 @@ const List<EducationCatalogEntry> educationCatalog = [
     titleAr: 'المراجعة والتدقيق المالي',
     href: '/education/auditing',
     kind: EducationModuleKind.content,
-    appRoute: '/gov-education/module/10',
+    appRoute: '/education/module/10',
   ),
   EducationCatalogEntry(
     num: 14,

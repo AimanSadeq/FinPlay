@@ -36,7 +36,7 @@ import '../../features/research/screens/research_screen.dart';
 import '../../features/earnings_call/screens/earnings_call_screen.dart';
 import '../../features/facilitator/screens/admin_model_screen.dart';
 import '../../features/education/screens/web_module_screen.dart';
-import '../../features/gov_education/screens/modules/gov_module_screen.dart';
+import '../../features/education/modules/education_module_screen.dart';
 
 class AppRouter {
   static final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -343,11 +343,11 @@ class AppRouter {
       // module's permanent catalog id (lib/data/education_catalog.dart), never
       // its position among the hub cards.
       GoRoute(
-        path: '/gov-education/module/:id',
+        path: '/education/module/:id',
         name: 'education-module',
         pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 1;
-          return _buildPage(GovModuleScreen(key: ValueKey('gov-module-$id'), moduleId: id), state);
+          return _buildPage(EducationModuleScreen(key: ValueKey('education-module-$id'), moduleId: id), state);
         },
       ),
       // A catalog module whose content is only on the website so far.

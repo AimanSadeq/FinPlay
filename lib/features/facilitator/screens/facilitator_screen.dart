@@ -110,14 +110,6 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
     } catch (_) {}
   }
 
-  Future<void> _toggleEducation(String feature, bool unlocked) async {
-    try {
-      final repo = ref.read(facilitatorRepositoryProvider);
-      await repo.unlockEducation(feature, unlocked);
-      ref.read(gameStateProvider.notifier).fetchGameState();
-    } catch (_) {}
-  }
-
   Future<void> _advanceRound() async {
     final s = ref.read(stringsProvider);
     final confirmed = await showDialog<bool>(
@@ -305,7 +297,7 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                       repo: ref.read(facilitatorRepositoryProvider),
                     ),
                     _TimerTab(repo: ref.read(facilitatorRepositoryProvider)),
-                    _EducationTab(gameState: gameState, onToggle: _toggleEducation),
+                    _EducationTab(gameState: gameState),
                     _RealismTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _VouchersTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _AssessmentsTab(repo: ref.read(facilitatorRepositoryProvider)),
@@ -2406,8 +2398,7 @@ const List<(int, String, String)> _eduModules = [
 
 class _EducationTab extends ConsumerStatefulWidget {
   final AsyncValue<GameState> gameState;
-  final Future<void> Function(String, bool) onToggle;
-  const _EducationTab({required this.gameState, required this.onToggle});
+  const _EducationTab({required this.gameState});
 
   @override
   ConsumerState<_EducationTab> createState() => _EducationTabState();
