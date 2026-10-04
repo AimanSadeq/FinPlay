@@ -105,7 +105,8 @@ class ApiEndpoints {
   static const String ratiosTooltip = '/ratios/tooltip';
   static const String scenarioTooltip = '/scenarios/tooltip';
 
-  // Government Education
+  // Education modules, legacy prefix: the server keeps /gov-education as a
+  // deprecated alias of /education-modules. There is no government track.
   static const String govEducationStatus = '/gov-education/status';
   static const String govEducationTeams = '/gov-education/teams';
   static const String govEducationProgress = '/gov-education/progress';

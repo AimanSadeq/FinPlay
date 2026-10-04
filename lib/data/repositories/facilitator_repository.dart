@@ -201,19 +201,6 @@ class FacilitatorRepository {
     });
   }
 
-  Future<void> toggleGovEducation(bool enabled) async {
-    await _api.post(ApiEndpoints.facilitatorToggleGovEd, data: {
-      'enabled': enabled,
-    });
-  }
-
-  Future<void> toggleGovModule(int moduleId, bool enabled) async {
-    await _api.post(ApiEndpoints.facilitatorToggleGovModule, data: {
-      'moduleId': moduleId,
-      'enabled': enabled,
-    });
-  }
-
   Future<void> moveMember(String playerId, String fromTeam, String toTeam) async {
     await _api.post(ApiEndpoints.facilitatorMoveMember, data: {
       'playerId': playerId,

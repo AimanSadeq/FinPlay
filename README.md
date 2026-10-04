@@ -20,11 +20,14 @@ finance tools.
     pace, with saved progress.
 - **Market shocks** — dynamic events injected during play, with in-app notifications and
   an active-shocks display.
-- **Education hub** — standalone interactive modules and finance tools: break-even,
-  capital budgeting, WACC, DuPont analysis, working capital, credit rating, covenants,
+- **Education hub** — the FinPlay curriculum: 14 content modules with slides, quizzes,
+  ordering games, statement-builder and case-scenario activities, plus 2 workshop tools
+  (break-even, capital budgeting) and the simulation. The lineup is defined once in
+  `lib/data/education_catalog.dart`, mirroring the website's `shared/education-catalog.ts`;
+  modules are referred to by title or permanent catalog id, never by card position.
+  Eight content modules ship in the app; the rest open on the website until ported.
+- **Finance tools** — WACC, DuPont analysis, working capital, credit rating, covenants,
   cap table, dividends, financial ratios, an Excel-style statement view, and a glossary.
-- **Government education track** — a separate guided learning path with quizzes,
-  ordering games, statement-builder, and case-scenario activities.
 - **Dashboards** — team comparison, multi-round dashboards, and a game-map overview.
 - **Assessment** — pre/post knowledge tests to measure learning gains.
 - **Research** — built-in instruments for DBA/academic data collection.
@@ -69,7 +72,7 @@ lib/
     ├── facilitator/          # Facilitator controls + admin model editor
     ├── dashboard/            # Team comparison, multi-round, game map
     ├── education/            # Education hub + finance tool screens
-    ├── gov_education/        # Government education track + games
+    ├── gov_education/        # Education module screens + games (legacy folder name)
     ├── assessment/           # Pre/post knowledge tests
     ├── research/             # Research data collection
     └── shocks/               # Market shock UI

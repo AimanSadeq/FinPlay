@@ -1,5 +1,5 @@
 /// FinPlay assessment question bank (ported from shared/assessment-bank.ts).
-/// 25 questions across the 10 education modules + the simulation. Used for
+/// 25 questions across the original content modules + the simulation. Used for
 /// both the pre-course and post-course knowledge tests.
 library;
 

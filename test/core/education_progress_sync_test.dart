@@ -27,25 +27,39 @@ void main() {
       expect(path, '/education/progress/Team%201/sync');
     });
 
-    test('content modules match the website lineup (5 and 8 excluded)', () {
-      expect(EducationProgressSync.contentModules, [1, 2, 3, 4, 6, 7, 9, 10]);
+    test('pushed modules are the in-app content modules, by catalog id', () {
+      // Hub order of the eight ported modules. Ids, never card positions:
+      // Sector Finance Comparison is id 2 and sits ninth.
+      expect(EducationProgressSync.contentModules, [1, 3, 4, 6, 7, 2, 9, 10]);
+    });
+
+    test('restored modules cover every scored content module in the catalog', () {
+      expect(EducationProgressSync.restoredModules,
+          [1, 3, 4, 5, 6, 7, 2, 9, 10, 14, 15, 16, 17, 18]);
     });
 
     test('max scores match the server table', () {
+      // MODULE_MAX_SCORES in server/routes/education-modules.ts.
       expect(EducationProgressSync.moduleMaxScores, {
         1: 225,
-        2: 400,
-        3: 375,
-        4: 375,
-        6: 400,
-        7: 375,
-        9: 400,
-        10: 400,
+        2: 275,
+        3: 300,
+        4: 325,
+        5: 400,
+        6: 300,
+        7: 275,
+        9: 300,
+        10: 300,
+        14: 300,
+        15: 300,
+        16: 300,
+        17: 300,
+        18: 300,
       });
     });
 
-    test('every content module has a max score', () {
-      for (final m in EducationProgressSync.contentModules) {
+    test('every restored module has a max score', () {
+      for (final m in EducationProgressSync.restoredModules) {
         expect(EducationProgressSync.moduleMaxScores[m], isNotNull,
             reason: 'module $m has no max score');
       }

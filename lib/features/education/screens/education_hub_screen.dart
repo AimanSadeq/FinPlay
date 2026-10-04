@@ -14,13 +14,14 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/self_paced_provider.dart';
 import '../../../app/i18n/app_strings.dart';
+import '../../../data/education_catalog.dart';
 import '../../self_paced/widgets/entitlement_banner.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for each education module
 // ---------------------------------------------------------------------------
 class _EduModule {
-  final int number; // display number 1..10
+  final int number; // hub card position, display only (see education_catalog.dart)
   final String titleEn;
   final String titleAr;
   final String descEn;
@@ -32,7 +33,7 @@ class _EduModule {
   final List<String> topicsEn;
   final List<String> topicsAr;
   final String route;
-  final int govModuleNum; // facilitator unlock ID (1-12, 13=simulation)
+  final int govModuleNum; // permanent catalog id (education_catalog.dart); 13 = simulation
 
   const _EduModule({
     required this.number,
@@ -52,7 +53,10 @@ class _EduModule {
 }
 
 // ---------------------------------------------------------------------------
-// The 10 education modules (matching website) + simulation banner
+// The education modules, in hub order, mirroring lib/data/education_catalog.dart
+// (and the website's shared/education-catalog.ts) + simulation banner.
+// `route` goes to the in-app screen for the eight ported modules, and to the
+// web-module screen for the rest. `govModuleNum` is the permanent catalog id.
 // ---------------------------------------------------------------------------
 const _modules = <_EduModule>[
   _EduModule(
@@ -86,7 +90,7 @@ const _modules = <_EduModule>[
     difficulty: 'intermediate',
     topicsEn: ['Income Statement', 'Balance Sheet', 'Cash Flow'],
     topicsAr: ['قائمة الدخل', 'الميزانية العمومية', 'التدفقات النقدية'],
-    route: '/gov-education/module/2',
+    route: '/gov-education/module/3',
     govModuleNum: 3,
   ),
   _EduModule(
@@ -103,11 +107,28 @@ const _modules = <_EduModule>[
     difficulty: 'intermediate',
     topicsEn: ['Ratio Analysis', 'DuPont Framework', 'Trend Analysis'],
     topicsAr: ['تحليل النسب', 'إطار دوبونت', 'تحليل الاتجاهات'],
-    route: '/gov-education/module/3',
+    route: '/gov-education/module/4',
     govModuleNum: 4,
   ),
   _EduModule(
     number: 4,
+    titleEn: 'Time Value of Money',
+    titleAr: 'القيمة الزمنية للنقود',
+    descEn:
+        'Compounding and discounting, annuities and perpetuities, effective rates, loan amortization, and the bridge from present value to NPV.',
+    descAr:
+        'التركيب والخصم، الدفعات السنوية والدائمة، المعدلات الفعلية، إطفاء القروض، والانتقال من القيمة الحالية إلى صافي القيمة الحالية.',
+    icon: Icons.schedule_rounded,
+    categoryEn: 'ANALYSIS',
+    categoryAr: 'التحليل',
+    difficulty: 'intermediate',
+    topicsEn: ['Present & Future Value', 'Annuities', 'Effective Rates'],
+    topicsAr: ['القيمة الحالية والمستقبلية', 'الدفعات السنوية', 'المعدلات الفعلية'],
+    route: '/education/web/5',
+    govModuleNum: 5,
+  ),
+  _EduModule(
+    number: 5,
     titleEn: 'Break-Even Analysis',
     titleAr: 'تحليل نقطة التعادل',
     descEn:
@@ -124,7 +145,7 @@ const _modules = <_EduModule>[
     govModuleNum: 11,
   ),
   _EduModule(
-    number: 5,
+    number: 6,
     titleEn: 'Capital Budgeting & Investment',
     titleAr: 'موازنة رأس المال والاستثمار',
     descEn:
@@ -141,7 +162,7 @@ const _modules = <_EduModule>[
     govModuleNum: 12,
   ),
   _EduModule(
-    number: 6,
+    number: 7,
     titleEn: 'Budgeting & Financial Planning',
     titleAr: 'الموازنة والتخطيط المالي',
     descEn:
@@ -158,7 +179,7 @@ const _modules = <_EduModule>[
     govModuleNum: 6,
   ),
   _EduModule(
-    number: 7,
+    number: 8,
     titleEn: 'IFRS vs IPSAS Standards',
     titleAr: 'معايير IFRS مقابل IPSAS',
     descEn:
@@ -175,7 +196,7 @@ const _modules = <_EduModule>[
     govModuleNum: 7,
   ),
   _EduModule(
-    number: 8,
+    number: 9,
     titleEn: 'Sector Finance Comparison',
     titleAr: 'مقارنة مالية القطاعات',
     descEn:
@@ -188,11 +209,11 @@ const _modules = <_EduModule>[
     difficulty: 'beginner',
     topicsEn: ['Sector Objectives', 'IPSAS vs IFRS', 'Accountability'],
     topicsAr: ['أهداف القطاعات', 'IPSAS مقابل IFRS', 'المساءلة'],
-    route: '/gov-education/module/8',
+    route: '/gov-education/module/2',
     govModuleNum: 2,
   ),
   _EduModule(
-    number: 9,
+    number: 10,
     titleEn: 'Compliance & Internal Controls',
     titleAr: 'الامتثال والضوابط الداخلية',
     descEn:
@@ -209,7 +230,7 @@ const _modules = <_EduModule>[
     govModuleNum: 9,
   ),
   _EduModule(
-    number: 10,
+    number: 11,
     titleEn: 'Financial Auditing & Review',
     titleAr: 'المراجعة والتدقيق المالي',
     descEn:
@@ -225,7 +246,99 @@ const _modules = <_EduModule>[
     route: '/gov-education/module/10',
     govModuleNum: 10,
   ),
+  _EduModule(
+    number: 12,
+    titleEn: 'Value Creation: ROIC, WACC and Economic Profit',
+    titleAr: 'خلق القيمة: العائد على رأس المال المستثمر وتكلفة رأس المال والربح الاقتصادي',
+    descEn:
+        'Learn what actually creates value: invested capital, NOPAT, the ROIC minus WACC spread, economic profit, and the value drivers behind them.',
+    descAr:
+        'تعلم ما يخلق القيمة فعلياً: رأس المال المستثمر، وصافي الربح التشغيلي بعد الضريبة، والفرق بين العائد على رأس المال المستثمر وتكلفة رأس المال، والربح الاقتصادي، ومحركات القيمة.',
+    icon: Icons.diamond_rounded,
+    categoryEn: 'VALUE',
+    categoryAr: 'القيمة',
+    difficulty: 'intermediate',
+    topicsEn: ['ROIC vs WACC', 'Economic Profit', 'Value Drivers'],
+    topicsAr: ['العائد مقابل تكلفة رأس المال', 'الربح الاقتصادي', 'محركات القيمة'],
+    route: '/education/web/14',
+    govModuleNum: 14,
+  ),
+  _EduModule(
+    number: 13,
+    titleEn: 'Business Valuation: DCF, Multiples and Deal Value',
+    titleAr: 'تقييم الشركات: التدفقات النقدية المخصومة والمضاعفات وقيمة الصفقة',
+    descEn:
+        'Build and challenge a valuation: free cash flow, terminal value, enterprise versus equity value, trading multiples, precedent transactions and deal pricing.',
+    descAr:
+        'ابنِ التقييم وتحدَّ افتراضاته: التدفق النقدي الحر، والقيمة النهائية، وقيمة المنشأة مقابل قيمة حقوق الملكية، ومضاعفات السوق، والصفقات السابقة، وتسعير الصفقة.',
+    icon: Icons.account_balance_rounded,
+    categoryEn: 'VALUE',
+    categoryAr: 'القيمة',
+    difficulty: 'advanced',
+    topicsEn: ['DCF & Terminal Value', 'Trading Multiples', 'Deal Value'],
+    topicsAr: ['التدفقات المخصومة والقيمة النهائية', 'مضاعفات السوق', 'قيمة الصفقة'],
+    route: '/education/web/15',
+    govModuleNum: 15,
+  ),
+  _EduModule(
+    number: 14,
+    titleEn: 'Capital Allocation for Executives',
+    titleAr: 'تخصيص رأس المال للتنفيذيين',
+    descEn:
+        'Turn appraisal into a process: hurdle rates, ranking competing projects under a budget, stage gates, sensitivity analysis and honest post-investment review.',
+    descAr:
+        'حوّل التقييم إلى عملية إدارية: معدلات العائد المطلوبة، وترتيب المشاريع المتنافسة ضمن الميزانية، وبوابات الاعتماد، وتحليل الحساسية، والمراجعة اللاحقة للاستثمار.',
+    icon: Icons.balance_rounded,
+    categoryEn: 'INVESTMENT',
+    categoryAr: 'الاستثمار',
+    difficulty: 'intermediate',
+    topicsEn: ['Hurdle Rates', 'Project Ranking', 'Stage Gates'],
+    topicsAr: ['معدلات العائد المطلوبة', 'ترتيب المشاريع', 'بوابات الاعتماد'],
+    route: '/education/web/16',
+    govModuleNum: 16,
+  ),
+  _EduModule(
+    number: 15,
+    titleEn: 'Financing, Dividends and the Cost of Capital',
+    titleAr: 'التمويل وتوزيعات الأرباح وتكلفة رأس المال',
+    descEn:
+        'Price the money: cost of debt, credit ratings and covenants, CAPM and the cost of equity, a full WACC build, capital structure, dilution and dividend policy.',
+    descAr:
+        'سعّر الأموال: تكلفة الدين، والتصنيفات الائتمانية والتعهدات، ونموذج تسعير الأصول الرأسمالية وتكلفة حقوق الملكية، وبناء المتوسط المرجح لتكلفة رأس المال، وهيكل رأس المال، والتخفيف، وسياسة التوزيعات.',
+    icon: Icons.payments_rounded,
+    categoryEn: 'FINANCING',
+    categoryAr: 'التمويل',
+    difficulty: 'advanced',
+    topicsEn: ['Cost of Debt & Equity', 'Capital Structure', 'Dividend Policy'],
+    topicsAr: ['تكلفة الدين وحقوق الملكية', 'هيكل رأس المال', 'سياسة التوزيعات'],
+    route: '/education/web/17',
+    govModuleNum: 17,
+  ),
+  _EduModule(
+    number: 16,
+    titleEn: 'Financial Risk Assessment',
+    titleAr: 'تقييم المخاطر المالية',
+    descEn:
+        'Read the risks behind the numbers: credit, market and liquidity risk, leverage and covenant headroom, early warning signs, the Altman Z-score, and sensitivity, scenario and reverse stress tests.',
+    descAr:
+        'اقرأ المخاطر الكامنة وراء الأرقام: مخاطر الائتمان والسوق والسيولة، والرافعة المالية وهامش التعهدات، وإشارات الإنذار المبكر، ونموذج ألتمان، واختبارات الحساسية والسيناريوهات والضغط العكسي.',
+    icon: Icons.gpp_maybe_rounded,
+    categoryEn: 'RISK · OPTIONAL',
+    categoryAr: 'المخاطر · اختيارية',
+    difficulty: 'advanced',
+    topicsEn: ['Credit, Market & Liquidity', 'Warning Signs', 'Stress Testing'],
+    topicsAr: ['الائتمان والسوق والسيولة', 'إشارات الإنذار', 'اختبار الضغط'],
+    route: '/education/web/18',
+    govModuleNum: 18,
+  ),
 ];
+
+/// Workshop tools have no Learn section and web-only modules keep theirs on the
+/// website, so neither can gate the in-app progression chain or the sim gate.
+bool _isToolOrWebOnly(_EduModule m) {
+  final entry = catalogEntry(m.govModuleNum);
+  return entry == null || !entry.isContent || !entry.inApp;
+}
 
 // ---------------------------------------------------------------------------
 // Main Screen
@@ -298,7 +411,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
       // Self-paced: progressive unlock — each module opens once the previous
       // module's Learn section is complete (website parity). _loadProgress
       // computes the set; seed the first module + tools so something is open.
-      _selfPacedUnlocked = {_modules.first.govModuleNum, 11, 12};
+      _selfPacedUnlocked = {
+        _modules.first.govModuleNum,
+        for (final m in _modules)
+          if (_isToolOrWebOnly(m)) m.govModuleNum,
+      };
       // Refresh entitlement (trial countdown / lapsed state) from /me so the
       // access banner reflects live billing state. /me is not gated, so this is
       // safe even for a lapsed learner. Fail-quiet — never blocks the hub.
@@ -418,7 +535,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     if (_isSelfPaced) {
       bool gateOpen = true; // the next content module is unlocked while open
       for (final m in _modules) {
-        final isTool = m.govModuleNum == 11 || m.govModuleNum == 12; // calculators, no Learn
+        final isTool = _isToolOrWebOnly(m); // no in-app Learn to gate on
         if (gateOpen || isTool) unlocked.add(m.govModuleNum);
         if (!isTool) {
           // Self-paced learners use the 'sp' progress scope (see gov_module_screen).
@@ -442,8 +559,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
 
   bool _selfPacedSimGate(SharedPreferences prefs) {
     for (final m in _modules) {
-      final isTool = m.govModuleNum == 11 || m.govModuleNum == 12;
-      if (isTool) continue;
+      if (_isToolOrWebOnly(m)) continue;
       if (!(prefs.getBool('gov_module_sp_${m.govModuleNum}_learn') ?? false)) return false;
     }
     return true;
@@ -455,7 +571,10 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   int get _overallPercent {
     if (_moduleProgress.isEmpty) return 0;
     final total = _moduleProgress.values.fold<int>(0, (a, b) => a + b);
-    return (total / _modules.length).round();
+    final contentCount = _modules
+        .where((m) => catalogEntry(m.govModuleNum)?.isContent ?? false)
+        .length;
+    return contentCount == 0 ? 0 : (total / contentCount).round();
   }
 
   int get _badgeCount => _completedCount; // 1 badge per completed module

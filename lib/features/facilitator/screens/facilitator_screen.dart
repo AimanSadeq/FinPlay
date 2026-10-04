@@ -2380,12 +2380,15 @@ class _TimerTabState extends State<_TimerTab> {
 }
 
 // ---- Education Tab ----
-// The 11 unlockable education modules (id → label), matching the website's
-// EducationAdmin grid. Ids are intentionally non-sequential (5 and 8 are absent).
+// Every unlockable education module (permanent catalog id → short label), in
+// hub order, matching the website's catalog. Ids are intentionally
+// non-sequential: 8 is retired, 13 is the game. Keep in step with
+// lib/data/education_catalog.dart.
 const List<(int, String, String)> _eduModules = [
   (1, 'Financial Primer', 'تمهيد مالي'),
   (3, 'Financial Statements', 'القوائم المالية'),
   (4, 'Financial Analysis', 'التحليل المالي'),
+  (5, 'Time Value of Money', 'القيمة الزمنية للنقود'),
   (11, 'Break-Even Analysis', 'تحليل نقطة التعادل'),
   (12, 'Capital Budgeting', 'الموازنة الرأسمالية'),
   (6, 'Budgeting & Planning', 'الموازنة والتخطيط'),
@@ -2393,6 +2396,11 @@ const List<(int, String, String)> _eduModules = [
   (2, 'Sector Comparison', 'مقارنة القطاعات'),
   (9, 'Compliance', 'الامتثال'),
   (10, 'Auditing', 'التدقيق'),
+  (14, 'Value Creation', 'خلق القيمة'),
+  (15, 'Business Valuation', 'تقييم الشركات'),
+  (16, 'Capital Allocation', 'تخصيص رأس المال'),
+  (17, 'Financing & Cost of Capital', 'التمويل وتكلفة رأس المال'),
+  (18, 'Financial Risk Assessment', 'تقييم المخاطر المالية'),
   (13, 'Simulation', 'المحاكاة'),
 ];
 
@@ -2491,9 +2499,7 @@ class _EducationTabState extends ConsumerState<_EducationTab> {
               );
             }),
             const SizedBox(height: 12),
-            // Other education controls (gov education, retry)
-            _eduRow(context, s.tr('Government Education', 'التعليم الحكومي'), gs.govEducationUnlocked,
-                (v) => widget.onToggle('govEducation', v)),
+            // Other education controls
             _eduRow(context, s.tr('Activity Retry', 'إعادة المحاولة'), gs.educationRetryUnlocked,
                 (v) => _run((r) => r.toggleEducationRetry(v))),
           ],

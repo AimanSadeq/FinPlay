@@ -64,7 +64,7 @@ class EducationRepository {
     throw Exception(response['error'] ?? 'Failed to fetch ratio tooltip');
   }
 
-  // Government Education
+  // Education modules (legacy /gov-education endpoint prefix)
   Future<List<Map<String, dynamic>>> fetchGovTeams() async {
     final response = await _api.get(ApiEndpoints.govEducationTeams);
     if (response['success'] == true) {

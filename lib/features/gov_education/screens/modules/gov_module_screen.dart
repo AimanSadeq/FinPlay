@@ -20,6 +20,7 @@ import '../../widgets/games/quiz_widget.dart';
 import '../../widgets/games/statement_builder_game.dart';
 import '../../widgets/games/case_scenario_game.dart';
 import '../../widgets/slide_narration_bar.dart';
+import '../../../../data/education_catalog.dart';
 import 'gov_module_data.dart';
 import 'case_scenario_data.dart';
 
@@ -73,8 +74,10 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
 
   int get _maxGameScore => _availableGames.length * 50;
 
-  // Hub display order: 1,2,3, (4,5 are Break-Even/CapBudget), 6,7,8,9,10
-  static const _moduleOrder = [1, 2, 3, 6, 7, 8, 9, 10, 11, 12];
+  // Catalog ids of the modules with in-app content, in hub order (the two
+  // workshop tools and the web-only modules are skipped for next-module).
+  static final List<int> _moduleOrder =
+      inAppContentModules.map((m) => m.num).toList();
 
   GovModuleContent get _module => govModuleContents[widget.moduleId]!;
 
@@ -357,7 +360,7 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(s.tr('Module ${widget.moduleId}', 'الوحدة ${widget.moduleId}'), style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          Text(s.tr('Module ${educationHubPosition(widget.moduleId) ?? widget.moduleId}', 'الوحدة ${educationHubPosition(widget.moduleId) ?? widget.moduleId}'), style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: const Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
                           Text(_module.title, style: Theme.of(context).textTheme.titleMedium),
                         ],

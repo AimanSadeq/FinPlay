@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/onboarding/screens/splash_screen.dart';
 import '../../features/onboarding/screens/mode_selector_screen.dart';
-import '../../features/onboarding/screens/program_selector_screen.dart';
 import '../../features/onboarding/screens/home_screen.dart';
 import '../../features/auth/screens/self_paced_login_screen.dart';
 import '../../features/auth/screens/self_paced_progress_screen.dart';
@@ -36,8 +35,7 @@ import '../../features/assessment/screens/assessment_screen.dart';
 import '../../features/research/screens/research_screen.dart';
 import '../../features/earnings_call/screens/earnings_call_screen.dart';
 import '../../features/facilitator/screens/admin_model_screen.dart';
-import '../../features/gov_education/screens/gov_hub_screen.dart';
-import '../../features/gov_education/screens/gov_lobby_screen.dart';
+import '../../features/education/screens/web_module_screen.dart';
 import '../../features/gov_education/screens/modules/gov_module_screen.dart';
 
 class AppRouter {
@@ -63,14 +61,6 @@ class AppRouter {
         name: 'mode-selector',
         pageBuilder: (context, state) => _buildPage(
           const ModeSelectorScreen(),
-          state,
-        ),
-      ),
-      GoRoute(
-        path: '/program',
-        name: 'program-selector',
-        pageBuilder: (context, state) => _buildPage(
-          const ProgramSelectorScreen(),
           state,
         ),
       ),
@@ -349,29 +339,24 @@ class AppRouter {
             _buildPage(const AdminModelScreen(), state),
       ),
 
-      // Government Education
-      GoRoute(
-        path: '/gov-education',
-        name: 'gov-education',
-        pageBuilder: (context, state) => _buildPage(
-          const GovLobbyScreen(),
-          state,
-        ),
-      ),
-      GoRoute(
-        path: '/gov-education/hub',
-        name: 'gov-education-hub',
-        pageBuilder: (context, state) => _buildPage(
-          const GovHubScreen(),
-          state,
-        ),
-      ),
+      // Education module screens. The path segment is legacy; `:id` is the
+      // module's permanent catalog id (lib/data/education_catalog.dart), never
+      // its position among the hub cards.
       GoRoute(
         path: '/gov-education/module/:id',
-        name: 'gov-module',
+        name: 'education-module',
         pageBuilder: (context, state) {
           final id = int.tryParse(state.pathParameters['id'] ?? '') ?? 1;
           return _buildPage(GovModuleScreen(key: ValueKey('gov-module-$id'), moduleId: id), state);
+        },
+      ),
+      // A catalog module whose content is only on the website so far.
+      GoRoute(
+        path: '/education/web/:num',
+        name: 'education-web-module',
+        pageBuilder: (context, state) {
+          final num = int.tryParse(state.pathParameters['num'] ?? '') ?? 0;
+          return _buildPage(WebModuleScreen(key: ValueKey('web-module-$num'), moduleNum: num), state);
         },
       ),
     ],
