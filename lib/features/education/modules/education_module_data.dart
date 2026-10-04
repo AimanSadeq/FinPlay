@@ -2,16 +2,14 @@ import 'data/module1_data.dart';
 import 'data/module2_data.dart';
 import 'data/module3_data.dart';
 import 'data/module4_data.dart';
-import 'data/module5_data.dart';
 import 'data/module6_data.dart';
 import 'data/module7_data.dart';
-import 'data/module8_data.dart';
 import 'data/module9_data.dart';
 import 'data/module10_data.dart';
 
 enum GameType { memoryMatch, classification, ordering }
 
-class GovModuleContent {
+class EducationModuleContent {
   final int id;
   final String title;
   final String gameTitle;
@@ -42,7 +40,7 @@ class GovModuleContent {
   final List<String>? statementBuilderCategories;
   final List<Map<String, String>>? statementBuilderItems;
 
-  const GovModuleContent({
+  const EducationModuleContent({
     required this.id,
     required this.title,
     required this.gameTitle,
@@ -62,20 +60,19 @@ class GovModuleContent {
   });
 }
 
-// Display order matches the website education hub exactly.
-// Positions 4 & 5 (Break-Even, Capital Budgeting) are separate screens, not gov modules.
-final govModuleContents = <int, GovModuleContent>{
-  1:  module1Data,   // 1. Financial Management Primer
-  2:  module3Data,   // 2. Understanding Financial Statements
-  3:  module4Data,   // 3. Analysis of Financial Statements
-  // 4. Break-Even Analysis        → routes to /education/break-even
-  // 5. Capital Budgeting           → routes to /education/capital-budgeting
-  6:  module6Data,   // 6. Budgeting & Financial Planning
-  7:  module7Data,   // 7. IFRS vs IPSAS Standards
-  8:  module2Data,   // 8. Sector Finance Comparison
-  9:  module9Data,   // 9. Compliance & Internal Controls
-  10: module10Data,  // 10. Financial Auditing & Review
-  // Bonus modules — fully authored content surfaced as extra hub slots.
-  11: module5Data,   // 11. Elements of Finance
-  12: module8Data,   // 12. Government Financial Decisions
+// Keyed by the module's PERMANENT catalog id (lib/data/education_catalog.dart),
+// which is also each content file's `id`. This map used to be keyed by hub card
+// position, so Understanding Financial Statements (id 3) was stored and synced
+// as id 2, which the server and the hub read as Sector Finance Comparison.
+// Listed in hub order. Time Value of Money (id 5) and ids 14-18 have no ported
+// content yet; the hub opens them on the website. Id 8 is retired.
+final educationModuleContents = <int, EducationModuleContent>{
+  1:  module1Data,   // Financial Management Primer
+  3:  module3Data,   // Understanding Financial Statements
+  4:  module4Data,   // Analysis of Financial Statements
+  6:  module6Data,   // Budgeting & Financial Planning
+  7:  module7Data,   // IFRS vs IPSAS Standards
+  2:  module2Data,   // Sector Finance Comparison
+  9:  module9Data,   // Compliance & Internal Controls
+  10: module10Data,  // Financial Auditing & Review
 };

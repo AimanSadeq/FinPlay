@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../providers/locale_provider.dart';
-import '../../screens/modules/case_scenario_data.dart';
+import '../../modules/case_scenario_data.dart';
 
 /// Interactive Case Scenario Simulator — walks the learner through one or more
 /// multi-step role-play decision cases, scoring each choice and reporting an

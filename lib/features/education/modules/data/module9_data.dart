@@ -1,6 +1,6 @@
-import '../gov_module_data.dart';
+import '../education_module_data.dart';
 
-const module9Data = GovModuleContent(
+const module9Data = EducationModuleContent(
   id: 9,
   title: 'Compliance & Internal Controls',
   titleAr: 'الامتثال والضوابط الداخلية',

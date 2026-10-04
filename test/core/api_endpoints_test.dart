@@ -26,9 +26,9 @@ void main() {
           ApiEndpoints.selfPacedLogout,
           ApiEndpoints.selfPacedProfile,
           ApiEndpoints.selfPacedProgress,
-          ApiEndpoints.govEducationStatus,
-          ApiEndpoints.govEducationQuiz,
-          ApiEndpoints.govEducationLeaderboard,
+          ApiEndpoints.educationStatus,
+          ApiEndpoints.educationQuiz,
+          ApiEndpoints.educationLeaderboard,
           ApiEndpoints.facilitatorAuth,
           ApiEndpoints.facilitatorVerifyCorporateCode,
           ApiEndpoints.facilitatorStartGame,
@@ -127,11 +127,11 @@ void main() {
 
     group('gov education endpoints', () {
       test('all gov education endpoints use correct prefix', () {
-        expect(ApiEndpoints.govEducationStatus, '/gov-education/status');
-        expect(ApiEndpoints.govEducationTeams, '/gov-education/teams');
-        expect(ApiEndpoints.govEducationProgress, '/gov-education/progress');
-        expect(ApiEndpoints.govEducationQuiz, '/gov-education/quiz');
-        expect(ApiEndpoints.govEducationLeaderboard, '/gov-education/leaderboard');
+        expect(ApiEndpoints.educationStatus, '/education/status');
+        expect(ApiEndpoints.educationTeams, '/education/teams');
+        expect(ApiEndpoints.educationProgress, '/education/progress');
+        expect(ApiEndpoints.educationQuiz, '/education/quiz');
+        expect(ApiEndpoints.educationLeaderboard, '/education/leaderboard');
       });
     });
 

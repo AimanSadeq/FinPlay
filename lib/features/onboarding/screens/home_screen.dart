@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../data/education_catalog.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/network/api_endpoints.dart';
@@ -321,7 +322,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                       _ActionCard(
                         title: s.tr('Start Learning', 'ابدأ التعلّم'),
-                        subtitle: s.tr('10 interactive finance education modules', '10 وحدات تعليمية مالية تفاعلية'),
+                        subtitle: s.tr('$educationModuleCount interactive finance education modules', '$educationModuleCount وحدة تعليمية مالية تفاعلية'),
                         icon: Icons.school_rounded,
                         accentColor: const Color(0xFF10B981),
                         gradient: const [Color(0xFF10B981), Color(0xFF059669)],

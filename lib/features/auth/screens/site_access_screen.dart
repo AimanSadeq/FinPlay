@@ -54,7 +54,7 @@ class _SiteAccessScreenState extends ConsumerState<SiteAccessScreen>
     final enabled = await ref.read(authRepositoryProvider).isSiteAccessEnabled();
     if (!enabled && mounted) {
       _statusTimer?.cancel();
-      context.go('/program');
+      context.go('/mode-selector');
     }
   }
 
@@ -95,7 +95,7 @@ class _SiteAccessScreenState extends ConsumerState<SiteAccessScreen>
           return;
         }
         if (!mounted) return;
-        context.go('/program');
+        context.go('/mode-selector');
       } else {
         setState(() => _error = s.tr('Invalid access code', 'رمز دخول غير صالح'));
       }

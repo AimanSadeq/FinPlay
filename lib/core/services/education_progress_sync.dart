@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/education_catalog.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
 import '../../providers/repository_providers.dart';
@@ -22,20 +23,33 @@ class EducationProgressSync {
 
   final ApiClient _api;
 
-  /// Content modules the hub tracks (11 + 12 are calculators, no scored work).
-  static const List<int> contentModules = [1, 2, 3, 4, 6, 7, 9, 10];
+  /// Content modules whose work is done in this app, by permanent catalog id
+  /// (education_catalog.dart). Only these are pushed to the server.
+  static final List<int> contentModules =
+      inAppContentModules.map((m) => m.num).toList();
+
+  /// Every scored content module, in-app or website-only. All of them are
+  /// restored from the server so the hub shows website progress too.
+  static final List<int> restoredModules =
+      educationCatalog.where((m) => m.isContent).map((m) => m.num).toList();
 
   /// Must match MODULE_MAX_SCORES in server/routes/education-modules.ts — the
   /// server clamps to these, and the website derives its % from them.
   static const Map<int, int> moduleMaxScores = {
     1: 225,
-    2: 400,
-    3: 375,
-    4: 375,
-    6: 400,
-    7: 375,
-    9: 400,
-    10: 400,
+    2: 275,
+    3: 300,
+    4: 325,
+    5: 400,
+    6: 300,
+    7: 275,
+    9: 300,
+    10: 300,
+    14: 300,
+    15: 300,
+    16: 300,
+    17: 300,
+    18: 300,
   };
 
   static const double passThreshold = 0.7; // 70%, same as the server
@@ -45,11 +59,13 @@ class EducationProgressSync {
   /// reads the module score instead.
   static const List<String> activities = ['learn', 'game', 'quiz', 'sim'];
 
-  static String _moduleKey(int n) => 'module$n';
+  /// Server progress key. Time Value of Money (id 5) is stored as `tvm` on the
+  /// website; every other module is `module` followed by its catalog id.
+  static String _moduleKey(int n) => n == 5 ? 'tvm' : 'module$n';
 
-  /// Pref key used by gov_module_screen: `gov_module_<scope>_<moduleId>_<activity>`.
+  /// Pref key used by edu_module_screen: `edu_module_` + scope + id + activity.
   static String _prefKey(String scope, int module, String activity) =>
-      'gov_module_${scope}_${module}_$activity';
+      'edu_module_${scope}_${module}_$activity';
 
   /// Badge ids restored from the server, echoed back on push so a mobile sync
   /// never wipes badges the learner earned on the website.
@@ -103,7 +119,7 @@ class EducationProgressSync {
     final prefs = await SharedPreferences.getInstance();
     var changed = false;
 
-    for (final n in contentModules) {
+    for (final n in restoredModules) {
       final entry = serverModules[_moduleKey(n)];
       if (entry is! Map) continue;
 

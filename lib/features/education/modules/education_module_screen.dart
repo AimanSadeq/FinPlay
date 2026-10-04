@@ -7,31 +7,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/i18n/app_strings.dart';
-import '../../../../core/services/education_progress_sync.dart';
-import '../../../../providers/repository_providers.dart';
-import '../../../../providers/auth_provider.dart';
-import '../../../../shared/widgets/glass_card.dart';
-import '../../widgets/games/memory_match_game.dart';
-import '../../widgets/games/classification_game.dart';
-import '../../widgets/games/ordering_game.dart';
-import '../../widgets/games/quiz_widget.dart';
-import '../../widgets/games/statement_builder_game.dart';
-import '../../widgets/games/case_scenario_game.dart';
-import '../../widgets/slide_narration_bar.dart';
-import 'gov_module_data.dart';
+import '../../../app/theme/app_colors.dart';
+import '../../../app/i18n/app_strings.dart';
+import '../../../core/services/education_progress_sync.dart';
+import '../../../providers/repository_providers.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../shared/widgets/glass_card.dart';
+import '../widgets/games/memory_match_game.dart';
+import '../widgets/games/classification_game.dart';
+import '../widgets/games/ordering_game.dart';
+import '../widgets/games/quiz_widget.dart';
+import '../widgets/games/statement_builder_game.dart';
+import '../widgets/games/case_scenario_game.dart';
+import '../widgets/slide_narration_bar.dart';
+import '../../../data/education_catalog.dart';
+import 'education_module_data.dart';
 import 'case_scenario_data.dart';
 
-class GovModuleScreen extends ConsumerStatefulWidget {
+class EducationModuleScreen extends ConsumerStatefulWidget {
   final int moduleId;
-  const GovModuleScreen({super.key, required this.moduleId});
+  const EducationModuleScreen({super.key, required this.moduleId});
 
   @override
-  ConsumerState<GovModuleScreen> createState() => _GovModuleScreenState();
+  ConsumerState<EducationModuleScreen> createState() => _EducationModuleScreenState();
 }
 
-class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTickerProviderStateMixin {
+class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   // Per-activity scores matching website max values
   int _gameScore = 0;   // sum across all games in the module
@@ -73,10 +74,12 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
 
   int get _maxGameScore => _availableGames.length * 50;
 
-  // Hub display order: 1,2,3, (4,5 are Break-Even/CapBudget), 6,7,8,9,10
-  static const _moduleOrder = [1, 2, 3, 6, 7, 8, 9, 10, 11, 12];
+  // Catalog ids of the modules with in-app content, in hub order (the two
+  // workshop tools and the web-only modules are skipped for next-module).
+  static final List<int> _moduleOrder =
+      inAppContentModules.map((m) => m.num).toList();
 
-  GovModuleContent get _module => govModuleContents[widget.moduleId]!;
+  EducationModuleContent get _module => educationModuleContents[widget.moduleId]!;
 
   int? get _nextModuleId {
     final idx = _moduleOrder.indexOf(widget.moduleId);
@@ -95,14 +98,14 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
   // Progress scope: 'sp' for self-paced learners (per-user), else the gov team id
   // (per-team). Keeps each team's / each self-paced learner's progress separate.
   String _scope = 'sp';
-  String _prefKey(String activity) => 'gov_module_${_scope}_${widget.moduleId}_$activity';
+  String _prefKey(String activity) => 'edu_module_${_scope}_${widget.moduleId}_$activity';
 
   Future<void> _restoreProgress() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     final auth = ref.read(authProvider);
     final isSelfPaced = auth.user != null && !auth.isFacilitator;
-    _scope = isSelfPaced ? 'sp' : (prefs.getInt('gov_team_id') ?? 1).toString();
+    _scope = isSelfPaced ? 'sp' : (prefs.getInt('edu_team_id') ?? 1).toString();
     setState(() {
       _lessonComplete = prefs.getBool(_prefKey('learn')) ?? false;
       _gameComplete = prefs.getBool(_prefKey('game')) ?? false;
@@ -169,7 +172,7 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
   }
 
   @override
-  void didUpdateWidget(covariant GovModuleScreen oldWidget) {
+  void didUpdateWidget(covariant EducationModuleScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.moduleId != widget.moduleId) {
       _currentSlide = 0;
@@ -324,7 +327,7 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
     try {
       final repo = ref.read(educationRepositoryProvider);
       final prefs = await SharedPreferences.getInstance();
-      final teamId = prefs.getInt('gov_team_id') ?? 1;
+      final teamId = prefs.getInt('edu_team_id') ?? 1;
       await repo.submitQuiz(
         teamId: teamId,
         moduleId: widget.moduleId,
@@ -357,7 +360,7 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(s.tr('Module ${widget.moduleId}', 'الوحدة ${widget.moduleId}'), style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          Text(s.tr('Module ${educationHubPosition(widget.moduleId) ?? widget.moduleId}', 'الوحدة ${educationHubPosition(widget.moduleId) ?? widget.moduleId}'), style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: const Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
                           Text(_module.title, style: Theme.of(context).textTheme.titleMedium),
                         ],
@@ -1047,7 +1050,7 @@ class _GovModuleScreenState extends ConsumerState<GovModuleScreen> with SingleTi
                     child: ElevatedButton.icon(
                       onPressed: () {
                         context.pop();
-                        context.push('/gov-education/module/$_nextModuleId');
+                        context.push('/education/module/$_nextModuleId');
                       },
                       icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                       label: Text(s.tr('Next Module', 'الوحدة التالية')),

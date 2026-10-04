@@ -66,8 +66,6 @@ class ApiEndpoints {
   static const String facilitatorClearSignins = '/facilitator/clear-signins';
   static const String facilitatorQrShow = '/facilitator/qr-show';
   static const String facilitatorQrHide = '/facilitator/qr-hide';
-  static const String facilitatorToggleGovEd = '/facilitator/toggle-gov-education';
-  static const String facilitatorToggleGovModule = '/facilitator/toggle-gov-education-module';
   static const String facilitatorGameMode = '/facilitator/game-mode';
   static const String facilitatorSetTeamLeader = '/facilitator/set-team-leader';
   static const String facilitatorRemoveTeamLeader = '/facilitator/remove-team-leader';
@@ -105,12 +103,12 @@ class ApiEndpoints {
   static const String ratiosTooltip = '/ratios/tooltip';
   static const String scenarioTooltip = '/scenarios/tooltip';
 
-  // Government Education
-  static const String govEducationStatus = '/gov-education/status';
-  static const String govEducationTeams = '/gov-education/teams';
-  static const String govEducationProgress = '/gov-education/progress';
-  static const String govEducationQuiz = '/gov-education/quiz';
-  static const String govEducationLeaderboard = '/gov-education/leaderboard';
+  // Education modules: team progress, quizzes and leaderboard (served under /api/education).
+  static const String educationStatus = '/education/status';
+  static const String educationTeams = '/education/teams';
+  static const String educationProgress = '/education/progress';
+  static const String educationQuiz = '/education/quiz';
+  static const String educationLeaderboard = '/education/leaderboard';
 
   // Earnings Call (post-Round-2 analyst event). Stage machine off -> prep -> live,
   // driven by the facilitator and polled by teams.
@@ -268,7 +266,7 @@ class ApiEndpoints {
   static const String selfPacedMembers = '/self-paced/admin/members';
 
   // Education Admin
-  static const String govEducationAdminReset = '/gov-education/admin/reset-all';
+  static const String educationAdminReset = '/education/admin/reset-all';
 
   // Round state direct
   static const String roundStateDirect = '/round-state';

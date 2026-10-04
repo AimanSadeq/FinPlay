@@ -42,7 +42,7 @@ class _SelfPacedProgressScreenState
   Future<void> _loadSimGate() async {
     final prefs = await SharedPreferences.getInstance();
     final unlocked = _simGateModules
-        .every((n) => prefs.getBool('gov_module_sp_${n}_learn') ?? false);
+        .every((n) => prefs.getBool('edu_module_sp_${n}_learn') ?? false);
     if (mounted) setState(() => _simUnlocked = unlocked);
   }
 

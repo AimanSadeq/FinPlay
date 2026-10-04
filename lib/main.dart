@@ -11,6 +11,7 @@ import 'providers/theme_provider.dart';
 import 'providers/locale_provider.dart';
 import 'shared/widgets/shock_notification.dart';
 import 'shared/widgets/global_timer_overlay.dart';
+import 'core/services/education_storage_migration.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +20,9 @@ void main() async {
   // Restore a previously selected cohort host (each cohort is its own subdomain).
   try {
     final prefs = await SharedPreferences.getInstance();
+    // Bring locally stored education progress up to the current key scheme
+    // before any screen reads it (see EducationStorageMigration).
+    await EducationStorageMigration.run(prefs);
     final cohortHost = prefs.getString('cohort_base_url');
     if (cohortHost != null && cohortHost.isNotEmpty) {
       ApiClient().setBaseHost(cohortHost);

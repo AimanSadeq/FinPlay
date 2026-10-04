@@ -45,13 +45,6 @@ class FacilitatorRepository {
     }
   }
 
-  Future<void> unlockEducation(String feature, bool unlocked) async {
-    await _api.post(ApiEndpoints.facilitatorToggleGovModule, data: {
-      'feature': feature,
-      'enabled': unlocked,
-    });
-  }
-
   Future<void> setTimer(int seconds, {String? action}) async {
     if (action == 'start') {
       await _api.post(ApiEndpoints.facilitatorStartTimer, data: {
@@ -198,19 +191,6 @@ class FacilitatorRepository {
   Future<void> resetGame(String password) async {
     await _api.post(ApiEndpoints.facilitatorResetGame, data: {
       'password': password,
-    });
-  }
-
-  Future<void> toggleGovEducation(bool enabled) async {
-    await _api.post(ApiEndpoints.facilitatorToggleGovEd, data: {
-      'enabled': enabled,
-    });
-  }
-
-  Future<void> toggleGovModule(int moduleId, bool enabled) async {
-    await _api.post(ApiEndpoints.facilitatorToggleGovModule, data: {
-      'moduleId': moduleId,
-      'enabled': enabled,
     });
   }
 
