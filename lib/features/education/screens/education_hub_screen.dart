@@ -59,7 +59,9 @@ class _EduModule {
 // The education modules, in hub order, mirroring lib/data/education_catalog.dart
 // (and the website's shared/education-catalog.ts) + simulation banner.
 // `route` goes to the in-app screen for the eight ported modules, and to the
-// web-module screen for the rest. `catalogId` is the permanent catalog id.
+// web-module screen for the rest; a card opens moduleRouteFor(catalogId), which
+// also sends the eight to the website under the Arabic locale. `catalogId` is
+// the permanent catalog id.
 // ---------------------------------------------------------------------------
 const _modules = <_EduModule>[
   _EduModule(
@@ -639,8 +641,12 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                         ar: ref.watch(stringsProvider).ar,
                         isSelfPaced: _isSelfPaced,
                         // Refresh progressive unlocks when returning from a
-                        // module, and push the new work to the server.
-                        onTap: () => context.push(m.route).then((_) {
+                        // module, and push the new work to the server (this
+                        // also pulls in work done on the website's module).
+                        onTap: () => context
+                            .push(moduleRouteFor(m.catalogId,
+                                arabic: ref.read(stringsProvider).ar))
+                            .then((_) {
                           if (mounted) {
                             _loadProgress();
                             _syncProgress();
@@ -1565,7 +1571,7 @@ class _ModuleCardState extends State<_ModuleCard> {
               if (widget.onTap != null) {
                 widget.onTap!();
               } else {
-                context.push(m.route);
+                context.push(moduleRouteFor(m.catalogId, arabic: widget.ar));
               }
             },
       onTapCancel: () => setState(() => _pressed = false),

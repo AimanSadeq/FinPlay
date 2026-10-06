@@ -219,6 +219,31 @@ final Map<int, EducationCatalogEntry> _byNum = {
 
 EducationCatalogEntry? catalogEntry(int num) => _byNum[num];
 
+/// Where a module card opens: the in-app screen, or the web-module screen that
+/// opens the module on the website.
+enum ModuleDestination { inApp, web }
+
+/// The slides and quizzes of the eight in-app content modules are English
+/// only, while the website translates them. Under the Arabic locale those
+/// modules therefore open the website's module through the web-module screen,
+/// the same way the website-only modules always do; the hub's progress sync
+/// brings the work done there back into the app. The English locale keeps the
+/// in-app screens. Workshop tools and the game are not affected, and an
+/// unknown id goes to the web-module screen, which says it is unknown.
+ModuleDestination moduleDestinationFor(int catalogId, {required bool arabic}) {
+  final entry = catalogEntry(catalogId);
+  if (entry == null || !entry.inApp) return ModuleDestination.web;
+  if (arabic && entry.isContent) return ModuleDestination.web;
+  return ModuleDestination.inApp;
+}
+
+/// The route a module card pushes for [catalogId] under the given locale. The
+/// web-module route carries the permanent catalog id, never the hub position.
+String moduleRouteFor(int catalogId, {required bool arabic}) =>
+    moduleDestinationFor(catalogId, arabic: arabic) == ModuleDestination.inApp
+        ? catalogEntry(catalogId)!.appRoute!
+        : '/education/web/$catalogId';
+
 /// 1-based position of a module among the hub's cards (the game excluded), or
 /// null for an unknown id. Display only: never store or compare positions.
 int? educationHubPosition(int num) {
