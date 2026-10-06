@@ -14,6 +14,13 @@ class AuthRepository {
     return response;
   }
 
+  /// "Try Demo": the server owns the demo learner and signs it in
+  /// (POST /self-paced/demo-login, no body). Same { success, token, user }
+  /// shape as a login, so the session is stored the same way.
+  Future<Map<String, dynamic>> demoLogin() async {
+    return _api.post(ApiEndpoints.selfPacedDemoLogin);
+  }
+
   /// Step 1 of verified sign-up: email a 6-digit verification code.
   Future<Map<String, dynamic>> requestVerification(String email) async {
     return _api.post(ApiEndpoints.selfPacedRequestVerification, data: {'email': email});

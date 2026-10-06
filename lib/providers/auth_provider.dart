@@ -125,6 +125,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// "Try Demo": POST /self-paced/demo-login provisions and signs in the demo
+  /// learner (demo-player@vifm.com) and returns the same { success, token,
+  /// user } payload as a login, so the session is stored and hydrated the same
+  /// way. The demo account has no usable password, so this is the only way in.
+  Future<bool> loginDemo() async {
+    state = state.copyWith(status: AuthStatus.loading, error: null);
+    try {
+      final response = await _api.post(ApiEndpoints.selfPacedDemoLogin);
+      if (response['success'] == true) {
+        final ok = _parseAuthResponse(response);
+        if (ok) _hydrateProgress();
+        return ok;
+      }
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: response['error']?.toString() ?? 'Could not start the demo',
+      );
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        status: AuthStatus.unauthenticated,
+        error: e.toString(),
+      );
+      return false;
+    }
+  }
+
   /// Fire-and-forget: refresh the self-paced game progress from the server after
   /// a login so a fresh device shows the learner's saved round/module + decisions.
   void _hydrateProgress() {

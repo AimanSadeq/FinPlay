@@ -181,6 +181,11 @@ class ApiEndpoints {
   // { success, message }. 15-min expiry, 60s resend cooldown, 5-attempt cap.
   static const String selfPacedRequestVerification = '/self-paced/request-verification';
   static const String selfPacedLogin = '/self-paced/login';
+  // "Try Demo": POST with no body -> { success, token, user:{id, email,
+  // displayName, firstName, lastName, currentRound, currentModule},
+  // entitlement }. The server provisions demo-player@vifm.com on first use
+  // with an unguessable password, so no password login can reach the demo.
+  static const String selfPacedDemoLogin = '/self-paced/demo-login';
   static const String selfPacedLogout = '/self-paced/logout';
   static const String selfPacedForgotPassword = '/self-paced/forgot-password';
   static const String selfPacedResetPassword = '/self-paced/reset-password';
