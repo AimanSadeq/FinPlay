@@ -115,9 +115,14 @@ class ApiEndpoints {
   // Shocks
   static const String shocksPredefined = '/shocks/predefined';
   static const String shocksTrigger = '/shocks/trigger';
+  // GET ?teamId= -> { success, shocks:[{id, shockId, definition:{name, nameAr,
+  // description, descriptionAr, category, severity, ...}, triggeredAt, target,
+  // round, module, isActive, acknowledgedBy}], count }.
   static const String shocksActive = '/shocks/active';
   static const String shocksAcknowledge = '/shocks/acknowledge';
   static const String shocksHistory = '/shocks/history';
+  // GET /shocks/unacknowledged/{teamId} -> { success, teamId, shocks, count }
+  // (same rows as shocksActive). The bare path answers 404.
   static const String shocksUnacknowledged = '/shocks/unacknowledged';
   // POST {password, revertModel?, round?}: the password travels in the BODY
   // (this router does not read the x-facilitator-password header).

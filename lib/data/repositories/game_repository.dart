@@ -23,6 +23,44 @@ class GameRepository {
     return GameState.fromJson(response);
   }
 
+  /// Market shocks a corporate team should see on entering the simulation:
+  /// GET /shocks/active?teamId plus GET /shocks/unacknowledged/{teamId}, merged
+  /// by id. The server nests the copy under `definition`, so each row is
+  /// flattened to carry name, description and severity at the top level, where
+  /// the shock banner reads them. A failed read contributes nothing.
+  Future<List<Map<String, dynamic>>> fetchTeamShocks(String teamId) async {
+    final encoded = Uri.encodeComponent(teamId);
+    final responses = await Future.wait([
+      _api.get(ApiEndpoints.shocksActive, params: {'teamId': teamId}),
+      _api.get('${ApiEndpoints.shocksUnacknowledged}/$encoded'),
+    ]);
+    final merged = <String, Map<String, dynamic>>{};
+    for (final res in responses) {
+      if (apiFailed(res)) continue;
+      final list = res['shocks'];
+      if (list is! List) continue;
+      for (final s in list) {
+        if (s is! Map) continue;
+        final row = flattenShock(Map<String, dynamic>.from(s));
+        final id = (row['id'] ?? row['shockId'] ?? '').toString();
+        if (id.isNotEmpty) merged[id] = row;
+      }
+    }
+    return merged.values.toList();
+  }
+
+  /// Lifts `definition.{name, nameAr, description, descriptionAr, severity,
+  /// category}` to the top level when the row does not already carry them.
+  static Map<String, dynamic> flattenShock(Map<String, dynamic> shock) {
+    final def = shock['definition'];
+    if (def is! Map) return shock;
+    return {
+      ...shock,
+      for (final key in const ['name', 'nameAr', 'description', 'descriptionAr', 'severity', 'category'])
+        if (shock[key] == null && def[key] != null) key: def[key],
+    };
+  }
+
   Future<List<Team>> fetchTeams() async {
     final cached = await _cache.get('teams', maxAge: const Duration(minutes: 2));
     if (cached != null && cached['list'] is List) {

@@ -156,38 +156,26 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     // Load data after frame (team might still be loading from SharedPreferences)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _tryLoadData();
-      _loadActiveShocks();
     });
   }
 
-  /// Initial REST fetch of active/unacknowledged market shocks. The app
-  /// otherwise only receives shocks via socket pushes, so a team that opens the
-  /// simulation after a shock was triggered would never see it.
+  /// Initial REST fetch of the team's active and unacknowledged market shocks
+  /// (GET /shocks/active?teamId and GET /shocks/unacknowledged/{teamId}). The
+  /// app otherwise only receives shocks via socket pushes, so a team that opens
+  /// the simulation after a shock was triggered would never see it.
   ///
   /// Corporate teams only: the server excludes every shock row when it computes
   /// a self-paced learner's financials, so surfacing shocks there would announce
   /// an event that cannot move their numbers (website parity).
   Future<void> _loadActiveShocks() async {
     if (_isSelfPaced) return;
+    final team = ref.read(teamProvider).selectedTeam;
+    if (team == null) return;
     try {
-      final api = ref.read(apiClientProvider);
-      final results = await Future.wait([
-        api.getList(ApiEndpoints.shocksActive),
-        api.getList(ApiEndpoints.shocksUnacknowledged),
-      ]);
+      final shocks = await ref.read(gameRepositoryProvider).fetchTeamShocks(team.id);
       if (!mounted) return;
-      final merged = <String, Map<String, dynamic>>{};
-      for (final list in results) {
-        for (final s in list) {
-          if (s is Map) {
-            final m = Map<String, dynamic>.from(s);
-            final id = (m['id'] ?? m['shockId'] ?? '').toString();
-            if (id.isNotEmpty) merged[id] = m;
-          }
-        }
-      }
-      if (merged.isNotEmpty) {
-        ref.read(activeShocksProvider.notifier).state = merged.values.toList();
+      if (shocks.isNotEmpty) {
+        ref.read(activeShocksProvider.notifier).state = shocks;
       }
     } catch (_) {
       // Best-effort; socket pushes remain the primary channel.
@@ -216,6 +204,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
       final team = ref.read(teamProvider).selectedTeam;
       if (team != null) {
         _loadInitialData();
+        _loadActiveShocks();
         if (mounted) setState(() => _dataLoaded = true);
         return;
       }
