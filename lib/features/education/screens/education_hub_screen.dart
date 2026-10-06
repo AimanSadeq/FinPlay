@@ -956,7 +956,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   children: [
                     _ProgressStat(
                       value: '$_completedCount',
-                      sub: '/10',
+                      sub: '/$educationModuleCount',
                       label: s.tr('Complete', 'مكتمل'),
                       color: AppColors.primaryLight,
                     ),
@@ -1454,7 +1454,9 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
               child: Icon(Icons.arrow_forward_rounded,
                   size: 14, color: AppColors.textTertiary(context)),
             ),
-            _PathBadge(s.tr('Advanced (7-10)', 'المتقدّم (7-10)'), const Color(0xFF7C3AED),
+            _PathBadge(
+                s.tr('Advanced (7-$educationModuleCount)', 'المتقدّم (7-$educationModuleCount)'),
+                const Color(0xFF7C3AED),
                 const Color(0xFFEDE9FE)),
           ],
         ),

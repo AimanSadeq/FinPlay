@@ -9,6 +9,7 @@ import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/app_settings_button.dart';
+import '../../../data/education_catalog.dart';
 
 class SelfPacedProgressScreen extends ConsumerStatefulWidget {
   const SelfPacedProgressScreen({super.key});
@@ -124,7 +125,8 @@ class _SelfPacedProgressScreenState
                       _ActionCard(
                         title: s.tr('Start Learning', 'ابدأ التعلّم'),
                         subtitle:
-                            s.tr('10 interactive finance education modules', '10 وحدات تعليمية مالية تفاعلية'),
+                            s.tr('$educationModuleCount interactive finance education modules',
+                                '$educationModuleCount وحدة تعليمية مالية تفاعلية'),
                         icon: Icons.school_rounded,
                         accentColor: const Color(0xFF10B981),
                         gradient: const [
