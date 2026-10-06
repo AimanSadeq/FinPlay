@@ -413,10 +413,10 @@ class _ControlsTabState extends State<_ControlsTab> {
     gs.whenData((data) {
       if (mounted) {
         setState(() {
+          // GET /facilitator/status: corporateAccessCode is the live cohort code
+          // while corporate mode is on and null once it is off.
           _corporateModeEnabled = data.corporateModeEnabled;
-          if (data.corporateAccessCode != null) {
-            _corporateAccessCode = data.corporateAccessCode!;
-          }
+          _corporateAccessCode = data.corporateAccessCode ?? '';
           _gameStatus = data.isActive ? 'playing' : 'stopped';
           _nextDecisionsUnlocked = data.nextDecisionsUnlocked;
         });

@@ -97,6 +97,149 @@ void main() {
       });
     });
 
+    group('fromJson - GET /facilitator/status gameState', () {
+      // Copied from a sandbox response of GET /api/facilitator/status with the
+      // x-facilitator-password header (server/routes/facilitator.ts). This is
+      // the payload the facilitator console reads; /sheets/round/state lacks
+      // isActive, the education gates and the corporate fields.
+      const fixture = {
+        'success': true,
+        'gameState': {
+          'currentRound': 3,
+          'currentModule': 'operating',
+          'isActive': true,
+          'timeRemaining': 0,
+          'lockFinancing': true,
+          'lockInvesting': true,
+          'lockOperating': true,
+          'nextDecisionsUnlocked': false,
+          'capitalBudgetingResultsUnlocked': <dynamic>[],
+          'educationUnlocked': true,
+          'educationModulesUnlocked': <dynamic>[],
+          'preAssessmentMandated': false,
+          'postAssessmentMandated': false,
+          'qrPlaceholders': {
+            'infoSheet': {'url': '', 'label': ''},
+            'courseSurvey': {'url': '', 'label': ''},
+            'preAssessment': {'url': '', 'label': ''},
+            'postAssessment': {'url': '', 'label': ''},
+            'companyLinkedin': {'url': '', 'label': ''},
+            'consultantLinkedin': {'url': '', 'label': ''},
+          },
+          'activeQrPlaceholder': 'NONE',
+          'activeCaseStudyId': null,
+          'gameMode': 'facilitator',
+          'corporateModeEnabled': true,
+          'corporateAccessCode': 'Q7GTZU',
+          'workingCapitalEnabled': false,
+          'duPontEnabled': false,
+          'waccEnabled': false,
+          'creditRatingEnabled': false,
+          'debtCovenantsEnabled': false,
+          'capTableEnabled': false,
+          'dividendPolicyEnabled': false,
+        },
+      };
+
+      test('parses the facilitator fields the console renders', () {
+        final gs = GameState.fromJson(
+            Map<String, dynamic>.from(fixture['gameState'] as Map));
+
+        expect(gs.currentRound, 3);
+        expect(gs.currentModule, 'operating');
+        expect(gs.isActive, true);
+        expect(gs.timeRemaining, 0);
+        expect(gs.lockFinancing, true);
+        expect(gs.lockInvesting, true);
+        expect(gs.lockOperating, true);
+        expect(gs.nextDecisionsUnlocked, false);
+        expect(gs.educationUnlocked, true);
+        expect(gs.educationModulesUnlocked, isEmpty);
+        expect(gs.educationRetryUnlocked, false);
+        expect(gs.preAssessmentMandated, false);
+        expect(gs.postAssessmentMandated, false);
+        expect(gs.activeQrPlaceholder, 'NONE');
+        expect(gs.activeCaseStudyId, isNull);
+        expect(gs.gameMode, 'facilitator');
+        expect(gs.corporateModeEnabled, true);
+        expect(gs.corporateAccessCode, 'Q7GTZU');
+      });
+
+      test('parses per-module education unlocks and a paused game', () {
+        final json = Map<String, dynamic>.from(fixture['gameState'] as Map)
+          ..['isActive'] = false
+          ..['educationModulesUnlocked'] = [1, 3, 9]
+          ..['educationRetryUnlocked'] = true;
+
+        final gs = GameState.fromJson(json);
+
+        expect(gs.isActive, false);
+        expect(gs.educationModulesUnlocked, [1, 3, 9]);
+        expect(gs.educationRetryUnlocked, true);
+      });
+
+      test('corporate mode off clears the access code', () {
+        final json = Map<String, dynamic>.from(fixture['gameState'] as Map)
+          ..['corporateModeEnabled'] = false
+          ..['corporateAccessCode'] = null;
+
+        final gs = GameState.fromJson(json);
+
+        expect(gs.corporateModeEnabled, false);
+        expect(gs.corporateAccessCode, isNull);
+      });
+    });
+
+    group('fromJson - base (partial payload merge)', () {
+      test('a round-state payload keeps the facilitator fields of the base', () {
+        final base = GameState.fromJson(const {
+          'currentRound': 1,
+          'currentModule': 'financing',
+          'isActive': true,
+          'educationUnlocked': true,
+          'educationModulesUnlocked': [1, 2],
+          'corporateModeEnabled': true,
+          'corporateAccessCode': 'Q7GTZU',
+        });
+        final roundState = {
+          'roundNum': 2,
+          'module': 'investing',
+          'timeRemaining': 0,
+          'timerActive': false,
+          'locks': {'financing': true, 'investing': false, 'operating': false},
+          'nextDecisionsUnlocked': true,
+          'excelMode': false,
+        };
+
+        final gs = GameState.fromJson(roundState, base: base);
+
+        expect(gs.currentRound, 2);
+        expect(gs.currentModule, 'investing');
+        expect(gs.lockFinancing, true);
+        expect(gs.nextDecisionsUnlocked, true);
+        expect(gs.isActive, true);
+        expect(gs.educationUnlocked, true);
+        expect(gs.educationModulesUnlocked, [1, 2]);
+        expect(gs.corporateModeEnabled, true);
+        expect(gs.corporateAccessCode, 'Q7GTZU');
+      });
+
+      test('an explicit null access code overrides the base', () {
+        const base = GameState(corporateModeEnabled: true, corporateAccessCode: 'ABC123');
+        final gs = GameState.fromJson(
+            {'corporateModeEnabled': false, 'corporateAccessCode': null}, base: base);
+        expect(gs.corporateModeEnabled, false);
+        expect(gs.corporateAccessCode, isNull);
+      });
+
+      test('without base the defaults are unchanged', () {
+        final gs = GameState.fromJson({'roundNum': 1});
+        expect(gs.isActive, true);
+        expect(gs.corporateModeEnabled, false);
+        expect(gs.educationUnlocked, false);
+      });
+    });
+
     group('isModuleLocked', () {
       test('returns lockFinancing when module is financing', () {
         const gs = GameState(
