@@ -5,6 +5,7 @@ import '../../data/education_catalog.dart';
 import '../network/api_client.dart';
 import '../network/api_endpoints.dart';
 import '../../providers/repository_providers.dart';
+import 'education_storage_migration.dart';
 
 /// Cross-device education progress (website parity with `hydrateProgressFromServer`
 /// / `syncProgressToDatabase` in client/src/lib/educationProgress.ts).
@@ -18,6 +19,14 @@ import '../../providers/repository_providers.dart';
 ///
 /// Conflict rule mirrors the website: per module the SERVER wins only when its
 /// score is HIGHER than the local one, so fresher local work is never downgraded.
+///
+/// One exception: ids that EducationStorageMigration marked provisional (local
+/// progress that came from a position-to-id remap and may belong to another
+/// module). Those are never pushed, and on the next pull the server record
+/// replaces the local one even when local is ahead, after which the id is no
+/// longer provisional. When the server has no record for a provisional id the
+/// local value is left alone and stays provisional until the learner works on
+/// that module in this app.
 class EducationProgressSync {
   EducationProgressSync(this._api);
 
@@ -117,10 +126,13 @@ class EducationProgressSync {
     required String scope,
   }) async {
     final prefs = await SharedPreferences.getInstance();
+    final provisional = await EducationStorageMigration.provisionalIds(prefs);
     var changed = false;
 
     for (final n in restoredModules) {
       final entry = serverModules[_moduleKey(n)];
+      // No server record: local stays as it is. A provisional id stays
+      // provisional, since nothing has confirmed its remapped value yet.
       if (entry is! Map) continue;
 
       final maxScore = moduleMaxScores[n]!;
@@ -135,7 +147,13 @@ class EducationProgressSync {
         await prefs.setStringList(_badgeKey(n), badges);
       }
 
-      if (serverPercent <= localPercent) continue; // local is fresher — keep it
+      // The server wins for a provisional id whatever the local value says:
+      // that value may be another module's progress moved here by the
+      // migration, and the server record is the only trustworthy copy.
+      final serverWins = provisional.contains(n);
+      if (!serverWins && serverPercent <= localPercent) {
+        continue; // local is fresher — keep it
+      }
 
       final activityData = entry['activityData'] is Map
           ? Map<String, dynamic>.from(entry['activityData'] as Map)
@@ -147,7 +165,9 @@ class EducationProgressSync {
       // survives a device switch); a mobile-origin record also has a real
       // 'learn' activity entry.
       final meta = activityData['__meta'];
-      var learnDone = prefs.getBool(_prefKey(scope, n, 'learn')) ?? false;
+      var learnDone = serverWins
+          ? false
+          : prefs.getBool(_prefKey(scope, n, 'learn')) ?? false;
       if (meta is Map && meta['completed'] == true) learnDone = true;
 
       for (final activity in activities) {
@@ -164,16 +184,20 @@ class EducationProgressSync {
               await prefs.setInt(_prefKey(scope, n, '${activity}Score'), score);
             }
           }
-        } else if (completed && activity != 'learn') {
+        } else if (activity != 'learn' && (completed || serverWins)) {
           // Website-origin record with its own activity ids: we can't map them
-          // one-to-one, but a passed module means the work was done.
-          await prefs.setBool(_prefKey(scope, n, activity), true);
+          // one-to-one, but a passed module means the work was done. For a
+          // provisional id an unpassed module also resets the remapped flags.
+          await prefs.setBool(_prefKey(scope, n, activity), completed);
         }
       }
       await prefs.setBool(_prefKey(scope, n, 'learn'), learnDone);
 
       await prefs.setInt('edu_progress_$n', serverPercent);
       await prefs.setBool('edu_passed_$n', completed);
+      if (serverWins) {
+        await EducationStorageMigration.clearProvisional(prefs, n);
+      }
       changed = true;
     }
 
@@ -185,7 +209,8 @@ class EducationProgressSync {
   /// POST /education/progress/{teamName}/sync. Only modules where the local
   /// score is ahead of the server's are sent: the server replaces activityData
   /// wholesale, so pushing a module we haven't advanced would flatten the
-  /// website's finer-grained per-activity records for no gain.
+  /// website's finer-grained per-activity records for no gain. Provisional ids
+  /// (see the class doc) are never sent, however far ahead local looks.
   Future<void> _push(
     String teamName, {
     required String scope,
@@ -193,10 +218,12 @@ class EducationProgressSync {
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final provisional = await EducationStorageMigration.provisionalIds(prefs);
       final modules = <String, dynamic>{};
       final allBadges = <String>{};
 
       for (final n in contentModules) {
+        if (provisional.contains(n)) continue; // unconfirmed remap: never push
         final maxScore = moduleMaxScores[n]!;
         final flags = {
           for (final a in activities)

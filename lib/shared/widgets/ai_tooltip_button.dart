@@ -4,28 +4,29 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme/app_colors.dart';
 import '../../providers/repository_providers.dart';
 
-/// A small button that fetches an AI-powered explanation for a financial term.
+/// A small button that fetches the website's rich, structured AI ratio tooltip
+/// (definition, formula, interpretation, benchmarks, business impact,
+/// actionable insights, advantages, disadvantages, risk level) from
+/// GET /ratios/tooltip, cached client-side.
 ///
-/// Two modes:
-///  * Term mode (default) — a single plain-language explanation string.
-///  * Ratio mode — pass [value] and [type] to fetch the website's rich,
-///    structured ratio tooltip (definition, formula, interpretation,
-///    benchmarks, business impact, actionable insights, advantages,
-///    disadvantages, risk level), cached client-side.
+/// The server has no free-text term explainer (the website glossary is static
+/// content), so [type] names the ratio category and is required.
 class AiTooltipButton extends ConsumerStatefulWidget {
   final String term;
   final Color? color;
 
-  /// When provided alongside [type], the rich structured ratio tooltip is used.
+  /// The ratio's current value, shown and sent for context.
   final String? value;
-  final String? type;
+
+  /// Ratio category understood by /ratios/tooltip (liquidity, solvency, ...).
+  final String type;
 
   const AiTooltipButton({
     super.key,
     required this.term,
+    required this.type,
     this.color,
     this.value,
-    this.type,
   });
 
   @override
@@ -34,14 +35,11 @@ class AiTooltipButton extends ConsumerStatefulWidget {
 
 class _AiTooltipButtonState extends ConsumerState<AiTooltipButton> {
   bool _loading = false;
-  String? _explanation;
   Map<String, dynamic>? _structured;
   String? _error;
 
-  bool get _isRatioMode => widget.type != null;
-
   Future<void> _fetchTooltip() async {
-    if (_explanation != null || _structured != null) {
+    if (_structured != null) {
       _showTooltipDialog();
       return;
     }
@@ -53,27 +51,16 @@ class _AiTooltipButtonState extends ConsumerState<AiTooltipButton> {
 
     try {
       final repo = ref.read(educationRepositoryProvider);
-      if (_isRatioMode) {
-        final result = await repo.fetchRatioTooltip(
-          title: widget.term,
-          value: widget.value,
-          type: widget.type,
-        );
-        if (!mounted) return;
-        setState(() {
-          _structured = result;
-          _loading = false;
-        });
-      } else {
-        final result = await repo.fetchAiTooltip(term: widget.term);
-        if (!mounted) return;
-        setState(() {
-          _explanation = result['explanation'] as String? ??
-              result['tooltip'] as String? ??
-              'No explanation available.';
-          _loading = false;
-        });
-      }
+      final result = await repo.fetchRatioTooltip(
+        title: widget.term,
+        value: widget.value,
+        type: widget.type,
+      );
+      if (!mounted) return;
+      setState(() {
+        _structured = result;
+        _loading = false;
+      });
       _showTooltipDialog();
     } catch (e) {
       if (mounted) {
@@ -113,12 +100,7 @@ class _AiTooltipButtonState extends ConsumerState<AiTooltipButton> {
               if (_error != null)
                 _errorBox(_error!)
               else if (_structured != null)
-                ..._structuredBody(_structured!)
-              else
-                Text(
-                  _explanation ?? '',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6),
-                ),
+                ..._structuredBody(_structured!),
               const SizedBox(height: 16),
             ],
           ),

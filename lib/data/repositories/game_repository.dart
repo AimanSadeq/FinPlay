@@ -23,6 +23,44 @@ class GameRepository {
     return GameState.fromJson(response);
   }
 
+  /// Market shocks a corporate team should see on entering the simulation:
+  /// GET /shocks/active?teamId plus GET /shocks/unacknowledged/{teamId}, merged
+  /// by id. The server nests the copy under `definition`, so each row is
+  /// flattened to carry name, description and severity at the top level, where
+  /// the shock banner reads them. A failed read contributes nothing.
+  Future<List<Map<String, dynamic>>> fetchTeamShocks(String teamId) async {
+    final encoded = Uri.encodeComponent(teamId);
+    final responses = await Future.wait([
+      _api.get(ApiEndpoints.shocksActive, params: {'teamId': teamId}),
+      _api.get('${ApiEndpoints.shocksUnacknowledged}/$encoded'),
+    ]);
+    final merged = <String, Map<String, dynamic>>{};
+    for (final res in responses) {
+      if (apiFailed(res)) continue;
+      final list = res['shocks'];
+      if (list is! List) continue;
+      for (final s in list) {
+        if (s is! Map) continue;
+        final row = flattenShock(Map<String, dynamic>.from(s));
+        final id = (row['id'] ?? row['shockId'] ?? '').toString();
+        if (id.isNotEmpty) merged[id] = row;
+      }
+    }
+    return merged.values.toList();
+  }
+
+  /// Lifts `definition.{name, nameAr, description, descriptionAr, severity,
+  /// category}` to the top level when the row does not already carry them.
+  static Map<String, dynamic> flattenShock(Map<String, dynamic> shock) {
+    final def = shock['definition'];
+    if (def is! Map) return shock;
+    return {
+      ...shock,
+      for (final key in const ['name', 'nameAr', 'description', 'descriptionAr', 'severity', 'category'])
+        if (shock[key] == null && def[key] != null) key: def[key],
+    };
+  }
+
   Future<List<Team>> fetchTeams() async {
     final cached = await _cache.get('teams', maxAge: const Duration(minutes: 2));
     if (cached != null && cached['list'] is List) {
@@ -97,6 +135,66 @@ class GameRepository {
     return FinancialData.fromSheetResponse(response);
   }
 
+  /// The team whose round-0 statements the website shows as "the baseline".
+  /// The opening position is shared by every team (the facilitator model
+  /// editor keeps one set of baseline cells), and the website's
+  /// BaselineFinancialStatements always reads it as Team 1.
+  static const String baselineTeamId = 'Team 1';
+
+  /// Statement query values of GET /game/results/round, keyed by the
+  /// `financials` key each one fills in the response.
+  static const Map<String, String> baselineStatementQueries = {
+    'incomeStatement': 'income',
+    'balanceSheet': 'balance',
+    'cashFlow': 'cashflow',
+    'ratios': 'ratios',
+  };
+
+  /// Fetch the baseline (round 0) financial statements that the Excel tiles
+  /// and the facilitator Excel tab render. Four parallel reads of
+  /// GET /game/results/round, one per statement, merged into
+  /// `{ incomeStatement, balanceSheet, cashFlow, ratios }` where each value is
+  /// the server's row list: `[{ title, value, isHeader, isMajor, isCalculation, type? }]`.
+  /// Throws when any read fails, so callers can show an error state.
+  Future<Map<String, List<Map<String, dynamic>>>> fetchBaselineStatements() async {
+    final keys = baselineStatementQueries.keys.toList();
+    final responses = await Future.wait(keys.map((key) => _api.get(
+          ApiEndpoints.resultsRound,
+          params: {
+            'teamId': baselineTeamId,
+            'round': 0,
+            'statement': baselineStatementQueries[key],
+          },
+        )));
+
+    final sheets = <String, List<Map<String, dynamic>>>{};
+    for (var i = 0; i < keys.length; i++) {
+      final response = responses[i];
+      if (apiFailed(response)) {
+        throw Exception(response['error']?.toString() ??
+            'Baseline ${keys[i]} is not available');
+      }
+      final financials = response['financials'] as Map<String, dynamic>? ?? {};
+      final rows = financials[keys[i]];
+      sheets[keys[i]] = rows is List
+          ? rows.whereType<Map>().map((r) => Map<String, dynamic>.from(r)).toList()
+          : <Map<String, dynamic>>[];
+    }
+    return sheets;
+  }
+
+  /// The baseline statements as a [FinancialData] (round 0, Team 1), for the
+  /// simulation screen's Baseline badge and module panels, which read the
+  /// row lists and the KPI getters. Throws like [fetchBaselineStatements].
+  Future<FinancialData> fetchBaselineFinancialData() async {
+    final sheets = await fetchBaselineStatements();
+    return FinancialData.fromSheetResponse({
+      'financials': sheets,
+      'round': 0,
+      'team': baselineTeamId,
+    });
+  }
+
   /// Fetch all 4 statement types in parallel (use for full refresh)
   Future<FinancialData> fetchFinancialData(String teamId,
       {int? round, bool selfPaced = false}) async {
@@ -124,10 +222,6 @@ class GameRepository {
 
   Future<Map<String, dynamic>> checkHealth() async {
     return _api.get(ApiEndpoints.health);
-  }
-
-  Future<Map<String, dynamic>> checkExcelConnection() async {
-    return _api.get(ApiEndpoints.excelConnectionStatus);
   }
 
   Future<void> clearCache() async {

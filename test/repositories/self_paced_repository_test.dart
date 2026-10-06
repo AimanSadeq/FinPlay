@@ -41,18 +41,15 @@ void main() {
     test('all self-paced endpoints start with /self-paced/', () {
       final endpoints = [
         ApiEndpoints.selfPacedMe,
-        ApiEndpoints.selfPacedProgress,
         ApiEndpoints.selfPacedProgressScenarios,
         ApiEndpoints.selfPacedProgressDecision,
         ApiEndpoints.selfPacedProgressDecisions,
         ApiEndpoints.selfPacedProgressReset,
         ApiEndpoints.selfPacedCompleteModule,
-        ApiEndpoints.selfPacedProgressEducation,
-        ApiEndpoints.selfPacedProgressEducationComplete,
+        ApiEndpoints.selfPacedProgressDashboardData,
         ApiEndpoints.selfPacedRegister,
         ApiEndpoints.selfPacedLogin,
         ApiEndpoints.selfPacedLogout,
-        ApiEndpoints.selfPacedProfile,
       ];
 
       for (final ep in endpoints) {
@@ -64,17 +61,15 @@ void main() {
     test('no duplicate endpoint values', () {
       final endpoints = {
         ApiEndpoints.selfPacedMe,
-        ApiEndpoints.selfPacedProgress,
         ApiEndpoints.selfPacedProgressScenarios,
         ApiEndpoints.selfPacedProgressDecision,
         ApiEndpoints.selfPacedProgressDecisions,
         ApiEndpoints.selfPacedProgressReset,
         ApiEndpoints.selfPacedCompleteModule,
-        ApiEndpoints.selfPacedProgressEducation,
-        ApiEndpoints.selfPacedProgressEducationComplete,
+        ApiEndpoints.selfPacedProgressDashboardData,
       };
-      // Set deduplicates — if all unique, count stays 9
-      expect(endpoints.length, 9);
+      // Set deduplicates — if all unique, count stays 7
+      expect(endpoints.length, 7);
     });
   });
 }

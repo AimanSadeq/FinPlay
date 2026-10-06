@@ -41,7 +41,7 @@ void main() {
         'gov_module_sp_2_learn': false, // positional Understanding FS, not done
         'gov_module_sp_3_learn': true, // could be synced Understanding FS (id 3)
         'edu_progress_2': 25, // positional
-        'edu_progress_3': 100, // synced catalog id 3, remapped to 4
+        'edu_progress_3': 100, // ambiguous: read as position 3, moved to id 4
       });
       final prefs = await SharedPreferences.getInstance();
       await EducationStorageMigration.run(prefs);
@@ -52,6 +52,68 @@ void main() {
       expect(prefs.getBool('edu_module_sp_4_learn'), isTrue);
       expect(prefs.getInt('edu_progress_3'), 25);
       expect(prefs.getInt('edu_progress_4'), 100);
+      // Both destinations received remapped values, so neither is trusted
+      // until the server (or in-app work) confirms it.
+      expect(await EducationStorageMigration.provisionalIds(prefs), {3, 4});
+    });
+
+    test('a device with synced progress gets its remapped ids marked provisional',
+        () async {
+      // The old sync service wrote these keys by CATALOG id: edu_progress_3 is
+      // Understanding Financial Statements at 100%, edu_progress_2 is Sector
+      // Finance Comparison at 40%. The migration cannot tell them from
+      // positional keys, so it remaps them (3 -> 4, 2 -> 3) and marks every
+      // destination provisional; the sync then lets the server correct them
+      // instead of pushing a phantom completion of id 4.
+      SharedPreferences.setMockInitialValues({
+        'edu_progress_3': 100,
+        'edu_passed_3': true,
+        'edu_progress_2': 40,
+        'gov_module_1_3_learn': true, // synced activity flags, team scope
+        'gov_module_1_3_quiz': true,
+        'gov_module_1_8_learn': true, // positional Sector Comparison -> id 2
+        'edu_badges_3': ['m3_first_steps'],
+        'edu_progress_6': 50, // id 6 is the same in both readings: untouched
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await EducationStorageMigration.run(prefs);
+
+      expect(prefs.getInt('edu_progress_4'), 100);
+      expect(prefs.getInt('edu_progress_3'), 40);
+      expect(prefs.getBool('edu_module_1_4_learn'), isTrue);
+      expect(prefs.getBool('edu_module_1_2_learn'), isTrue);
+      expect(prefs.getInt('edu_progress_6'), 50);
+
+      expect(prefs.getStringList(EducationStorageMigration.provisionalKey),
+          ['2', '3', '4']);
+      expect(await EducationStorageMigration.provisionalIds(prefs), {2, 3, 4});
+    });
+
+    test('nothing is provisional when no key was remapped', () async {
+      SharedPreferences.setMockInitialValues({
+        'gov_module_sp_1_learn': true,
+        'edu_progress_1': 25,
+        'edu_progress_6': 50,
+        'gov_team_id': 2,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await EducationStorageMigration.run(prefs);
+      expect(prefs.containsKey(EducationStorageMigration.provisionalKey), isFalse);
+      expect(await EducationStorageMigration.provisionalIds(prefs), isEmpty);
+    });
+
+    test('clearProvisional removes one id and drops the key when empty', () async {
+      SharedPreferences.setMockInitialValues({
+        EducationStorageMigration.provisionalKey: ['2', '3', '4'],
+      });
+      final prefs = await SharedPreferences.getInstance();
+      await EducationStorageMigration.clearProvisional(prefs, 4);
+      expect(await EducationStorageMigration.provisionalIds(prefs), {2, 3});
+      await EducationStorageMigration.clearProvisional(prefs, 9); // not provisional
+      expect(await EducationStorageMigration.provisionalIds(prefs), {2, 3});
+      await EducationStorageMigration.clearProvisional(prefs, 2);
+      await EducationStorageMigration.clearProvisional(prefs, 3);
+      expect(prefs.containsKey(EducationStorageMigration.provisionalKey), isFalse);
     });
 
     test('runs only once', () async {

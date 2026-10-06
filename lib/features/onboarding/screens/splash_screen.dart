@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/i18n/app_strings.dart';
-import '../../../providers/repository_providers.dart';
 import '../../../providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -115,25 +113,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     Future.delayed(const Duration(milliseconds: 3000), _navigateOnward);
   }
 
-  /// Honour the facilitator's global site-access gate (matches the website,
-  /// which polls /site-access/status and blocks the app behind an access code).
+  /// There is no site-access password on the website, so nothing gates the
+  /// app here; the corporate game gate (/facilitator/simulation-access) is
+  /// enforced by the website at the simulation entry and is not mirrored yet.
   Future<void> _navigateOnward() async {
     if (!mounted) return;
-    // 1) Honour the site-access gate first.
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final alreadyVerified = prefs.getBool('site_access_verified') ?? false;
-      if (!alreadyVerified) {
-        final gated = await ref.read(authRepositoryProvider).isSiteAccessEnabled();
-        if (gated) {
-          if (mounted) context.go('/site-access');
-          return;
-        }
-      }
-    } catch (_) {
-      // Fall through to the normal flow if the check fails.
-    }
-    // 2) Restore a saved self-paced session so the user stays signed in.
+    // Restore a saved self-paced session so the user stays signed in.
     try {
       final restored = await ref.read(authProvider.notifier).restoreSession();
       if (restored && mounted) {
@@ -519,44 +504,47 @@ class _FinPlayTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        Text(
-          'Fin',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 48,
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF5793D6),
-            letterSpacing: -1.5,
-            height: 1.0,
-          ),
-        ),
-        Text(
-          'Play',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 48,
-            fontWeight: FontWeight.w800,
-            color: isDark ? Colors.white : const Color(0xFF243C76),
-            letterSpacing: -1.5,
-            height: 1.0,
-          ),
-        ),
-        // Registered mark
-        Padding(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: Text(
-            '\u00AE',
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(
+            'Fin',
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF243C76).withValues(alpha: 0.6),
+              fontSize: 48,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF5793D6),
+              letterSpacing: -1.5,
+              height: 1.0,
             ),
           ),
-        ),
-      ],
+          Text(
+            'Play',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 48,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF243C76),
+              letterSpacing: -1.5,
+              height: 1.0,
+            ),
+          ),
+          // Registered mark
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Text(
+              '\u00AE',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF243C76).withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

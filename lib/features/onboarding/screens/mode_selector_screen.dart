@@ -591,26 +591,31 @@ class _HeroSection extends StatelessWidget {
     return Column(
       children: [
         // FinPlay Logo
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text('Fin', style: GoogleFonts.plusJakartaSans(
-              fontSize: isSmall ? 28 : 32, fontWeight: FontWeight.w800, color: const Color(0xFF5793D6),
-            )),
-            Text('Play', style: GoogleFonts.plusJakartaSans(
-              fontSize: isSmall ? 28 : 32, fontWeight: FontWeight.w800,
-              color: isDark ? Colors.white : const Color(0xFF243C76),
-            )),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Text('\u00AE', style: GoogleFonts.plusJakartaSans(
-                fontSize: 11, fontWeight: FontWeight.w600,
-                color: const Color(0xFF243C76).withValues(alpha: 0.5),
+        // The wordmark is Latin: keep 'Fin' before 'Play' under an RTL locale, where a
+        // Row would otherwise mirror its children and read "PlayFin".
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text('Fin', style: GoogleFonts.plusJakartaSans(
+                fontSize: isSmall ? 28 : 32, fontWeight: FontWeight.w800, color: const Color(0xFF5793D6),
               )),
-            ),
-          ],
+              Text('Play', style: GoogleFonts.plusJakartaSans(
+                fontSize: isSmall ? 28 : 32, fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF243C76),
+              )),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Text('\u00AE', style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11, fontWeight: FontWeight.w600,
+                  color: const Color(0xFF243C76).withValues(alpha: 0.5),
+                )),
+              ),
+            ],
+          ),
         ),
 
         SizedBox(height: isSmall ? 8 : 14),

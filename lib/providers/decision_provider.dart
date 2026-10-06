@@ -58,30 +58,6 @@ class DecisionNotifier extends StateNotifier<DecisionState> {
     state = state.copyWith(currentDecision: data);
   }
 
-  Future<bool> validateDecision({
-    required String teamId,
-    required int round,
-    required String module,
-  }) async {
-    state = state.copyWith(isValidating: true, error: null);
-    try {
-      final result = await _repo.validateDecision(
-        teamId: teamId,
-        round: round,
-        module: module,
-        decisionData: state.currentDecision,
-      );
-      state = state.copyWith(
-        validationResult: result,
-        isValidating: false,
-      );
-      return result['success'] == true;
-    } catch (e) {
-      state = state.copyWith(isValidating: false, error: e.toString());
-      return false;
-    }
-  }
-
   Future<bool> confirmDecision({
     required String teamId,
     required int round,

@@ -3,6 +3,8 @@ class ApiEndpoints {
 
   // Health
   static const String health = '/health';
+  // GET -> { database:{available}, engine:{available, mode}, mode:'online'|'offline', message }
+  static const String healthConnection = '/health/connection';
 
   // Teams
   static const String teams = '/teams';
@@ -12,29 +14,38 @@ class ApiEndpoints {
   // Game State
   static const String roundState = '/sheets/round/state';
   static const String teamProgression = '/team-progression/status';
-  static const String advanceRound = '/advance-round';
-  static const String gameChecks = '/game-checks';
+  // POST /team-progression/advance/{teamId} (no body): moves ONE team to its
+  // next module once its decisions are confirmed and the facilitator has
+  // unlocked "Move to Next Decisions". 200 { success, action, nextModule:
+  // 'investing'|'operating'|'dashboard', previousModule }; 403 { error:
+  // 'Advancement locked', message }; 400 { error: 'Decisions not confirmed' }.
+  // Broadcasts team:module_advanced to the team's other members.
+  static const String teamProgressionAdvance = '/team-progression/advance';
 
   // Decisions
   static const String decisions = '/decisions';
   static const String decisionConfirm = '/decisions/confirm';
-  static const String decisionValidate = '/decisions/repair';
   static const String decisionFinancing = '/decision/financing';
   static const String decisionInvesting = '/decision/investing';
   static const String decisionOperating = '/decision/operating';
 
-  // Decisions unlock
+  // Decisions unlock (TEAM-MEMBER route, requireTeamMember): a team re-opens
+  // its own confirmed decisions. A facilitator token gets 401 here; the
+  // facilitator's pacing control is facilitatorToggleNextDecisions.
   static const String decisionsUnlock = '/decisions/unlock';
 
   // Scenarios
   static const String scenarios = '/scenarios';
 
   // Financial Data & Results
-  static const String resultsRound = '/sheets/results/round';
-  static const String sheetsKpis = '/sheets/kpis';
+  // GET /game/results/round?teamId&round&statement=income|balance|cashflow|ratios
+  // -> { round, team, financials:{ incomeStatement, balanceSheet, cashFlow, ratios }, kpis }.
+  // Round 0 is the baseline (opening position). The server still rewrites the
+  // retired /sheets/results/round path to this handler, but that alias is
+  // deprecated, so the app calls the canonical path the website uses.
+  static const String resultsRound = '/game/results/round';
   static const String sheetsLeaderboard = '/sheets/leaderboard';
   static const String leaderboardDay = '/leaderboard/live';
-  static const String sheetsBaseline = '/sheets/baseline/direct';
   static const String balanceValidation = '/sheets/balance-validation';
   static const String dashboardData = '/dashboard-data';
 
@@ -49,7 +60,15 @@ class ApiEndpoints {
   static const String facilitatorAuth = '/facilitator/authenticate';
   static const String facilitatorAdminAuth = '/facilitator/admin-authenticate';
   static const String facilitatorStatus = '/facilitator/status';
-  static const String facilitatorTeamsStatus = '/facilitator/teams-status';
+  // GET (facilitator) -> { success, currentRound, gameState:{lockFinancing,
+  // lockInvesting, lockOperating, nextDecisionsUnlocked}, teams:[{teamId,
+  // teamName, currentRound, currentModule, moduleStatus:{financing|investing|
+  // operating:{status, scenarios, isLocked}}, scenarioDetails, totalDecisions,
+  // connectedMembers:[{playerName, joinedAt}], onlineCount}] }
+  static const String facilitatorTeamOverview = '/facilitator/team-overview';
+  // GET -> { financing: { [teamId]: { [round]: [ {scenarioId, title, amount,
+  // confirmed} ] } }, investing: {...}, operating: {...} } with NO success/data
+  // wrapper (server/routes.ts); a failure is 500 {error}.
   static const String facilitatorAllDecisions = '/facilitator/all-decisions';
   static const String facilitatorStartGame = '/facilitator/start-game';
   static const String facilitatorPauseGame = '/facilitator/pause-game';
@@ -58,6 +77,13 @@ class ApiEndpoints {
   static const String facilitatorForceRound = '/facilitator/force-round';
   static const String facilitatorForceModule = '/facilitator/force-module';
   static const String facilitatorLockAdvance = '/facilitator/lock-and-advance-module';
+  // POST {unlock:boolean} (facilitator) -> { success, message,
+  // nextDecisionsUnlocked, nextDecisionsUnlockedFor }. The website's "Unlock /
+  // Lock" next-decisions control: the server checks nextDecisionsUnlocked in
+  // POST /team-progression/advance/{teamId} (403 'Advancement locked'
+  // otherwise). The unlock is scoped to the module the room is on. The current
+  // value is read from GET /facilitator/status gameState.nextDecisionsUnlocked.
+  static const String facilitatorToggleNextDecisions = '/facilitator/toggle-next-decisions';
   static const String facilitatorStartTimer = '/facilitator/start-timer';
   static const String facilitatorEndTimer = '/facilitator/end-timer';
   static const String facilitatorUpdateTimer = '/facilitator/update-timer';
@@ -67,6 +93,16 @@ class ApiEndpoints {
   static const String facilitatorQrShow = '/facilitator/qr-show';
   static const String facilitatorQrHide = '/facilitator/qr-hide';
   static const String facilitatorGameMode = '/facilitator/game-mode';
+  // POST {enabled} -> { success, corporateModeEnabled, corporateAccessCode }.
+  // A fresh cohort access code is minted on every OFF->ON toggle.
+  static const String facilitatorToggleCorporateMode = '/facilitator/toggle-corporate-mode';
+  // Corporate game gate: GET -> { success, open }; POST {open} (facilitator).
+  static const String facilitatorSimulationAccess = '/facilitator/simulation-access';
+  // Live countdown on every participant screen: POST (facilitator) -> { success }.
+  static const String facilitatorTimerOverlayStart = '/facilitator/timer-overlay/start';
+  static const String facilitatorTimerOverlayStop = '/facilitator/timer-overlay/stop';
+  // POST {scenarioIds:[...], unlock} -> { success, capitalBudgetingResultsUnlocked }.
+  static const String facilitatorUnlockAllScenarioResults = '/facilitator/unlock-all-scenario-results';
   static const String facilitatorSetTeamLeader = '/facilitator/set-team-leader';
   static const String facilitatorRemoveTeamLeader = '/facilitator/remove-team-leader';
   // GET /facilitator/team-leader/{teamId} -> { success, teamId, leader }
@@ -79,11 +115,18 @@ class ApiEndpoints {
   // Shocks
   static const String shocksPredefined = '/shocks/predefined';
   static const String shocksTrigger = '/shocks/trigger';
+  // GET ?teamId= -> { success, shocks:[{id, shockId, definition:{name, nameAr,
+  // description, descriptionAr, category, severity, ...}, triggeredAt, target,
+  // round, module, isActive, acknowledgedBy}], count }.
   static const String shocksActive = '/shocks/active';
   static const String shocksAcknowledge = '/shocks/acknowledge';
   static const String shocksHistory = '/shocks/history';
+  // GET /shocks/unacknowledged/{teamId} -> { success, teamId, shocks, count }
+  // (same rows as shocksActive). The bare path answers 404.
   static const String shocksUnacknowledged = '/shocks/unacknowledged';
-  static const String shocksClear = '/shocks/clear';
+  // POST {password, revertModel?, round?}: the password travels in the BODY
+  // (this router does not read the x-facilitator-password header).
+  static const String shocksClearAll = '/shocks/clear-all';
 
   // Certificate — awarded once every learning module is complete.
   // /me is authenticated AND entitlement-gated (a lapsed learner gets 402), because issuing a
@@ -92,23 +135,19 @@ class ApiEndpoints {
   static const String certificateMe = '/certificate/me';
 
   // Education
-  static const String education = '/education';
   static const String educationModulesStatus = '/education-modules/status';
   static const String breakEvenScenarios = '/education/break-even/scenarios';
   static const String capitalBudgetingStatus = '/capital-budgeting/status';
-  static const String aiTooltip = '/education/tooltip';
   // Public "Request a Demo" lead capture (absolute — different host/ops API).
   static const String demoRequest = 'https://ops.viftraining.com/api/public/demo-request';
   // Structured AI ratio tooltip (definition/formula/benchmarks/impact/risk...).
   static const String ratiosTooltip = '/ratios/tooltip';
+  // GET /scenarios/tooltip/{scenarioId}?title= -> bilingual { title:{en,ar},
+  // definition:{en,ar}, whyItMatters:{en,ar}, pros, cons, ... } (no envelope).
   static const String scenarioTooltip = '/scenarios/tooltip';
 
-  // Education modules: team progress, quizzes and leaderboard (served under /api/education).
+  // Education modules (served under /api/education).
   static const String educationStatus = '/education/status';
-  static const String educationTeams = '/education/teams';
-  static const String educationProgress = '/education/progress';
-  static const String educationQuiz = '/education/quiz';
-  static const String educationLeaderboard = '/education/leaderboard';
 
   // Earnings Call (post-Round-2 analyst event). Stage machine off -> prep -> live,
   // driven by the facilitator and polled by teams.
@@ -141,21 +180,18 @@ class ApiEndpoints {
   // Cache
   static const String cacheClear = '/cache/clear';
 
-  // Excel
-  static const String excelConnectionStatus = '/excel/connection-status';
-  static const String excelAdvanceStage = '/excel/advance-stage';
-  static const String excelScenarioMetrics = '/excel/scenarios/keymetrics';
-  static const String excelScenarioAmount = '/excel/scenarios/amount';
-
   // Self-Paced Auth (backend mounts at /api/self-paced)
   static const String selfPacedRegister = '/self-paced/register';
   // Step 1 of verified sign-up: emails a 6-digit code. POST {email} ->
   // { success, message }. 15-min expiry, 60s resend cooldown, 5-attempt cap.
   static const String selfPacedRequestVerification = '/self-paced/request-verification';
   static const String selfPacedLogin = '/self-paced/login';
+  // "Try Demo": POST with no body -> { success, token, user:{id, email,
+  // displayName, firstName, lastName, currentRound, currentModule},
+  // entitlement }. The server provisions demo-player@vifm.com on first use
+  // with an unguessable password, so no password login can reach the demo.
+  static const String selfPacedDemoLogin = '/self-paced/demo-login';
   static const String selfPacedLogout = '/self-paced/logout';
-  static const String selfPacedProfile = '/self-paced/profile';
-  static const String selfPacedPasswordReset = '/self-paced/password-reset';
   static const String selfPacedForgotPassword = '/self-paced/forgot-password';
   static const String selfPacedResetPassword = '/self-paced/reset-password';
 
@@ -164,15 +200,11 @@ class ApiEndpoints {
   static const String assessmentStatus = '/assessments/status';
   static const String assessmentSubmit = '/assessments/submit';
 
-  // Research / DBA data collection
+  // Research (DBA study) mode. FinPlay does not collect the study's data: the
+  // website removed the consent and instrument endpoints, and GET /config
+  // carries collectsHere:false. Only the flag and the facilitator toggle remain.
   static const String researchConfig = '/research/config';
-  static const String researchConsent = '/research/consent';
-  static const String researchDescriptors = '/research/descriptors';
-  static const String researchResponse = '/research/response';
-  // GET /research/participant/{code} -> resume status; facilitator-only below.
-  static const String researchParticipant = '/research/participant';
   static const String researchMode = '/research/mode'; // facilitator toggle
-  static const String researchExport = '/research/export.xlsx'; // facilitator
 
   // Facilitator model editor (admin)
   static const String modelAssumptions = '/facilitator/model/assumptions';
@@ -215,15 +247,12 @@ class ApiEndpoints {
   static const String facilitatorQrStatus = '/facilitator/qr-status';
 
   // Self-Paced Progress
-  static const String selfPacedProgress = '/self-paced/progress';
   static const String selfPacedProgressDecisions = '/self-paced/progress/decisions';
   static const String selfPacedCompleteModule = '/self-paced/progress/complete-module';
   static const String selfPacedMe = '/self-paced/me';
   static const String selfPacedProgressScenarios = '/self-paced/progress/scenarios';
   static const String selfPacedProgressDecision = '/self-paced/progress/decision';
   static const String selfPacedProgressReset = '/self-paced/progress/reset';
-  static const String selfPacedProgressEducation = '/self-paced/progress/education';
-  static const String selfPacedProgressEducationComplete = '/self-paced/progress/education/complete';
 
   // Billing (self-paced subscription — MamoPay). Auth via the self-paced bearer token.
   static const String billingPlans = '/billing/plans';
@@ -241,15 +270,6 @@ class ApiEndpoints {
   // Leaderboard
   static const String leaderboardLive = '/leaderboard/live';
 
-  // Site Access
-  // Backend exposes status at /site-access/status (returns {"enabled": bool}).
-  static const String siteAccessCheck = '/site-access/status';
-  static const String siteAccessVerify = '/site-access/verify';
-  static const String facilitatorSiteAccess = '/facilitator/site-access';
-  static const String facilitatorCorporateMode = '/facilitator/corporate-mode';
-  static const String facilitatorGameControl = '/facilitator/game-control';
-  static const String facilitatorTeamSignin = '/facilitator/team-signin';
-
   // Timer
   static const String timerStatus = '/timer/status';
 
@@ -265,9 +285,7 @@ class ApiEndpoints {
   // Self-Paced Admin
   static const String selfPacedMembers = '/self-paced/admin/members';
 
-  // Education Admin
+  // Education Admin. POST {password}: this router reads the password from the
+  // body only, not the x-facilitator-password header.
   static const String educationAdminReset = '/education/admin/reset-all';
-
-  // Round state direct
-  static const String roundStateDirect = '/round-state';
 }

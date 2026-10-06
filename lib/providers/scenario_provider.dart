@@ -101,23 +101,6 @@ class ScenarioNotifier extends StateNotifier<ScenarioState> {
     state = state.copyWith(userAmounts: amounts, selectedScenarioIds: ids);
   }
 
-  /// Background write of an edited amount to the backend (corporate mode only).
-  Future<void> persistAmount({
-    required String teamId,
-    required int round,
-    required String module,
-    required String scenarioId,
-    required double amount,
-  }) {
-    return _repo.updateScenarioAmount(
-      teamId: teamId,
-      round: round,
-      module: module,
-      scenarioId: scenarioId,
-      amount: amount,
-    );
-  }
-
   void clearSelection() {
     state = state.copyWith(selectedScenarioIds: {});
   }

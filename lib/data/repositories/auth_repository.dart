@@ -14,6 +14,13 @@ class AuthRepository {
     return response;
   }
 
+  /// "Try Demo": the server owns the demo learner and signs it in
+  /// (POST /self-paced/demo-login, no body). Same { success, token, user }
+  /// shape as a login, so the session is stored the same way.
+  Future<Map<String, dynamic>> demoLogin() async {
+    return _api.post(ApiEndpoints.selfPacedDemoLogin);
+  }
+
   /// Step 1 of verified sign-up: email a 6-digit verification code.
   Future<Map<String, dynamic>> requestVerification(String email) async {
     return _api.post(ApiEndpoints.selfPacedRequestVerification, data: {'email': email});
@@ -71,41 +78,14 @@ class AuthRepository {
     });
   }
 
-  Future<Map<String, dynamic>> getProfile() async {
-    final response = await _api.get(ApiEndpoints.selfPacedProfile);
-    return response;
-  }
-
   Future<void> logout() async {
     await _api.post(ApiEndpoints.selfPacedLogout);
   }
 
-  /// Verify the site-access password. Returns the full response so callers can
-  /// branch on `isFacilitator` (the website auto-logs the facilitator in when the
-  /// entered code is the admin password).
-  Future<Map<String, dynamic>> verifySiteAccess(String password) async {
-    return _api.post(ApiEndpoints.siteAccessVerify, data: {
-      'password': password,
-    });
-  }
-
-  Future<bool> validateSiteAccess(String password) async {
-    final response = await verifySiteAccess(password);
-    return response['success'] == true;
-  }
-
-  Future<Map<String, dynamic>> checkSiteAccess() async {
-    return _api.get(ApiEndpoints.siteAccessCheck);
-  }
-
-  /// Whether the facilitator has enabled the global site-access password gate.
-  /// Best-effort: returns false if the status cannot be fetched.
-  Future<bool> isSiteAccessEnabled() async {
-    try {
-      final res = await checkSiteAccess();
-      return res['enabled'] == true;
-    } catch (_) {
-      return false;
-    }
-  }
+  // There is no site-access password on the website; the /site-access/* gate
+  // this repository used to call never existed on the server and could never
+  // block sign-in. The website's only entry gate is the corporate simulation
+  // gate (GET/POST /facilitator/simulation-access), which this app does not
+  // implement yet.
+  // TODO(owner): decide whether to mirror /facilitator/simulation-access here.
 }

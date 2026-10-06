@@ -9,6 +9,7 @@ import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/app_settings_button.dart';
+import '../../../data/education_catalog.dart';
 
 class SelfPacedProgressScreen extends ConsumerStatefulWidget {
   const SelfPacedProgressScreen({super.key});
@@ -124,7 +125,8 @@ class _SelfPacedProgressScreenState
                       _ActionCard(
                         title: s.tr('Start Learning', 'ابدأ التعلّم'),
                         subtitle:
-                            s.tr('10 interactive finance education modules', '10 وحدات تعليمية مالية تفاعلية'),
+                            s.tr('$educationModuleCount interactive finance education modules',
+                                '$educationModuleCount وحدة تعليمية مالية تفاعلية'),
                         icon: Icons.school_rounded,
                         accentColor: const Color(0xFF10B981),
                         gradient: const [
@@ -281,26 +283,29 @@ class _SelfPacedProgressScreenState
               color: isDark ? AppColors.darkCard : const Color(0xFFF0F4FF),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Fin',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF5793D6),
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Fin',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF5793D6),
+                    ),
                   ),
-                ),
-                Text(
-                  'Play',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : const Color(0xFF243C76),
+                  Text(
+                    'Play',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF243C76),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -382,39 +387,44 @@ class _SelfPacedProgressScreenState
         const SizedBox(height: 4),
 
         // FinPlay subtitle
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              'Fin',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF5793D6),
-              ),
-            ),
-            Text(
-              'Play',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : const Color(0xFF243C76),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: Text(
-                s.tr('Self-Paced', 'التعلّم الذاتي'),
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryLight,
+        // The wordmark is Latin: keep 'Fin' before 'Play' under an RTL locale, where a
+        // Row would otherwise mirror its children and read "PlayFin".
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Fin',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF5793D6),
                 ),
               ),
-            ),
-          ],
+              Text(
+                'Play',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF243C76),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: Text(
+                  s.tr('Self-Paced', 'التعلّم الذاتي'),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryLight,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
 
         const SizedBox(height: 2),

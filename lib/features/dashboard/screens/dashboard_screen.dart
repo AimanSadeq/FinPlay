@@ -1815,7 +1815,7 @@ class _StatementList extends StatelessWidget {
                   const SizedBox(width: 8),
                   AiTooltipButton(
                     term: row.label,
-                    type: row.aiType,
+                    type: row.aiType!,
                     value: row.suffix != null
                         ? '${row.value.toStringAsFixed(1)}${row.suffix}'
                         : row.value.toStringAsFixed(2),

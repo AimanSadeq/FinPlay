@@ -43,25 +43,22 @@ class _ExcelViewScreenState extends ConsumerState<ExcelViewScreen> {
     _loadExcelData();
   }
 
+  /// Baseline (round 0) statements from GET /game/results/round, the same
+  /// reads the website's BaselineFinancialStatements makes. A failed read
+  /// throws in the repository and lands in the error state below.
   Future<void> _loadExcelData() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final api = ref.read(apiClientProvider);
-      final response = await api.get('/excel/baseline-financials');
-      if (response['success'] == true) {
-        setState(() {
-          _excelData = response['data'] as Map<String, dynamic>;
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _error = response['error'] as String? ?? 'Failed to load';
-          _loading = false;
-        });
-      }
-    } catch (e) {
+      final sheets = await ref.read(gameRepositoryProvider).fetchBaselineStatements();
+      if (!mounted) return;
       setState(() {
-        _error = 'Could not connect to Excel service';
+        _excelData = sheets;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not load the baseline financial statements';
         _loading = false;
       });
     }
@@ -69,8 +66,9 @@ class _ExcelViewScreenState extends ConsumerState<ExcelViewScreen> {
 
   Color get _activeColor => _sheetColors[_activeSheet] ?? const Color(0xFF3B82F6);
 
-  // Maps a tab label to the key used by /excel/baseline-financials
-  // (`{ incomeStatement, balanceSheet, cashFlow, ratios }`).
+  // Maps a tab label to the key of GameRepository.fetchBaselineStatements
+  // (`{ incomeStatement, balanceSheet, cashFlow, ratios }`), each a list of
+  // `{ title, value, isHeader, ... }` rows.
   static const _sheetKeyMap = {
     'Income Statement': 'incomeStatement',
     'Balance Sheet': 'balanceSheet',
@@ -132,7 +130,7 @@ class _ExcelViewScreenState extends ConsumerState<ExcelViewScreen> {
                               ),
                             ),
                             Text(
-                              s.tr('Real-time spreadsheet insights', 'رؤى فورية من الجداول'),
+                              s.tr('Baseline financial statements', 'القوائم المالية الأساسية'),
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: AppColors.textTertiary(context),
                                 fontSize: 12,
@@ -442,7 +440,14 @@ class _ExcelViewScreenState extends ConsumerState<ExcelViewScreen> {
       itemBuilder: (context, index) {
         final row = data[index];
         if (row is Map) {
-          final entries = row.entries.toList();
+          // A statement row is { title, value, isHeader, ... }: show it as one
+          // title/value line (a header row, such as "ASSETS:", has no amount).
+          // Any other map renders every entry as before.
+          final entries = row.containsKey('title')
+              ? <MapEntry<dynamic, dynamic>>[
+                  MapEntry(row['title'], row['isHeader'] == true ? '' : row['value']),
+                ]
+              : row.entries.toList();
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: ClipRRect(

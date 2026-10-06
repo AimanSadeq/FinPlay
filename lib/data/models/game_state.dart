@@ -47,33 +47,51 @@ class GameState {
     this.corporateAccessCode,
   });
 
-  factory GameState.fromJson(Map<String, dynamic> json) {
+  /// Parses either payload the app reads:
+  ///
+  /// * GET /sheets/round/state (public): {roundNum, module, timeRemaining,
+  ///   timerActive, locks:{financing,investing,operating}, nextDecisionsUnlocked,
+  ///   excelMode}. It carries no isActive, education or corporate fields.
+  /// * GET /facilitator/status `gameState` (facilitator): the flat format with
+  ///   currentRound, currentModule, isActive, lockFinancing/Investing/Operating,
+  ///   nextDecisionsUnlocked, educationUnlocked, educationModulesUnlocked,
+  ///   educationRetryUnlocked, preAssessmentMandated, postAssessmentMandated,
+  ///   activeQrPlaceholder, activeCaseStudyId, gameMode, corporateModeEnabled
+  ///   and corporateAccessCode.
+  ///
+  /// With [base], a key the payload lacks keeps the value [base] holds instead
+  /// of resetting to the default, so a partial update (a socket push, a
+  /// round-state read on a facilitator device) cannot wipe the facilitator
+  /// fields a status read filled in.
+  factory GameState.fromJson(Map<String, dynamic> json, {GameState? base}) {
     // Handle both formats: {roundNum, module, locks: {}} and flat format
     final locks = json['locks'] as Map<String, dynamic>?;
 
     return GameState(
-      currentRound: json['roundNum'] as int? ?? json['currentRound'] as int? ?? 1,
-      currentModule: json['module'] as String? ?? json['currentModule'] as String? ?? 'financing',
-      isActive: json['isActive'] as bool? ?? true,
-      timeRemaining: json['timeRemaining'] as int?,
-      lockFinancing: locks?['financing'] as bool? ?? json['lockFinancing'] as bool? ?? false,
-      lockInvesting: locks?['investing'] as bool? ?? json['lockInvesting'] as bool? ?? false,
-      lockOperating: locks?['operating'] as bool? ?? json['lockOperating'] as bool? ?? false,
-      nextDecisionsUnlocked: json['nextDecisionsUnlocked'] as bool? ?? false,
-      breakEvenUnlocked: json['breakEvenUnlocked'] as bool? ?? false,
-      capitalBudgetingUnlocked: json['capitalBudgetingUnlocked'] as bool? ?? false,
-      educationUnlocked: json['educationUnlocked'] as bool? ?? false,
+      currentRound: json['roundNum'] as int? ?? json['currentRound'] as int? ?? base?.currentRound ?? 1,
+      currentModule: json['module'] as String? ?? json['currentModule'] as String? ?? base?.currentModule ?? 'financing',
+      isActive: json['isActive'] as bool? ?? base?.isActive ?? true,
+      timeRemaining: json['timeRemaining'] as int? ?? base?.timeRemaining,
+      lockFinancing: locks?['financing'] as bool? ?? json['lockFinancing'] as bool? ?? base?.lockFinancing ?? false,
+      lockInvesting: locks?['investing'] as bool? ?? json['lockInvesting'] as bool? ?? base?.lockInvesting ?? false,
+      lockOperating: locks?['operating'] as bool? ?? json['lockOperating'] as bool? ?? base?.lockOperating ?? false,
+      nextDecisionsUnlocked: json['nextDecisionsUnlocked'] as bool? ?? base?.nextDecisionsUnlocked ?? false,
+      breakEvenUnlocked: json['breakEvenUnlocked'] as bool? ?? base?.breakEvenUnlocked ?? false,
+      capitalBudgetingUnlocked: json['capitalBudgetingUnlocked'] as bool? ?? base?.capitalBudgetingUnlocked ?? false,
+      educationUnlocked: json['educationUnlocked'] as bool? ?? base?.educationUnlocked ?? false,
       educationModulesUnlocked: (json['educationModulesUnlocked'] as List<dynamic>?)
-          ?.map((e) => (e as num).toInt()).toList() ?? [],
-      educationRetryUnlocked: json['educationRetryUnlocked'] as bool? ?? false,
-      preAssessmentMandated: json['preAssessmentMandated'] as bool? ?? false,
-      postAssessmentMandated: json['postAssessmentMandated'] as bool? ?? false,
-      siteAccessEnabled: json['siteAccessEnabled'] as bool? ?? false,
-      activeQrPlaceholder: json['activeQrPlaceholder'] as String?,
-      activeCaseStudyId: json['activeCaseStudyId'] as String?,
-      gameMode: json['gameMode'] as String? ?? 'facilitator',
-      corporateModeEnabled: json['corporateModeEnabled'] as bool? ?? false,
-      corporateAccessCode: json['corporateAccessCode'] as String?,
+          ?.map((e) => (e as num).toInt()).toList() ?? base?.educationModulesUnlocked ?? [],
+      educationRetryUnlocked: json['educationRetryUnlocked'] as bool? ?? base?.educationRetryUnlocked ?? false,
+      preAssessmentMandated: json['preAssessmentMandated'] as bool? ?? base?.preAssessmentMandated ?? false,
+      postAssessmentMandated: json['postAssessmentMandated'] as bool? ?? base?.postAssessmentMandated ?? false,
+      siteAccessEnabled: json['siteAccessEnabled'] as bool? ?? base?.siteAccessEnabled ?? false,
+      activeQrPlaceholder: json['activeQrPlaceholder'] as String? ?? base?.activeQrPlaceholder,
+      activeCaseStudyId: json['activeCaseStudyId'] as String? ?? base?.activeCaseStudyId,
+      gameMode: json['gameMode'] as String? ?? base?.gameMode ?? 'facilitator',
+      corporateModeEnabled: json['corporateModeEnabled'] as bool? ?? base?.corporateModeEnabled ?? false,
+      corporateAccessCode: json.containsKey('corporateAccessCode')
+          ? json['corporateAccessCode'] as String?
+          : base?.corporateAccessCode,
     );
   }
 

@@ -6,6 +6,14 @@ import '../utils/constants.dart';
 /// to make clear it is added by the client and never sent by the server.
 const String httpStatusKey = '_httpStatus';
 
+/// True when a response map returned by ApiClient is a failure: the server said
+/// so (`success: false`) or the request was rejected with a 4xx that ApiClient
+/// preserved as a body. A missing route answers 404 {success:false, error:'API
+/// route not found'}, so a caller that does not check this treats a dead route
+/// as success.
+bool apiFailed(Map<String, dynamic> res) =>
+    res['success'] == false || ((res[httpStatusKey] as int?) ?? 0) >= 400;
+
 class ApiClient {
   static ApiClient? _instance;
   late final Dio _dio;
@@ -68,6 +76,17 @@ class ApiClient {
     _dio.options.headers.remove('x-facilitator-password');
   }
 
+  /// True once a facilitator has signed in on this device (the password header
+  /// is attached), so reads can use the facilitator-gated routes.
+  bool get hasFacilitatorPassword => facilitatorPassword != null;
+
+  /// The signed-in facilitator's password, for the few routers that read it
+  /// from the request body instead of the header; null when none is stored.
+  String? get facilitatorPassword {
+    final pw = _dio.options.headers['x-facilitator-password'];
+    return pw is String && pw.isNotEmpty ? pw : null;
+  }
+
   /// GET that returns a Map response
   Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? params}) async {
     try {
@@ -78,25 +97,36 @@ class ApiClient {
       // Wrap non-map responses
       return {'success': true, 'data': response.data};
     } on DioException catch (e) {
-      // Preserve the server's error body for 4xx (e.g. a 402 SUBSCRIPTION_REQUIRED carries
-      // {success:false, code:'SUBSCRIPTION_REQUIRED', ...} that the UI acts on) instead of
-      // letting the exception bubble up and break the screen.
-      //
-      // The status is stamped under [httpStatusKey] because not every error carries a `code`:
-      // a 401 is just {success:false, error:'Not authenticated'}, which a caller otherwise
-      // cannot tell apart from any other failure — and so ends up showing the raw server
-      // string instead of offering the learner a way to sign in again.
-      final statusCode = e.response?.statusCode;
-      if (e.response?.data is Map) {
-        final body = Map<String, dynamic>.from(e.response!.data as Map);
-        if (statusCode != null) body[httpStatusKey] = statusCode;
-        return body;
-      }
-      if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-        return {'success': false, 'error': 'Request failed ($statusCode)', httpStatusKey: statusCode};
-      }
-      rethrow;
+      return _preserved4xx(e) ?? (throw e);
     }
+  }
+
+  /// The server's error body for a 4xx, stamped with the status, or null when
+  /// the error is not a 4xx and should propagate.
+  ///
+  /// The body is preserved (e.g. a 402 SUBSCRIPTION_REQUIRED carries
+  /// {success:false, code:'SUBSCRIPTION_REQUIRED', ...} that the UI acts on)
+  /// instead of letting the exception bubble up and break the screen. The
+  /// status is stamped under [httpStatusKey] because not every error carries a
+  /// `code`: a 401 is just {success:false, error:'Not authenticated'}, which a
+  /// caller otherwise cannot tell apart from any other failure, and a 404 from
+  /// a route that no longer exists is {success:false, error:'API route not
+  /// found'}. Every verb goes through here so a POST caller can detect a dead
+  /// route the same way a GET caller can.
+  Map<String, dynamic>? _preserved4xx(DioException e, {bool authMessages = false}) {
+    final statusCode = e.response?.statusCode;
+    if (e.response?.data is Map) {
+      final body = Map<String, dynamic>.from(e.response!.data as Map);
+      if (statusCode != null) body[httpStatusKey] = statusCode;
+      return body;
+    }
+    if (statusCode == null || statusCode < 400 || statusCode >= 500) return null;
+    final error = switch (statusCode) {
+      401 when authMessages => 'Invalid email or password',
+      409 when authMessages => 'Email already registered',
+      _ => 'Request failed ($statusCode)',
+    };
+    return {'success': false, 'error': error, httpStatusKey: statusCode};
   }
 
   /// GET that returns a List response
@@ -121,53 +151,48 @@ class ApiClient {
       }
       return {'success': true, 'data': response.data};
     } on DioException catch (e) {
-      // Return error response body for 4xx errors instead of throwing
-      if (e.response?.data is Map<String, dynamic>) {
-        return e.response!.data as Map<String, dynamic>;
-      }
-      if (e.response?.data is Map) {
-        return Map<String, dynamic>.from(e.response!.data as Map);
-      }
-      // Extract a user-friendly message
-      final statusCode = e.response?.statusCode;
-      if (statusCode == 401) {
-        return {'success': false, 'error': 'Invalid email or password'};
-      }
-      if (statusCode == 409) {
-        return {'success': false, 'error': 'Email already registered'};
-      }
-      if (statusCode != null && statusCode >= 400 && statusCode < 500) {
-        return {'success': false, 'error': 'Request failed ($statusCode)'};
-      }
-      rethrow;
+      // Same rule as get(): a 4xx body comes back stamped with its status.
+      return _preserved4xx(e, authMessages: true) ?? (throw e);
     }
   }
 
   /// PUT
   Future<Map<String, dynamic>> put(String path, {dynamic data}) async {
-    final response = await _dio.put(path, data: data);
-    if (response.data is Map<String, dynamic>) {
-      return response.data as Map<String, dynamic>;
+    try {
+      final response = await _dio.put(path, data: data);
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {'success': true, 'data': response.data};
+    } on DioException catch (e) {
+      return _preserved4xx(e) ?? (throw e);
     }
-    return {'success': true, 'data': response.data};
   }
 
   /// PATCH
   Future<Map<String, dynamic>> patch(String path, {dynamic data}) async {
-    final response = await _dio.patch(path, data: data);
-    if (response.data is Map<String, dynamic>) {
-      return response.data as Map<String, dynamic>;
+    try {
+      final response = await _dio.patch(path, data: data);
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {'success': true, 'data': response.data};
+    } on DioException catch (e) {
+      return _preserved4xx(e) ?? (throw e);
     }
-    return {'success': true, 'data': response.data};
   }
 
   /// DELETE
   Future<Map<String, dynamic>> delete(String path) async {
-    final response = await _dio.delete(path);
-    if (response.data is Map<String, dynamic>) {
-      return response.data as Map<String, dynamic>;
+    try {
+      final response = await _dio.delete(path);
+      if (response.data is Map<String, dynamic>) {
+        return response.data as Map<String, dynamic>;
+      }
+      return {'success': true, 'data': response.data};
+    } on DioException catch (e) {
+      return _preserved4xx(e) ?? (throw e);
     }
-    return {'success': true, 'data': response.data};
   }
 }
 

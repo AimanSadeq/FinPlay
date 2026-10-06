@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../../../shared/widgets/ai_tooltip_button.dart';
 import '../../../app/i18n/app_strings.dart';
 
 /// Arabic display label for a glossary category key (key itself is unchanged
@@ -741,8 +740,6 @@ class _TermCardState extends State<_TermCard> {
                   ],
                 ),
               ),
-              AiTooltipButton(term: widget.term.term, color: catColor),
-              const SizedBox(width: 6),
               AnimatedRotation(
                 turns: _expanded ? 0.5 : 0,
                 duration: const Duration(milliseconds: 200),

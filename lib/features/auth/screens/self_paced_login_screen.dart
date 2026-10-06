@@ -150,19 +150,15 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
     await ref.read(authProvider.notifier).requestVerification(_emailController.text.trim());
   }
 
-  /// One-tap demo: log in with the public demo account. Credentials:
-  /// demo@viftraining.com / demo@2026. (Sign-up now requires an emailed
-  /// verification code, so the demo account is provisioned server-side rather
-  /// than self-registered on the fly.)
+  /// One-tap demo: POST /self-paced/demo-login, which provisions the demo
+  /// learner server-side and signs it in (website parity). The demo account
+  /// has no usable password, so a password login can never reach it.
   Future<void> _tryDemo() async {
-    const demoEmail = 'demo@viftraining.com';
-    const demoPassword = 'demo@2026';
     setState(() => _isRegister = false);
-    _emailController.text = demoEmail;
-    _passwordController.text = demoPassword;
+    _passwordController.clear();
 
     final auth = ref.read(authProvider.notifier);
-    final success = await auth.loginSelfPaced(demoEmail, demoPassword);
+    final success = await auth.loginDemo();
     if (success && mounted) {
       context.go('/self-paced-progress');
     } else if (mounted) {

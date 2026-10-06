@@ -18,17 +18,12 @@ void main() {
           ApiEndpoints.decisionOperating,
           ApiEndpoints.scenarios,
           ApiEndpoints.resultsRound,
-          ApiEndpoints.sheetsKpis,
           ApiEndpoints.sheetsLeaderboard,
-          ApiEndpoints.sheetsBaseline,
           ApiEndpoints.selfPacedRegister,
           ApiEndpoints.selfPacedLogin,
           ApiEndpoints.selfPacedLogout,
-          ApiEndpoints.selfPacedProfile,
-          ApiEndpoints.selfPacedProgress,
+          ApiEndpoints.selfPacedMe,
           ApiEndpoints.educationStatus,
-          ApiEndpoints.educationQuiz,
-          ApiEndpoints.educationLeaderboard,
           ApiEndpoints.facilitatorAuth,
           ApiEndpoints.facilitatorVerifyCorporateCode,
           ApiEndpoints.facilitatorStartGame,
@@ -37,8 +32,8 @@ void main() {
           ApiEndpoints.shocksPredefined,
           ApiEndpoints.shocksTrigger,
           ApiEndpoints.shocksActive,
-          ApiEndpoints.siteAccessCheck,
-          ApiEndpoints.siteAccessVerify,
+          ApiEndpoints.teamProgressionAdvance,
+          ApiEndpoints.facilitatorTeamOverview,
           ApiEndpoints.timerStatus,
           ApiEndpoints.reportExport,
         ];
@@ -57,7 +52,7 @@ void main() {
           ApiEndpoints.selfPacedLogin,
           ApiEndpoints.facilitatorAuth,
           ApiEndpoints.shocksActive,
-          ApiEndpoints.siteAccessCheck,
+          ApiEndpoints.teamProgressionAdvance,
         ];
 
         for (final endpoint in endpoints) {
@@ -72,19 +67,17 @@ void main() {
         expect(ApiEndpoints.selfPacedRegister, '/self-paced/register');
         expect(ApiEndpoints.selfPacedLogin, '/self-paced/login');
         expect(ApiEndpoints.selfPacedLogout, '/self-paced/logout');
-        expect(ApiEndpoints.selfPacedProfile, '/self-paced/profile');
-        expect(ApiEndpoints.selfPacedPasswordReset, '/self-paced/password-reset');
+        expect(ApiEndpoints.selfPacedMe, '/self-paced/me');
+        expect(ApiEndpoints.selfPacedForgotPassword, '/self-paced/forgot-password');
+        expect(ApiEndpoints.selfPacedResetPassword, '/self-paced/reset-password');
       });
 
       test('progress endpoints use correct prefix', () {
-        expect(ApiEndpoints.selfPacedProgress, '/self-paced/progress');
         expect(ApiEndpoints.selfPacedProgressDecisions, '/self-paced/progress/decisions');
         expect(ApiEndpoints.selfPacedCompleteModule, '/self-paced/progress/complete-module');
         expect(ApiEndpoints.selfPacedProgressScenarios, '/self-paced/progress/scenarios');
         expect(ApiEndpoints.selfPacedProgressDecision, '/self-paced/progress/decision');
         expect(ApiEndpoints.selfPacedProgressReset, '/self-paced/progress/reset');
-        expect(ApiEndpoints.selfPacedProgressEducation, '/self-paced/progress/education');
-        expect(ApiEndpoints.selfPacedProgressEducationComplete, '/self-paced/progress/education/complete');
       });
     });
 
@@ -103,6 +96,12 @@ void main() {
           ApiEndpoints.facilitatorEndTimer,
           ApiEndpoints.facilitatorAllDecisions,
           ApiEndpoints.facilitatorTeamFreshStart,
+          ApiEndpoints.facilitatorTeamOverview,
+          ApiEndpoints.facilitatorToggleCorporateMode,
+          ApiEndpoints.facilitatorSimulationAccess,
+          ApiEndpoints.facilitatorTimerOverlayStart,
+          ApiEndpoints.facilitatorTimerOverlayStop,
+          ApiEndpoints.facilitatorUnlockAllScenarioResults,
         ];
 
         for (final ep in facilEndpoints) {
@@ -119,19 +118,49 @@ void main() {
         expect(ApiEndpoints.decisionOperating, '/decision/operating');
       });
 
-      test('confirm and validate endpoints exist', () {
+      test('confirm endpoint exists', () {
         expect(ApiEndpoints.decisionConfirm, '/decisions/confirm');
-        expect(ApiEndpoints.decisionValidate, '/decisions/repair');
       });
     });
 
-    group('gov education endpoints', () {
-      test('all gov education endpoints use correct prefix', () {
+    group('routes the website server actually serves', () {
+      // Paths from server/routes/*.ts in the website repository. Each of these
+      // replaced a dead path the app used to call (Deep Audit 3, mobile-contract).
+      test('simulation and facilitator routes', () {
+        expect(ApiEndpoints.teamProgressionAdvance, '/team-progression/advance');
+        expect(ApiEndpoints.facilitatorTeamOverview, '/facilitator/team-overview');
+        expect(ApiEndpoints.facilitatorToggleCorporateMode, '/facilitator/toggle-corporate-mode');
+        expect(ApiEndpoints.facilitatorStartGame, '/facilitator/start-game');
+        expect(ApiEndpoints.facilitatorPauseGame, '/facilitator/pause-game');
+        expect(ApiEndpoints.facilitatorContinueGame, '/facilitator/continue-game');
+        expect(ApiEndpoints.facilitatorResetGame, '/facilitator/reset-game');
+        expect(ApiEndpoints.facilitatorTimerOverlayStart, '/facilitator/timer-overlay/start');
+        expect(ApiEndpoints.facilitatorTimerOverlayStop, '/facilitator/timer-overlay/stop');
+        expect(ApiEndpoints.facilitatorUnlockAllScenarioResults,
+            '/facilitator/unlock-all-scenario-results');
+        expect(ApiEndpoints.facilitatorSimulationAccess, '/facilitator/simulation-access');
+        expect(ApiEndpoints.educationAdminReset, '/education/admin/reset-all');
+        expect(ApiEndpoints.shocksClearAll, '/shocks/clear-all');
+        expect(ApiEndpoints.healthConnection, '/health/connection');
+        expect(ApiEndpoints.scenarioTooltip, '/scenarios/tooltip');
+      });
+
+      test('financial statements come from the results route the website reads', () {
+        // server/routes.ts registers /api/game/results/round; the website's
+        // BaselineFinancialStatements reads it at round 0. The old
+        // /excel/baseline-financials path is not served.
+        expect(ApiEndpoints.resultsRound, '/game/results/round');
+      });
+    });
+
+    group('education endpoints', () {
+      test('education endpoints use correct prefix', () {
         expect(ApiEndpoints.educationStatus, '/education/status');
-        expect(ApiEndpoints.educationTeams, '/education/teams');
-        expect(ApiEndpoints.educationProgress, '/education/progress');
-        expect(ApiEndpoints.educationQuiz, '/education/quiz');
-        expect(ApiEndpoints.educationLeaderboard, '/education/leaderboard');
+        expect(ApiEndpoints.educationModulesStatus, '/education-modules/status');
+        expect(ApiEndpoints.educationProgressSaved,
+            '/education/progress/{teamName}/saved');
+        expect(ApiEndpoints.educationProgressSync,
+            '/education/progress/{teamName}/sync');
       });
     });
 
@@ -149,7 +178,7 @@ void main() {
           ApiEndpoints.facilitatorAuth,
           ApiEndpoints.roundState,
           ApiEndpoints.sheetsLeaderboard,
-          ApiEndpoints.siteAccessCheck,
+          ApiEndpoints.facilitatorTeamOverview,
         };
         // A Set removes duplicates, so length should stay the same
         expect(endpoints.length, 12);

@@ -156,38 +156,26 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     // Load data after frame (team might still be loading from SharedPreferences)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _tryLoadData();
-      _loadActiveShocks();
     });
   }
 
-  /// Initial REST fetch of active/unacknowledged market shocks. The app
-  /// otherwise only receives shocks via socket pushes, so a team that opens the
-  /// simulation after a shock was triggered would never see it.
+  /// Initial REST fetch of the team's active and unacknowledged market shocks
+  /// (GET /shocks/active?teamId and GET /shocks/unacknowledged/{teamId}). The
+  /// app otherwise only receives shocks via socket pushes, so a team that opens
+  /// the simulation after a shock was triggered would never see it.
   ///
   /// Corporate teams only: the server excludes every shock row when it computes
   /// a self-paced learner's financials, so surfacing shocks there would announce
   /// an event that cannot move their numbers (website parity).
   Future<void> _loadActiveShocks() async {
     if (_isSelfPaced) return;
+    final team = ref.read(teamProvider).selectedTeam;
+    if (team == null) return;
     try {
-      final api = ref.read(apiClientProvider);
-      final results = await Future.wait([
-        api.getList(ApiEndpoints.shocksActive),
-        api.getList(ApiEndpoints.shocksUnacknowledged),
-      ]);
+      final shocks = await ref.read(gameRepositoryProvider).fetchTeamShocks(team.id);
       if (!mounted) return;
-      final merged = <String, Map<String, dynamic>>{};
-      for (final list in results) {
-        for (final s in list) {
-          if (s is Map) {
-            final m = Map<String, dynamic>.from(s);
-            final id = (m['id'] ?? m['shockId'] ?? '').toString();
-            if (id.isNotEmpty) merged[id] = m;
-          }
-        }
-      }
-      if (merged.isNotEmpty) {
-        ref.read(activeShocksProvider.notifier).state = merged.values.toList();
+      if (shocks.isNotEmpty) {
+        ref.read(activeShocksProvider.notifier).state = shocks;
       }
     } catch (_) {
       // Best-effort; socket pushes remain the primary channel.
@@ -216,6 +204,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
       final team = ref.read(teamProvider).selectedTeam;
       if (team != null) {
         _loadInitialData();
+        _loadActiveShocks();
         if (mounted) setState(() => _dataLoaded = true);
         return;
       }
@@ -277,7 +266,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     if (team != null) {
       ref.read(financialProvider.notifier).fetchTeamFinancials(team.id);
       ref.read(decisionProvider.notifier).fetchTeamDecisions(team.id, round: round);
-      _fetchBaselineFinancials(team.id);
+      _fetchBaselineFinancials();
     }
     _fetchCaseStudyConstraints();
     // Poll for case-study activation/deactivation from admin (no socket push
@@ -288,23 +277,23 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     );
   }
 
-  Future<void> _fetchBaselineFinancials(String teamId) async {
+  /// Baseline (round 0) statements for the Baseline badge and the module
+  /// panels: the same GET /game/results/round reads the website's
+  /// BaselineFinancialStatements makes. The opening position is shared by
+  /// every team, so no team id is needed.
+  Future<void> _fetchBaselineFinancials() async {
     if (_loadingBaseline) return; // Prevent duplicate calls
     setState(() => _loadingBaseline = true);
     try {
-      final api = ref.read(apiClientProvider);
-      final response = await api.get(
-        ApiEndpoints.sheetsBaseline,
-        params: {'teamId': teamId},
-      );
+      final baseline = await ref.read(gameRepositoryProvider).fetchBaselineFinancialData();
       if (mounted) {
         setState(() {
-          _baselineFinancials = FinancialData.fromJson(response);
+          _baselineFinancials = baseline;
           _loadingBaseline = false;
         });
       }
     } catch (_) {
-      // Baseline not available (Excel not connected) - silently skip
+      // Baseline not served: the badge stays grey and the panels show nothing.
       if (mounted) setState(() => _loadingBaseline = false);
     }
   }
@@ -672,27 +661,18 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     }
   }
 
-  /// Handle an edited scenario amount: update local state (auto-select/deselect),
-  /// persist to the backend, and broadcast the change to teammates. Mirrors the
-  /// website's inline amount editor.
+  /// Handle an edited scenario amount: update local state (auto-select/deselect)
+  /// and broadcast the change to teammates. Mirrors the website's inline amount
+  /// editor, which keeps the amount locally; it reaches the server with the
+  /// decision confirmation.
   void _onScenarioAmountChanged(String module, String scenarioId, double amount) {
-    final notifier = ref.read(scenarioProvider.notifier);
-    notifier.setAmount(scenarioId, amount);
+    ref.read(scenarioProvider.notifier).setAmount(scenarioId, amount);
 
     if (_isSelfPaced) return;
 
     final team = ref.read(teamProvider).selectedTeam;
     if (team == null) return;
     final round = _effectiveRound;
-
-    // Background write to the model (best-effort; confirm() re-sends authoritatively).
-    notifier.persistAmount(
-      teamId: team.id,
-      round: round,
-      module: module,
-      scenarioId: scenarioId,
-      amount: amount,
-    );
 
     // Broadcast so teammates see the amount update live.
     ref.read(socketManagerProvider).sendDecision({
@@ -1885,14 +1865,12 @@ class _DecisionStatusBar extends ConsumerStatefulWidget {
 }
 
 class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
-  bool _excelConnected = false;
   bool _unlocking = false;
   bool _advancing = false;
 
   @override
   void initState() {
     super.initState();
-    _checkExcelConnection();
     // Poll decision lock state every 5 seconds (website polls every 3s)
     _startDecisionPolling();
   }
@@ -1924,20 +1902,6 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
     _decisionPollTimer?.cancel();
     _gameStatePollTimer?.cancel();
     super.dispose();
-  }
-
-  Future<void> _checkExcelConnection() async {
-    try {
-      final api = ref.read(apiClientProvider);
-      final response = await api.get(ApiEndpoints.excelConnectionStatus);
-      if (mounted) {
-        setState(() {
-          _excelConnected = response['connected'] == true || response['status'] == 'connected';
-        });
-      }
-    } catch (_) {
-      // Excel not connected
-    }
   }
 
   Future<void> _unlockDecisions() async {
@@ -2031,35 +1995,36 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
       return;
     }
 
-    // Operating module → navigate to dashboard (like website)
-    if (widget.moduleKey == 'operating') {
-      if (mounted) {
-        context.go('/dashboard');
-      }
-      return;
-    }
-
-    // Determine next module (financing→investing, investing→operating)
-    final modules = ['financing', 'investing', 'operating'];
-    final currentIdx = modules.indexOf(widget.moduleKey);
-    final nextModule = modules[currentIdx + 1];
-
-    // Toast titles matching website
     final s = ref.read(stringsProvider);
-    final toastTitle = widget.moduleKey == 'financing'
-        ? s.tr('Ready for Investing!', 'جاهز للاستثمار!')
-        : s.tr('Ready for Operating!', 'جاهز للتشغيل!');
-
     setState(() => _advancing = true);
     try {
+      // POST /team-progression/advance/{teamId}, as the website does: the
+      // server re-checks the facilitator unlock and the confirmed decisions,
+      // moves this team's module pointer and broadcasts team:module_advanced
+      // to the rest of the team. Its 403/400 bodies carry {error, message}
+      // and no success flag, so anything but success:true is a failure.
       final api = ref.read(apiClientProvider);
-      await api.post(ApiEndpoints.excelAdvanceStage, data: {
-        'currentModule': widget.moduleKey,
-        'nextModule': nextModule,
-        'teamId': widget.teamId,
-      });
+      final res = await api.post(
+        '${ApiEndpoints.teamProgressionAdvance}/${Uri.encodeComponent(widget.teamId)}',
+      );
+      if (res['success'] != true) {
+        throw Exception(res['message'] ??
+            res['error'] ??
+            s.tr('The server did not advance the team', 'لم يُقدّم الخادم الفريق'));
+      }
+      final nextModule = res['nextModule']?.toString() ?? '';
       // Refresh game state
       ref.read(gameStateProvider.notifier).fetchGameState();
+      if (!mounted) return;
+      // Operating complete: the server answers nextModule 'dashboard'.
+      if (nextModule == 'dashboard') {
+        context.go('/dashboard');
+        return;
+      }
+      // Toast titles matching website
+      final toastTitle = nextModule == 'investing'
+          ? s.tr('Ready for Investing!', 'جاهز للاستثمار!')
+          : s.tr('Ready for Operating!', 'جاهز للتشغيل!');
       // Switch tab locally
       widget.onMoveNextTab();
       if (mounted) {
@@ -2272,11 +2237,12 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                // Connected badge - shows Excel connection, falls back to socket
+                // Connected badge - the live socket to the server (the server
+                // has no Excel integration any more, so that is the only link).
                 _StatusChipSmall(
                   icon: Icons.wifi_rounded,
-                  label: (_excelConnected || isSocketConnected) ? s.tr('Connected', 'متصل') : s.tr('Disconnected', 'غير متصل'),
-                  color: (_excelConnected || isSocketConnected)
+                  label: isSocketConnected ? s.tr('Connected', 'متصل') : s.tr('Disconnected', 'غير متصل'),
+                  color: isSocketConnected
                       ? const Color(0xFF16A34A)
                       : const Color(0xFFDC2626),
                 ),
@@ -4585,7 +4551,7 @@ class _EducationalTooltipButton extends ConsumerWidget {
 
                     // AI Explanation button
                     const SizedBox(height: 16),
-                    _AiExplainButton(term: '${scenario.title}: ${scenario.description}'),
+                    _AiExplainButton(scenarioId: scenario.id, title: scenario.title),
 
                     // Full educational content button
                     const SizedBox(height: 12),
@@ -4845,8 +4811,9 @@ String _localizedModule(AppStrings s, String key, String fallback) {
 // AI Explanation Button (inside educational tooltip bottom sheet)
 // ---------------------------------------------------------------------------
 class _AiExplainButton extends ConsumerStatefulWidget {
-  final String term;
-  const _AiExplainButton({required this.term});
+  final String scenarioId;
+  final String title;
+  const _AiExplainButton({required this.scenarioId, required this.title});
 
   @override
   ConsumerState<_AiExplainButton> createState() => _AiExplainButtonState();
@@ -4860,14 +4827,25 @@ class _AiExplainButtonState extends ConsumerState<_AiExplainButton> {
     if (_explanation != null) return;
     setState(() => _loading = true);
     try {
+      // GET /scenarios/tooltip/{scenarioId}: bilingual {definition, whyItMatters}.
       final repo = ref.read(educationRepositoryProvider);
-      final result = await repo.fetchAiTooltip(term: widget.term);
+      final result = await repo.fetchScenarioTooltip(
+          scenarioId: widget.scenarioId, title: widget.title);
       if (mounted) {
         final s = ref.read(stringsProvider);
+        String pick(dynamic field) {
+          if (field is Map) {
+            return (s.tr(field['en']?.toString() ?? '', field['ar']?.toString() ?? '')).trim();
+          }
+          return field?.toString() ?? '';
+        }
+        final parts = [pick(result['definition']), pick(result['whyItMatters'])]
+            .where((p) => p.isNotEmpty)
+            .toList();
         setState(() {
-          _explanation = result['explanation'] as String? ??
-              result['tooltip'] as String? ??
-              s.tr('No explanation available.', 'لا يوجد تفسير متاح.');
+          _explanation = parts.isEmpty
+              ? s.tr('No explanation available.', 'لا يوجد تفسير متاح.')
+              : parts.join('\n\n');
           _loading = false;
         });
       }
