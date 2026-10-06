@@ -300,8 +300,22 @@ class FacilitatorRepository {
     await _api.post(ApiEndpoints.facilitatorForceModule, data: {'module': module});
   }
 
-  Future<void> unlockDecisions() async {
-    await _api.post(ApiEndpoints.decisionsUnlock);
+  /// Let every team "Move to Next Decisions" (unlock:true) or hold them
+  /// (unlock:false): POST /facilitator/toggle-next-decisions, the same route the
+  /// website's Unlock / Lock control uses. The facilitator password rides on the
+  /// x-facilitator-password header set by [login]. Returns the server's
+  /// response; callers must check `success` (a 401 or 400 body comes back with
+  /// success:false and its status under [httpStatusKey]) and read
+  /// `nextDecisionsUnlocked` for the confirmed state.
+  Future<Map<String, dynamic>> toggleNextDecisions(bool unlock) async {
+    final res = await _api.post(ApiEndpoints.facilitatorToggleNextDecisions, data: {
+      'unlock': unlock,
+    });
+    if (apiFailed(res) && res['success'] == null) {
+      // A 4xx preserved without a success flag (e.g. 400 {error}) is a failure too.
+      return {...res, 'success': false};
+    }
+    return res;
   }
 
   Future<void> refreshExcelCache() async {

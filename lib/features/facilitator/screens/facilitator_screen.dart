@@ -353,6 +353,9 @@ class _ControlsTabState extends State<_ControlsTab> {
   String _corporateAccessCode = '';
   bool _lobbyOpen = false;
   String _gameStatus = 'stopped';
+  // Server gameState.nextDecisionsUnlocked: whether teams may "Move to Next
+  // Decisions". Mirrors what the server reports, never what was last tapped.
+  bool _nextDecisionsUnlocked = false;
   bool _loading = false;
 
   // Covenant threshold overrides
@@ -397,6 +400,14 @@ class _ControlsTabState extends State<_ControlsTab> {
     _syncFromGameState();
   }
 
+  @override
+  void didUpdateWidget(covariant _ControlsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The parent rebuilds this tab with a fresh AsyncValue after every
+    // fetchGameState(); didChangeDependencies does not fire for that.
+    if (!identical(oldWidget.gameState, widget.gameState)) _syncFromGameState();
+  }
+
   void _syncFromGameState() {
     final gs = widget.gameState;
     gs.whenData((data) {
@@ -407,6 +418,7 @@ class _ControlsTabState extends State<_ControlsTab> {
             _corporateAccessCode = data.corporateAccessCode!;
           }
           _gameStatus = data.isActive ? 'playing' : 'stopped';
+          _nextDecisionsUnlocked = data.nextDecisionsUnlocked;
         });
       }
     });
@@ -736,30 +748,48 @@ class _ControlsTabState extends State<_ControlsTab> {
         ),
         const SizedBox(height: 12),
 
-        // Unlock Decisions
+        // Next Decisions (website "Unlock / Lock" next-decisions control):
+        // POST /facilitator/toggle-next-decisions. The label and the button
+        // follow the server's nextDecisionsUnlocked, so the facilitator sees
+        // whether teams can currently "Move to Next Decisions".
         GlassCard(
           padding: const EdgeInsets.all(16),
           child: Row(children: [
             Container(
               width: 44, height: 44,
               decoration: BoxDecoration(
-                color: AppColors.secondary.withValues(alpha: 0.15),
+                color: (_nextDecisionsUnlocked ? AppColors.secondary : AppColors.danger).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.lock_open_rounded, color: AppColors.secondaryLight, size: 22),
+              child: Icon(
+                _nextDecisionsUnlocked ? Icons.lock_open_rounded : Icons.lock_rounded,
+                color: _nextDecisionsUnlocked ? AppColors.secondaryLight : AppColors.dangerLight,
+                size: 22,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(s.tr('Unlock Decisions', 'فتح القرارات'), style: Theme.of(context).textTheme.titleMedium),
-                Text(s.tr('Unlock next module for all teams', 'فتح الوحدة التالية لجميع الفرق'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+                Text(s.tr('Next Decisions', 'القرارات التالية'), style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  _nextDecisionsUnlocked
+                      ? s.tr('Unlocked: teams can move to the next decisions', 'مفتوحة: يمكن للفرق الانتقال إلى القرارات التالية')
+                      : s.tr('Locked: teams cannot move to the next decisions yet', 'مقفلة: لا يمكن للفرق الانتقال إلى القرارات التالية بعد'),
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
+                ),
               ],
             )),
             ElevatedButton(
-              onPressed: _loading ? null : _unlockDecisions,
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-              child: Text(s.tr('Unlock', 'فتح'), style: const TextStyle(fontSize: 12)),
+              onPressed: _loading ? null : () => _toggleNextDecisions(!_nextDecisionsUnlocked, s),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _nextDecisionsUnlocked ? AppColors.danger : AppColors.secondary,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: Text(
+                _nextDecisionsUnlocked ? s.tr('Lock', 'قفل') : s.tr('Unlock', 'فتح'),
+                style: const TextStyle(fontSize: 12),
+              ),
             ),
           ]),
         ),
@@ -961,14 +991,27 @@ class _ControlsTabState extends State<_ControlsTab> {
     }
   }
 
-  Future<void> _unlockDecisions() async {
+  /// Unlock or lock "Move to Next Decisions" for every team. The state shown
+  /// afterwards is the one the server confirmed; a failed call (401 from a
+  /// stale password, 400, dead route) is reported and nothing changes.
+  Future<void> _toggleNextDecisions(bool unlock, AppStrings s) async {
     setState(() => _loading = true);
     try {
-      await widget.repo.unlockDecisions();
+      final res = await widget.repo.toggleNextDecisions(unlock);
+      if (res['success'] != true) {
+        throw Exception(res['message'] ?? res['error'] ?? 'Next decisions were not changed');
+      }
+      final confirmed = res['nextDecisionsUnlocked'] as bool? ?? unlock;
+      if (mounted) setState(() => _nextDecisionsUnlocked = confirmed);
       widget.onRefreshState();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Decisions unlocked'), backgroundColor: AppColors.secondary),
+          SnackBar(
+            content: Text(confirmed
+                ? s.tr('Next decisions unlocked: teams can move on', 'تم فتح القرارات التالية: يمكن للفرق الانتقال')
+                : s.tr('Next decisions locked', 'تم قفل القرارات التالية')),
+            backgroundColor: confirmed ? AppColors.secondary : AppColors.accent,
+          ),
         );
       }
     } catch (e) {

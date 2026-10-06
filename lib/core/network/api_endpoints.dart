@@ -29,7 +29,9 @@ class ApiEndpoints {
   static const String decisionInvesting = '/decision/investing';
   static const String decisionOperating = '/decision/operating';
 
-  // Decisions unlock
+  // Decisions unlock (TEAM-MEMBER route, requireTeamMember): a team re-opens
+  // its own confirmed decisions. A facilitator token gets 401 here; the
+  // facilitator's pacing control is facilitatorToggleNextDecisions.
   static const String decisionsUnlock = '/decisions/unlock';
 
   // Scenarios
@@ -72,6 +74,13 @@ class ApiEndpoints {
   static const String facilitatorForceRound = '/facilitator/force-round';
   static const String facilitatorForceModule = '/facilitator/force-module';
   static const String facilitatorLockAdvance = '/facilitator/lock-and-advance-module';
+  // POST {unlock:boolean} (facilitator) -> { success, message,
+  // nextDecisionsUnlocked, nextDecisionsUnlockedFor }. The website's "Unlock /
+  // Lock" next-decisions control: the server checks nextDecisionsUnlocked in
+  // POST /team-progression/advance/{teamId} (403 'Advancement locked'
+  // otherwise). The unlock is scoped to the module the room is on. The current
+  // value is read from GET /facilitator/status gameState.nextDecisionsUnlocked.
+  static const String facilitatorToggleNextDecisions = '/facilitator/toggle-next-decisions';
   static const String facilitatorStartTimer = '/facilitator/start-timer';
   static const String facilitatorEndTimer = '/facilitator/end-timer';
   static const String facilitatorUpdateTimer = '/facilitator/update-timer';
