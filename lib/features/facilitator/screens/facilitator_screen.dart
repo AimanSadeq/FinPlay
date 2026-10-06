@@ -9,6 +9,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/constants.dart';
+import '../../../data/education_catalog.dart';
 import '../../../data/models/game_state.dart';
 import '../../../data/models/shock.dart';
 import '../../../data/repositories/facilitator_repository.dart';
@@ -2372,29 +2373,21 @@ class _TimerTabState extends State<_TimerTab> {
 }
 
 // ---- Education Tab ----
-// Every unlockable education module (permanent catalog id → short label), in
-// hub order, matching the website's catalog. Ids are intentionally
-// non-sequential: 8 is retired, 13 is the game. Keep in step with
-// lib/data/education_catalog.dart.
-const List<(int, String, String)> _eduModules = [
-  (1, 'Financial Primer', 'تمهيد مالي'),
-  (3, 'Financial Statements', 'القوائم المالية'),
-  (4, 'Financial Analysis', 'التحليل المالي'),
-  (5, 'Time Value of Money', 'القيمة الزمنية للنقود'),
-  (11, 'Break-Even Analysis', 'تحليل نقطة التعادل'),
-  (12, 'Capital Budgeting', 'الموازنة الرأسمالية'),
-  (6, 'Budgeting & Planning', 'الموازنة والتخطيط'),
-  (7, 'Reporting Standards', 'معايير التقارير'),
-  (2, 'Sector Comparison', 'مقارنة القطاعات'),
-  (9, 'Compliance', 'الامتثال'),
-  (10, 'Auditing', 'التدقيق'),
-  (14, 'Value Creation', 'خلق القيمة'),
-  (15, 'Business Valuation', 'تقييم الشركات'),
-  (16, 'Capital Allocation', 'تخصيص رأس المال'),
-  (17, 'Financing & Cost of Capital', 'التمويل وتكلفة رأس المال'),
-  (18, 'Financial Risk Assessment', 'تقييم المخاطر المالية'),
-  (13, 'Simulation', 'المحاكاة'),
+// Every module the facilitator can force open (permanent catalog id, title),
+// in hub order, straight from the catalog: the server validates the id against
+// the website's FORCE_UNLOCKABLE_MODULE_NUMS, which is every catalog entry
+// except the simulation (id 13), so the game gets no switch here. It answers to
+// the game gate under Game Controls instead.
+final List<(int, String, String)> _eduModules = [
+  for (final m in educationCatalog)
+    if (!m.isSimulation) (m.num, m.titleEn, m.titleAr),
 ];
+
+/// Ids behind the per-module unlock switches. Exposed so a test can pin them to
+/// the catalog's non-simulation entries.
+@visibleForTesting
+List<int> get facilitatorEducationModuleIds =>
+    _eduModules.map((m) => m.$1).toList();
 
 class _EducationTab extends ConsumerStatefulWidget {
   final AsyncValue<GameState> gameState;

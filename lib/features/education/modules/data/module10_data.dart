@@ -3,7 +3,7 @@ import '../education_module_data.dart';
 const module10Data = EducationModuleContent(
   id: 10,
   title: 'Financial Auditing & Review',
-  titleAr: 'التدقيق المالي والمراجعة',
+  titleAr: 'المراجعة والتدقيق المالي',
   gameTitle: 'Audit Process Order',
   gameDescription: 'Arrange the audit process steps in the correct sequence.',
   gameType: GameType.ordering,

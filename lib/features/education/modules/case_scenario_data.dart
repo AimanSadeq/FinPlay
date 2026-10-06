@@ -1,5 +1,5 @@
 /// Data model + content for the Case Scenario Simulator — multi-step branching
-/// role-play decision cases used by several government-education modules on the
+/// role-play decision cases used by several education modules on the
 /// website (modules 4, 6, 7, 9, 10). Each scenario walks the learner through a
 /// sequence of typed steps (analysis / decision / recommendation / stakeholder);
 /// every step offers options carrying correctness, feedback and a consequence,

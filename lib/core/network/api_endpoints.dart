@@ -103,12 +103,9 @@ class ApiEndpoints {
   static const String ratiosTooltip = '/ratios/tooltip';
   static const String scenarioTooltip = '/scenarios/tooltip';
 
-  // Education modules: team progress, quizzes and leaderboard (served under /api/education).
+  // Education modules (served under /api/education).
   static const String educationStatus = '/education/status';
-  static const String educationTeams = '/education/teams';
-  static const String educationProgress = '/education/progress';
   static const String educationQuiz = '/education/quiz';
-  static const String educationLeaderboard = '/education/leaderboard';
 
   // Earnings Call (post-Round-2 analyst event). Stage machine off -> prep -> live,
   // driven by the facilitator and polled by teams.

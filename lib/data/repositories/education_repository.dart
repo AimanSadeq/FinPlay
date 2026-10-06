@@ -64,25 +64,6 @@ class EducationRepository {
     throw Exception(response['error'] ?? 'Failed to fetch ratio tooltip');
   }
 
-  // Education modules (team progress, quizzes, leaderboard)
-  Future<List<Map<String, dynamic>>> fetchGovTeams() async {
-    final response = await _api.get(ApiEndpoints.educationTeams);
-    if (response['success'] == true) {
-      return (response['data'] as List<dynamic>).cast<Map<String, dynamic>>();
-    }
-    throw Exception(response['error'] ?? 'Failed to fetch gov teams');
-  }
-
-  Future<Map<String, dynamic>> fetchGovProgress(int teamId) async {
-    final response = await _api.get(
-      '${ApiEndpoints.educationProgress}/$teamId',
-    );
-    if (response['success'] == true) {
-      return response['data'] as Map<String, dynamic>;
-    }
-    throw Exception(response['error'] ?? 'Failed to fetch gov progress');
-  }
-
   Future<Map<String, dynamic>> submitQuiz({
     required int teamId,
     required int moduleId,
@@ -101,13 +82,5 @@ class EducationRepository {
       return response['data'] as Map<String, dynamic>;
     }
     throw Exception(response['error'] ?? 'Failed to submit quiz');
-  }
-
-  Future<List<Map<String, dynamic>>> fetchGovLeaderboard() async {
-    final response = await _api.get(ApiEndpoints.educationLeaderboard);
-    if (response['success'] == true) {
-      return (response['data'] as List<dynamic>).cast<Map<String, dynamic>>();
-    }
-    throw Exception(response['error'] ?? 'Failed to fetch gov leaderboard');
   }
 }

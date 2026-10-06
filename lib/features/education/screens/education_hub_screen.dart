@@ -22,8 +22,6 @@ import '../../self_paced/widgets/entitlement_banner.dart';
 // ---------------------------------------------------------------------------
 class _EduModule {
   final int number; // hub card position, display only (see education_catalog.dart)
-  final String titleEn;
-  final String titleAr;
   final String descEn;
   final String descAr;
   final IconData icon;
@@ -37,8 +35,6 @@ class _EduModule {
 
   const _EduModule({
     required this.number,
-    required this.titleEn,
-    required this.titleAr,
     required this.descEn,
     required this.descAr,
     required this.icon,
@@ -50,6 +46,12 @@ class _EduModule {
     required this.route,
     required this.catalogId,
   });
+
+  /// Titles come from the catalog so a card can never drift from the lineup
+  /// (and the website) in either language.
+  EducationCatalogEntry get _entry => catalogEntry(catalogId)!;
+  String get titleEn => _entry.titleEn;
+  String get titleAr => _entry.titleAr;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,8 +63,6 @@ class _EduModule {
 const _modules = <_EduModule>[
   _EduModule(
     number: 1,
-    titleEn: 'Financial Management Primer',
-    titleAr: 'تمهيد الإدارة المالية',
     descEn:
         'The Three Pillars of Finance: Financing, Investing, Operating — covering Debt & Equity, Capital Structure, WACC, NPV & IRR, and Cash Flow Management.',
     descAr:
@@ -78,8 +78,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 2,
-    titleEn: 'Understanding Financial Statements',
-    titleAr: 'فهم القوائم المالية',
     descEn:
         'From the Accounting Cycle through Income Statement, Balance Sheet, Cash Flow Statement, and Auditing & Oversight.',
     descAr:
@@ -95,8 +93,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 3,
-    titleEn: 'Analysis of Financial Statements',
-    titleAr: 'تحليل القوائم المالية',
     descEn:
         'Master horizontal, vertical, and trend analysis. Five ratio categories and DuPont Analysis.',
     descAr:
@@ -112,8 +108,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 4,
-    titleEn: 'Time Value of Money',
-    titleAr: 'القيمة الزمنية للنقود',
     descEn:
         'Compounding and discounting, annuities and perpetuities, effective rates, loan amortization, and the bridge from present value to NPV.',
     descAr:
@@ -129,8 +123,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 5,
-    titleEn: 'Break-Even Analysis',
-    titleAr: 'تحليل نقطة التعادل',
     descEn:
         'Learn how to calculate the point where your business covers all costs and starts making profit.',
     descAr:
@@ -146,8 +138,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 6,
-    titleEn: 'Capital Budgeting & Investment',
-    titleAr: 'موازنة رأس المال والاستثمار',
     descEn:
         'Master investment analysis techniques including NPV, IRR, and Payback Period for evaluating capital projects.',
     descAr:
@@ -157,14 +147,12 @@ const _modules = <_EduModule>[
     categoryAr: 'الاستثمار',
     difficulty: 'intermediate',
     topicsEn: ['Time Value of Money', 'NPV', 'IRR'],
-    topicsAr: ['القيمة الزمنية للمال', 'صافي القيمة الحالية', 'معدل العائد الداخلي'],
+    topicsAr: ['القيمة الزمنية للنقود', 'صافي القيمة الحالية', 'معدل العائد الداخلي'],
     route: '/education/capital-budgeting',
     catalogId: 12,
   ),
   _EduModule(
     number: 7,
-    titleEn: 'Budgeting & Financial Planning',
-    titleAr: 'الموازنة والتخطيط المالي',
     descEn:
         '8 budget types, 9 approaches (ZBB, rolling, flexible, MTEF), the 6-stage government process, and a 10-dimension comparison.',
     descAr:
@@ -180,8 +168,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 8,
-    titleEn: 'IFRS vs IPSAS Standards',
-    titleAr: 'معايير IFRS مقابل IPSAS',
     descEn:
         'Compare IFRS and IPSAS: alignment in measurement, recognition, presentation, and public-sector divergences.',
     descAr:
@@ -197,8 +183,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 9,
-    titleEn: 'Sector Finance Comparison',
-    titleAr: 'مقارنة مالية القطاعات',
     descEn:
         'Compare 12 dimensions across government and private sectors: objectives, revenue, accountability, IPSAS vs IFRS, and more.',
     descAr:
@@ -214,8 +198,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 10,
-    titleEn: 'Compliance & Internal Controls',
-    titleAr: 'الامتثال والضوابط الداخلية',
     descEn:
         'COSO framework, fraud prevention, procurement compliance, ethics, whistleblower protection, and Saudi regulations.',
     descAr:
@@ -231,8 +213,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 11,
-    titleEn: 'Financial Auditing & Review',
-    titleAr: 'المراجعة والتدقيق المالي',
     descEn:
         '5 audit types, risk-based auditing, IT analytics, audit quality standards, and emerging trends.',
     descAr:
@@ -248,8 +228,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 12,
-    titleEn: 'Value Creation: ROIC, WACC and Economic Profit',
-    titleAr: 'خلق القيمة: العائد على رأس المال المستثمر وتكلفة رأس المال والربح الاقتصادي',
     descEn:
         'Learn what actually creates value: invested capital, NOPAT, the ROIC minus WACC spread, economic profit, and the value drivers behind them.',
     descAr:
@@ -265,8 +243,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 13,
-    titleEn: 'Business Valuation: DCF, Multiples and Deal Value',
-    titleAr: 'تقييم الشركات: التدفقات النقدية المخصومة والمضاعفات وقيمة الصفقة',
     descEn:
         'Build and challenge a valuation: free cash flow, terminal value, enterprise versus equity value, trading multiples, precedent transactions and deal pricing.',
     descAr:
@@ -282,8 +258,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 14,
-    titleEn: 'Capital Allocation for Executives',
-    titleAr: 'تخصيص رأس المال للتنفيذيين',
     descEn:
         'Turn appraisal into a process: hurdle rates, ranking competing projects under a budget, stage gates, sensitivity analysis and honest post-investment review.',
     descAr:
@@ -299,8 +273,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 15,
-    titleEn: 'Financing, Dividends and the Cost of Capital',
-    titleAr: 'التمويل وتوزيعات الأرباح وتكلفة رأس المال',
     descEn:
         'Price the money: cost of debt, credit ratings and covenants, CAPM and the cost of equity, a full WACC build, capital structure, dilution and dividend policy.',
     descAr:
@@ -316,8 +288,6 @@ const _modules = <_EduModule>[
   ),
   _EduModule(
     number: 16,
-    titleEn: 'Financial Risk Assessment',
-    titleAr: 'تقييم المخاطر المالية',
     descEn:
         'Read the risks behind the numbers: credit, market and liquidity risk, leverage and covenant headroom, early warning signs, the Altman Z-score, and sensitivity, scenario and reverse stress tests.',
     descAr:
@@ -332,6 +302,11 @@ const _modules = <_EduModule>[
     catalogId: 18,
   ),
 ];
+
+/// Catalog ids of the hub cards in display order. Exposed so a test can pin the
+/// registry to the catalog's non-simulation entries.
+@visibleForTesting
+List<int> get educationHubCardIds => _modules.map((m) => m.catalogId).toList();
 
 /// Workshop tools have no Learn section and web-only modules keep theirs on the
 /// website, so neither can gate the in-app progression chain or the sim gate.

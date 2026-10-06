@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../core/services/education_progress_sync.dart';
+import '../../../core/services/education_storage_migration.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -142,6 +143,9 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
   /// (`edu_progress_<id>` / `edu_passed_<id>`) so its grid % and badge count
   /// reflect real progress. Only for self-paced learners (the 'sp' scope).
   Future<void> _syncHubProgress(SharedPreferences prefs) async {
+    // Work done here proves the local value for this module is current, so a
+    // remapped value the migration left provisional can be pushed again.
+    await EducationStorageMigration.clearProvisional(prefs, widget.moduleId);
     if (_scope != 'sp') return;
     final done = [_lessonComplete, _quizComplete, _gameComplete, _simComplete]
         .where((b) => b).length;
@@ -843,7 +847,7 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
 
             // Keep game state isolated per type with a ValueKey.
             KeyedSubtree(
-              key: ValueKey('gov-game-${widget.moduleId}-${active.name}'),
+              key: ValueKey('module-game-${widget.moduleId}-${active.name}'),
               child: _buildGame(active),
             ),
           ],
