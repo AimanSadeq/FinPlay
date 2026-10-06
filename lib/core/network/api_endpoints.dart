@@ -163,10 +163,6 @@ class ApiEndpoints {
   // Cache
   static const String cacheClear = '/cache/clear';
 
-  // Excel-era leftover still called by the simulation status bar; the server
-  // answers 404 and the caller swallows it.
-  static const String excelConnectionStatus = '/excel/connection-status';
-
   // Self-Paced Auth (backend mounts at /api/self-paced)
   static const String selfPacedRegister = '/self-paced/register';
   // Step 1 of verified sign-up: emails a 6-digit code. POST {email} ->

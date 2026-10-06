@@ -1876,14 +1876,12 @@ class _DecisionStatusBar extends ConsumerStatefulWidget {
 }
 
 class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
-  bool _excelConnected = false;
   bool _unlocking = false;
   bool _advancing = false;
 
   @override
   void initState() {
     super.initState();
-    _checkExcelConnection();
     // Poll decision lock state every 5 seconds (website polls every 3s)
     _startDecisionPolling();
   }
@@ -1915,20 +1913,6 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
     _decisionPollTimer?.cancel();
     _gameStatePollTimer?.cancel();
     super.dispose();
-  }
-
-  Future<void> _checkExcelConnection() async {
-    try {
-      final api = ref.read(apiClientProvider);
-      final response = await api.get(ApiEndpoints.excelConnectionStatus);
-      if (mounted) {
-        setState(() {
-          _excelConnected = response['connected'] == true || response['status'] == 'connected';
-        });
-      }
-    } catch (_) {
-      // Excel not connected
-    }
   }
 
   Future<void> _unlockDecisions() async {
@@ -2264,11 +2248,12 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                // Connected badge - shows Excel connection, falls back to socket
+                // Connected badge - the live socket to the server (the server
+                // has no Excel integration any more, so that is the only link).
                 _StatusChipSmall(
                   icon: Icons.wifi_rounded,
-                  label: (_excelConnected || isSocketConnected) ? s.tr('Connected', 'متصل') : s.tr('Disconnected', 'غير متصل'),
-                  color: (_excelConnected || isSocketConnected)
+                  label: isSocketConnected ? s.tr('Connected', 'متصل') : s.tr('Disconnected', 'غير متصل'),
+                  color: isSocketConnected
                       ? const Color(0xFF16A34A)
                       : const Color(0xFFDC2626),
                 ),
