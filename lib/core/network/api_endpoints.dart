@@ -164,10 +164,9 @@ class ApiEndpoints {
   // Cache
   static const String cacheClear = '/cache/clear';
 
-  // Excel-era leftovers still called by the simulation status bar and the
-  // inline amount editor; the server answers 404 and the callers swallow it.
+  // Excel-era leftover still called by the simulation status bar; the server
+  // answers 404 and the caller swallows it.
   static const String excelConnectionStatus = '/excel/connection-status';
-  static const String excelScenarioMetrics = '/excel/scenarios/keymetrics';
 
   // Self-Paced Auth (backend mounts at /api/self-paced)
   static const String selfPacedRegister = '/self-paced/register';

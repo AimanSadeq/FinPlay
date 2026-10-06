@@ -672,27 +672,18 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     }
   }
 
-  /// Handle an edited scenario amount: update local state (auto-select/deselect),
-  /// persist to the backend, and broadcast the change to teammates. Mirrors the
-  /// website's inline amount editor.
+  /// Handle an edited scenario amount: update local state (auto-select/deselect)
+  /// and broadcast the change to teammates. Mirrors the website's inline amount
+  /// editor, which keeps the amount locally; it reaches the server with the
+  /// decision confirmation.
   void _onScenarioAmountChanged(String module, String scenarioId, double amount) {
-    final notifier = ref.read(scenarioProvider.notifier);
-    notifier.setAmount(scenarioId, amount);
+    ref.read(scenarioProvider.notifier).setAmount(scenarioId, amount);
 
     if (_isSelfPaced) return;
 
     final team = ref.read(teamProvider).selectedTeam;
     if (team == null) return;
     final round = _effectiveRound;
-
-    // Background write to the model (best-effort; confirm() re-sends authoritatively).
-    notifier.persistAmount(
-      teamId: team.id,
-      round: round,
-      module: module,
-      scenarioId: scenarioId,
-      amount: amount,
-    );
 
     // Broadcast so teammates see the amount update live.
     ref.read(socketManagerProvider).sendDecision({
