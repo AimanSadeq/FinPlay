@@ -115,7 +115,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   /// There is no site-access password on the website, so nothing gates the
   /// app here; the corporate game gate (/facilitator/simulation-access) is
-  /// enforced by the website at the simulation entry and is not mirrored yet.
+  /// enforced at the simulation entry (simulation_screen.dart), as on the website.
   Future<void> _navigateOnward() async {
     if (!mounted) return;
     // Restore a saved self-paced session so the user stays signed in.

@@ -13,6 +13,7 @@ import '../../../providers/repository_providers.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/self_paced_provider.dart';
+import '../../../providers/simulation_access_provider.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../data/education_catalog.dart';
 import '../../self_paced/widgets/entitlement_banner.dart';
@@ -424,6 +425,9 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   }
 
   Future<void> _fetchEducationStatus() async {
+    // The corporate simulation gate rides the same poll (the website refetches
+    // it on an interval too), so the Sim banner opens when the facilitator does.
+    ref.read(simulationAccessProvider.notifier).refresh();
     try {
       final api = ref.read(apiClientProvider);
       final res = await api.get(ApiEndpoints.educationModulesStatus);
@@ -536,7 +540,14 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     final auth = ref.watch(authProvider);
     final teamState = ref.watch(teamProvider);
 
-    final unlockedModules = _unlockedModules;
+    // The game (13) opens for a corporate room when the facilitator's
+    // simulation switch is on, or on a facilitator's own device (website hub:
+    // `progressiveUnlocked.has(13) || simAccessOpen || isFacilitatorSession`).
+    final simGateOpen = ref.watch(simulationAccessProvider).valueOrNull == true;
+    final unlockedModules =
+        (simGateOpen || auth.isFacilitator) && !_unlockedModules.contains(13)
+            ? [..._unlockedModules, 13]
+            : _unlockedModules;
 
     final isSelfPaced =
         auth.user != null && !auth.isFacilitator && teamState.selectedTeam == null;

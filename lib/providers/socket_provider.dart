@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/socket_service.dart';
 import 'game_state_provider.dart';
+import 'simulation_access_provider.dart';
 import 'team_provider.dart';
 
 /// Manages Socket.IO connection lifecycle and event routing
@@ -147,6 +148,19 @@ class SocketManager {
     _subscriptions.add(
       _socket.on<dynamic>('team:module_advanced').listen((data) {
         _ref.read(gameStateProvider.notifier).fetchGameState();
+      }),
+    );
+
+    // Corporate simulation gate flipped by the facilitator (or closed by a
+    // game reset): the waiting screen clears or the simulation locks at once,
+    // ahead of the next poll.
+    _subscriptions.add(
+      _socket.on<dynamic>('facilitator:simulation_access').listen((data) {
+        if (data is Map) {
+          _ref
+              .read(simulationAccessProvider.notifier)
+              .applySocket(Map<String, dynamic>.from(data));
+        }
       }),
     );
   }

@@ -50,6 +50,10 @@ class SocketService {
     _socket!.on('cache-cleared', (data) => _emit('cache-cleared', data));
     _socket!.on('presence-update', (data) => _emit('presence-update', data));
     _socket!.on('facilitator:action', (data) => _emit('facilitator:action', data));
+    // Corporate simulation gate: { open } whenever the facilitator flips the
+    // switch (and { open:false } on a game reset).
+    _socket!.on('facilitator:simulation_access',
+        (data) => _emit('facilitator:simulation_access', data));
     _socket!.on('decision:updated', (data) => _emit('decision:updated', data));
     _socket!.on('team:module_advanced', (data) => _emit('team:module_advanced', data));
     _socket!.on('team:joined', (data) => _emit('team:joined', data));
