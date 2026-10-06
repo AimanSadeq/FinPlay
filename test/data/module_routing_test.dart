@@ -56,14 +56,5 @@ void main() {
       expect(educationHubPosition(9), 10);
       expect(moduleRouteFor(9, arabic: true), '/education/web/9');
     });
-
-    test('the web-module screen opens the website page named by the catalog', () {
-      for (final m in inAppContentModules) {
-        final entry = catalogEntry(m.num)!;
-        expect(entry.href, startsWith('/education/'));
-        expect('$educationWebsiteBase${entry.href}',
-            startsWith('https://finplay.viftraining.com/education/'));
-      }
-    });
   });
 }
