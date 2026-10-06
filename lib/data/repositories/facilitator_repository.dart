@@ -8,10 +8,14 @@ class FacilitatorRepository {
 
   FacilitatorRepository(this._api);
 
-  /// Kept for the few routes whose router reads the password from the request
-  /// BODY rather than the x-facilitator-password header: reset-game,
-  /// /education/admin/reset-all and /shocks/clear-all.
-  String? _password;
+  /// For the few routes whose router reads the password from the request BODY
+  /// rather than the x-facilitator-password header: reset-game,
+  /// /education/admin/reset-all and /shocks/clear-all. Falls back to the
+  /// password the ApiClient already carries, so a facilitator who signed in
+  /// through the home Admin dialog (authProvider.loginFacilitator) is covered
+  /// without a second sign-in here.
+  String? _bodyPassword;
+  String? get _password => _bodyPassword ?? _api.facilitatorPassword;
 
   /// Capital-budgeting scenario ids on the website
   /// (client/src/data/capitalBudgetingEducationalContent.ts,
@@ -40,7 +44,7 @@ class FacilitatorRepository {
     // Attach the password to every later facilitator-gated request.
     if (ok) {
       _api.setFacilitatorPassword(password);
-      _password = password;
+      _bodyPassword = password;
     }
     return ok;
   }

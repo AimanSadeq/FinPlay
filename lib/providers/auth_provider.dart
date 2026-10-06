@@ -350,6 +350,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  /// Leave the facilitator console: drop the password header and the
+  /// facilitator flag, keeping any self-paced learner session on the device.
+  void logoutFacilitator() {
+    _api.clearFacilitatorPassword();
+    state = state.copyWith(
+      isFacilitator: false,
+      status: state.user != null ? AuthStatus.authenticated : AuthStatus.unauthenticated,
+    );
+  }
+
   /// Clear only the transient error (e.g. when toggling between login/register).
   void clearError() {
     if (state.error != null) state = state.copyWith(error: null);

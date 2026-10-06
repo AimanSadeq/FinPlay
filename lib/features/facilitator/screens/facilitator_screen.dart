@@ -14,6 +14,7 @@ import '../../../data/models/game_state.dart';
 import '../../../data/models/shock.dart';
 import '../../../data/repositories/facilitator_repository.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/game_state_provider.dart';
@@ -43,6 +44,21 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 19, vsync: this);
+    // A facilitator who authenticated in the home "Admin Access" dialog already
+    // holds a session (authProvider.isFacilitator, password header attached):
+    // open the panel instead of asking for the password a second time.
+    if (ref.read(authProvider).isFacilitator) {
+      _isAuthenticated = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadAfterLogin();
+      });
+    }
+  }
+
+  void _loadAfterLogin() {
+    ref.read(teamProvider.notifier).fetchTeams();
+    ref.read(gameStateProvider.notifier).fetchGameState();
+    _loadShocks();
   }
 
   @override
@@ -55,13 +71,12 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
   Future<void> _login() async {
     setState(() { _isLoggingIn = true; _loginError = null; });
     try {
-      final repo = ref.read(facilitatorRepositoryProvider);
-      final success = await repo.login(_passwordController.text);
+      // One sign-in for the whole app: the auth provider stores the session
+      // (password header) that every facilitator read and write then reuses.
+      final success = await ref.read(authProvider.notifier).loginFacilitator(_passwordController.text);
       if (success) {
         setState(() => _isAuthenticated = true);
-        ref.read(teamProvider.notifier).fetchTeams();
-        ref.read(gameStateProvider.notifier).fetchGameState();
-        _loadShocks();
+        _loadAfterLogin();
       } else {
         setState(() => _loginError = ref.read(stringsProvider).tr('Invalid password', 'كلمة مرور غير صحيحة'));
       }
@@ -245,7 +260,10 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                     const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.logout_rounded, color: AppColors.dangerLight),
-                      onPressed: () => setState(() => _isAuthenticated = false),
+                      onPressed: () {
+                        ref.read(authProvider.notifier).logoutFacilitator();
+                        setState(() => _isAuthenticated = false);
+                      },
                     ),
                   ],
                 ),

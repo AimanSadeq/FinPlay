@@ -78,8 +78,14 @@ class ApiClient {
 
   /// True once a facilitator has signed in on this device (the password header
   /// is attached), so reads can use the facilitator-gated routes.
-  bool get hasFacilitatorPassword =>
-      (_dio.options.headers['x-facilitator-password'] as String?)?.isNotEmpty == true;
+  bool get hasFacilitatorPassword => facilitatorPassword != null;
+
+  /// The signed-in facilitator's password, for the few routers that read it
+  /// from the request body instead of the header; null when none is stored.
+  String? get facilitatorPassword {
+    final pw = _dio.options.headers['x-facilitator-password'];
+    return pw is String && pw.isNotEmpty ? pw : null;
+  }
 
   /// GET that returns a Map response
   Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? params}) async {
