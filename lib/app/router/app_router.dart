@@ -5,7 +5,6 @@ import '../../features/onboarding/screens/mode_selector_screen.dart';
 import '../../features/onboarding/screens/home_screen.dart';
 import '../../features/auth/screens/self_paced_login_screen.dart';
 import '../../features/auth/screens/self_paced_progress_screen.dart';
-import '../../features/auth/screens/site_access_screen.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/reset_password_screen.dart';
 import '../../features/billing/screens/pricing_screen.dart';
@@ -32,7 +31,6 @@ import '../../features/education/screens/cap_table_screen.dart';
 import '../../features/education/screens/dividends_screen.dart';
 import '../../features/education/screens/ratios_category_screen.dart';
 import '../../features/assessment/screens/assessment_screen.dart';
-import '../../features/research/screens/research_screen.dart';
 import '../../features/earnings_call/screens/earnings_call_screen.dart';
 import '../../features/facilitator/screens/admin_model_screen.dart';
 import '../../features/education/screens/web_module_screen.dart';
@@ -74,14 +72,6 @@ class AppRouter {
       ),
 
       // Auth
-      GoRoute(
-        path: '/site-access',
-        name: 'site-access',
-        pageBuilder: (context, state) => _buildPage(
-          const SiteAccessScreen(),
-          state,
-        ),
-      ),
       GoRoute(
         path: '/self-paced-login',
         name: 'self-paced-login',
@@ -311,14 +301,6 @@ class AppRouter {
           ),
           state,
         ),
-      ),
-
-      // Research / DBA data collection
-      GoRoute(
-        path: '/research',
-        name: 'research',
-        pageBuilder: (context, state) =>
-            _buildPage(const ResearchScreen(), state),
       ),
 
       // Auth — reset password (token from email link)

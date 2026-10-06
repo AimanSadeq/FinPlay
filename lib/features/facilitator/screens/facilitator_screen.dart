@@ -347,7 +347,6 @@ class _ControlsTab extends StatefulWidget {
 }
 
 class _ControlsTabState extends State<_ControlsTab> {
-  bool _siteAccessEnabled = false;
   bool _corporateModeEnabled = false;
   // Cohort access code minted when corporate mode is turned on — shared with the
   // room and required for team sign-in. Empty when corporate mode is off.
@@ -361,16 +360,10 @@ class _ControlsTabState extends State<_ControlsTab> {
   final _minCoverageC = TextEditingController(text: '1.5');
   bool _savingCovenant = false;
 
-  // Budget constraints
-  final _budgetC = TextEditingController(text: '1000000');
-  String _constraintLevel = 'Beginner';
-  bool _savingConstraint = false;
-
   @override
   void dispose() {
     _maxLeverageC.dispose();
     _minCoverageC.dispose();
-    _budgetC.dispose();
     super.dispose();
   }
 
@@ -398,29 +391,6 @@ class _ControlsTabState extends State<_ControlsTab> {
     }
   }
 
-  Future<void> _saveConstraint(AppStrings s) async {
-    final budget = double.tryParse(_budgetC.text.trim());
-    if (budget == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(s.tr('Enter a valid budget', 'أدخل ميزانية صحيحة')),
-        backgroundColor: AppColors.danger));
-      return;
-    }
-    setState(() => _savingConstraint = true);
-    final ok = await widget.repo.setTeamConstraints(level: _constraintLevel, budget: budget);
-    if (mounted) {
-      setState(() => _savingConstraint = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok
-            ? s.tr('Budget constraint saved', 'تم حفظ قيد الميزانية')
-            : s.tr('Could not save constraint', 'تعذّر حفظ القيد')),
-        backgroundColor: ok ? AppColors.secondary : AppColors.danger,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
-    }
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -432,7 +402,6 @@ class _ControlsTabState extends State<_ControlsTab> {
     gs.whenData((data) {
       if (mounted) {
         setState(() {
-          _siteAccessEnabled = data.siteAccessEnabled;
           _corporateModeEnabled = data.corporateModeEnabled;
           if (data.corporateAccessCode != null) {
             _corporateAccessCode = data.corporateAccessCode!;
@@ -443,31 +412,17 @@ class _ControlsTabState extends State<_ControlsTab> {
     });
   }
 
-  Future<void> _toggleSiteAccess(bool val) async {
-    setState(() => _loading = true);
-    try {
-      await widget.repo.toggleSiteAccess(val);
-      setState(() => _siteAccessEnabled = val);
-      widget.onRefreshState();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
   Future<void> _toggleCorporateMode(bool val) async {
     setState(() => _loading = true);
     try {
       final res = await widget.repo.toggleCorporateMode(val);
+      if (res['success'] != true) {
+        throw Exception(res['message'] ?? res['error'] ?? 'Corporate mode was not changed');
+      }
       setState(() {
-        _corporateModeEnabled = val;
+        _corporateModeEnabled = res['corporateModeEnabled'] == true;
         // Server mints a fresh code on enable, clears it on disable.
-        _corporateAccessCode = val ? (res['corporateAccessCode']?.toString() ?? '') : '';
+        _corporateAccessCode = res['corporateAccessCode']?.toString() ?? '';
       });
       widget.onRefreshState();
     } catch (e) {
@@ -481,10 +436,21 @@ class _ControlsTabState extends State<_ControlsTab> {
     }
   }
 
+  /// Play / Pause / Continue / Reset map to the server's start-game,
+  /// pause-game, continue-game and reset-game routes. The status label only
+  /// changes once the server confirmed the action.
   Future<void> _gameControl(String action) async {
     setState(() => _loading = true);
     try {
-      await widget.repo.gameControl(action);
+      final r = widget.repo;
+      final ok = await switch (action) {
+        'play' => r.startGame(),
+        'pause' => r.pauseGame(),
+        'continue' => r.continueGame(),
+        'reset' => r.resetGame(),
+        _ => Future.value(false),
+      };
+      if (!ok) throw Exception('The server rejected the request');
       setState(() => _gameStatus = action == 'reset' ? 'stopped' : action);
       widget.onRefreshState();
       if (mounted) {
@@ -532,42 +498,10 @@ class _ControlsTabState extends State<_ControlsTab> {
       return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // Site Access Toggle
-        GlassCard(
-          padding: const EdgeInsets.all(16),
-          child: Row(children: [
-            Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(
-                color: (_siteAccessEnabled ? AppColors.secondary : AppColors.danger).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                _siteAccessEnabled ? Icons.public_rounded : Icons.public_off_rounded,
-                color: _siteAccessEnabled ? AppColors.secondaryLight : AppColors.dangerLight,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(s.tr('Site Access', 'الوصول إلى الموقع'), style: Theme.of(context).textTheme.titleMedium),
-                Text(
-                  _siteAccessEnabled ? s.tr('Public - Anyone can access', 'عام - يمكن للجميع الوصول') : s.tr('Private - Access restricted', 'خاص - الوصول مقيّد'),
-                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
-                ),
-              ],
-            )),
-            Switch(
-              value: _siteAccessEnabled,
-              onChanged: _loading ? null : _toggleSiteAccess,
-              activeTrackColor: AppColors.secondaryLight,
-            ),
-          ]),
-        ),
-        const SizedBox(height: 12),
-
+        // There is no site-access password on the website (the old switch posted
+        // to a route that never existed). The website's entry gate is the
+        // corporate game gate; see ApiEndpoints.facilitatorSimulationAccess.
+        // TODO(owner): decide whether to add a /facilitator/simulation-access switch here.
         // Corporate Mode Toggle
         GlassCard(
           padding: const EdgeInsets.all(16),
@@ -936,53 +870,9 @@ class _ControlsTabState extends State<_ControlsTab> {
         ),
         const SizedBox(height: 12),
 
-        // ── Rules: Budget constraints ──
-        GlassCard(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primaryLight, size: 20),
-                const SizedBox(width: 8),
-                Text(s.tr('Budget Constraints', 'قيود الميزانية'), style: Theme.of(context).textTheme.titleMedium),
-              ]),
-              const SizedBox(height: 4),
-              Text(s.tr('Set the starting budget per difficulty level.',
-                  'حدّد الميزانية الابتدائية لكل مستوى صعوبة.'),
-                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: DropdownButtonFormField<String>(
-                  initialValue: _constraintLevel,
-                  isDense: true,
-                  decoration: InputDecoration(
-                    labelText: s.tr('Level', 'المستوى'), isDense: true, border: const OutlineInputBorder()),
-                  items: const ['Beginner', 'Intermediate', 'Advanced']
-                      .map((l) => DropdownMenuItem(value: l, child: Text(l))).toList(),
-                  onChanged: (v) => setState(() => _constraintLevel = v ?? _constraintLevel),
-                )),
-                const SizedBox(width: 10),
-                Expanded(child: TextField(
-                  controller: _budgetC,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: s.tr('Budget', 'الميزانية'), isDense: true, border: const OutlineInputBorder()),
-                )),
-              ]),
-              const SizedBox(height: 12),
-              SizedBox(width: double.infinity, child: ElevatedButton.icon(
-                onPressed: _savingConstraint ? null : () => _saveConstraint(s),
-                icon: _savingConstraint
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.save_rounded, size: 18),
-                label: Text(s.tr('Save Constraint', 'حفظ القيد')),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              )),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
+        // (The "Budget constraints" card was removed: the server has no
+        // per-level budget route. Constraints on the website are case-study
+        // driven: /facilitator/set-case-study and set-case-study-overrides.)
 
         // Force Excel Cache Refresh
         GlassCard(
@@ -1639,7 +1529,8 @@ class _TeamSignInTab extends StatefulWidget {
 
 class _TeamSignInTabState extends State<_TeamSignInTab> {
   Timer? _refreshTimer;
-  Map<String, dynamic> _signinData = {};
+  // teams[] from GET /facilitator/team-overview.
+  List<Map<String, dynamic>> _teams = [];
   bool _isLoading = true;
   String? _error;
   // teamId (number string) -> current leader name.
@@ -1687,10 +1578,10 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
 
   Future<void> _fetchSignins() async {
     try {
-      final data = await widget.repo.getTeamSignins();
+      final teams = await widget.repo.getTeamOverviewTeams();
       if (mounted) {
         setState(() {
-          _signinData = data;
+          _teams = teams;
           _isLoading = false;
           _error = null;
         });
@@ -1764,17 +1655,15 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
       ));
     }
 
-    // Parse teams data - handle various response formats
-    final teamsData = _signinData['data'] as Map<String, dynamic>? ?? _signinData['teams'] as Map<String, dynamic>? ?? {};
-
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: AppConstants.maxTeams,
       itemBuilder: (context, index) {
         final teamKey = 'Team ${index + 1}';
         final color = AppColors.teamColor(index);
-        final teamInfo = teamsData[teamKey] as Map<String, dynamic>?;
-        final players = teamInfo?['players'] as List<dynamic>? ?? teamInfo?['members'] as List<dynamic>? ?? [];
+        // team-overview: teams[].connectedMembers[].playerName (Postgres sign-ins).
+        final teamInfo = _overviewTeam(_teams, index + 1);
+        final players = teamInfo?['connectedMembers'] as List<dynamic>? ?? [];
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -1807,10 +1696,10 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
                     ),
                   ),
                 ]),
-                if (teamInfo?['round'] != null || teamInfo?['module'] != null) ...[
+                if (teamInfo?['currentRound'] != null || teamInfo?['currentModule'] != null) ...[
                   const SizedBox(height: 6),
                   Text(
-                    '${s.tr('Round', 'الجولة')} ${teamInfo?['round'] ?? '?'} - ${teamInfo?['module'] ?? '?'}',
+                    '${s.tr('Round', 'الجولة')} ${teamInfo?['currentRound'] ?? '?'} - ${teamInfo?['currentModule'] ?? '?'}',
                     style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
                   ),
                 ],
@@ -1841,7 +1730,9 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
                     spacing: 6,
                     runSpacing: 6,
                     children: players.map<Widget>((p) {
-                      final name = p is String ? p : (p as Map<String, dynamic>)['name']?.toString() ?? 'Unknown';
+                      final name = p is String
+                          ? p
+                          : ((p as Map)['playerName'] ?? p['name'])?.toString() ?? 'Unknown';
                       final teamId = '${index + 1}';
                       final isLeader = _leaders[teamId] == name;
                       return Container(
@@ -1889,6 +1780,23 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
       },
     );
   }
+}
+
+/// The team-overview entry for team number [n] ("Team 3" / "team-3" / 3), or
+/// null when the server lists no such team.
+Map<String, dynamic>? _overviewTeam(List<Map<String, dynamic>> teams, int n) {
+  for (final t in teams) {
+    if (_overviewTeamNumber(t) == n) return t;
+  }
+  return null;
+}
+
+int? _overviewTeamNumber(Map<String, dynamic> t) {
+  for (final key in ['teamId', 'teamName']) {
+    final digits = RegExp(r'\d+').firstMatch(t[key]?.toString() ?? '');
+    if (digits != null) return int.tryParse(digits.group(0)!);
+  }
+  return null;
 }
 
 // ---- Shocks Tab ----
@@ -2222,7 +2130,12 @@ class _TimerTabState extends State<_TimerTab> {
   }
 
   Future<void> _overlay(bool show, AppStrings s) async {
-    show ? await widget.repo.showTimerOverlay() : await widget.repo.hideTimerOverlay();
+    final ok = show ? await widget.repo.showTimerOverlay() : await widget.repo.hideTimerOverlay();
+    if (!ok) {
+      _snack(s.tr('Could not update the timer overlay', 'تعذّر تحديث عرض المؤقّت'),
+          color: AppColors.danger);
+      return;
+    }
     _snack(show
         ? s.tr('Timer overlay shown on participant screens', 'تم عرض المؤقّت على شاشات المشاركين')
         : s.tr('Timer overlay hidden', 'تم إخفاء المؤقّت'));
@@ -3468,7 +3381,8 @@ class _RoundDetailsTab extends StatefulWidget {
 }
 
 class _RoundDetailsTabState extends State<_RoundDetailsTab> {
-  Map<String, dynamic>? _teamsStatus;
+  // GET /facilitator/team-overview (teams[] with round, module, decision status).
+  Map<String, dynamic>? _overview;
   Map<String, dynamic>? _allDecisions;
   bool _isLoading = true;
   String? _error;
@@ -3483,12 +3397,12 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
     setState(() { _isLoading = true; _error = null; });
     try {
       final results = await Future.wait([
-        widget.repo.getTeamsStatus(),
+        widget.repo.getTeamOverview(),
         widget.repo.getAllDecisions(),
       ]);
       if (mounted) {
         setState(() {
-          _teamsStatus = results[0];
+          _overview = results[0];
           _allDecisions = results[1];
           _isLoading = false;
         });
@@ -3501,12 +3415,6 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
         });
       }
     }
-  }
-
-  double _parseDouble(dynamic value) {
-    if (value == null || value.toString() == 'NaN') return 0.0;
-    if (value is num) return value.toDouble();
-    return double.tryParse(value.toString()) ?? 0.0;
   }
 
   @override
@@ -3525,7 +3433,9 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
       ));
     }
 
-    final teamsData = _teamsStatus?['data'] as Map<String, dynamic>? ?? _teamsStatus ?? {};
+    final teams = ((_overview?['teams'] as List?) ?? const [])
+        .map((t) => Map<String, dynamic>.from(t as Map))
+        .toList();
     final decisionsData = _allDecisions?['data'] as Map<String, dynamic>? ?? _allDecisions ?? {};
 
     return RefreshIndicator(
@@ -3533,14 +3443,14 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Performance Heatmap
-          Text('Team Performance', style: Theme.of(context).textTheme.titleLarge),
+          // Progress per team: round, module and decision status
+          Text('Team Progress', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
           GlassCard(
             padding: const EdgeInsets.all(12),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              child: _buildPerformanceTable(context, teamsData),
+              child: _buildProgressTable(context, teams),
             ),
           ),
 
@@ -3568,20 +3478,42 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
     );
   }
 
-  Widget _buildPerformanceTable(BuildContext context, Map<String, dynamic> teamsData) {
-    final metrics = ['Score', 'Revenue', 'Net Income', 'Assets'];
-    final metricKeys = ['score', 'revenue', 'netIncome', 'totalAssets'];
+  Widget _buildProgressTable(BuildContext context, List<Map<String, dynamic>> teams) {
+    const rows = <(String, String?)>[
+      ('Round', null),
+      ('Financing', 'financing'),
+      ('Investing', 'investing'),
+      ('Operating', 'operating'),
+      ('Members', null),
+    ];
 
-    // Collect values per metric for relative coloring
-    final teamValues = <String, List<double>>{};
-    for (final key in metricKeys) {
-      teamValues[key] = [];
-      for (int i = 0; i < AppConstants.maxTeams; i++) {
-        final teamKey = 'Team ${i + 1}';
-        final team = teamsData[teamKey] as Map<String, dynamic>? ?? {};
-        teamValues[key]!.add(_parseDouble(team[key]));
+    String cell(Map<String, dynamic>? t, (String, String?) row) {
+      if (t == null) return '-';
+      final module = row.$2;
+      if (module == null) {
+        if (row.$1 == 'Round') return '${t['currentRound'] ?? '?'}';
+        final members = t['connectedMembers'];
+        final count = t['onlineCount'] ?? (members is List ? members.length : 0);
+        return '$count';
       }
+      final ms = t['moduleStatus'];
+      final entry = ms is Map ? ms[module] : null;
+      final status = entry is Map ? entry['status']?.toString() : null;
+      final current = t['currentModule'] == module;
+      final label = switch (status) {
+        'confirmed' => 'Confirmed',
+        'in_progress' => 'In progress',
+        _ => current ? 'Current' : '-',
+      };
+      return label;
     }
+
+    Color cellColor(String label) => switch (label) {
+          'Confirmed' => AppColors.secondaryLight,
+          'In progress' => AppColors.accentLight,
+          'Current' => AppColors.primaryLight,
+          _ => Colors.transparent,
+        }.withValues(alpha: 0.15);
 
     return DataTable(
       columnSpacing: 16,
@@ -3594,32 +3526,19 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
           label: Text('T${i + 1}', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppColors.teamColor(i))),
         )),
       ],
-      rows: List.generate(metrics.length, (mIdx) {
-        final key = metricKeys[mIdx];
-        final values = teamValues[key]!;
-        final maxVal = values.isEmpty ? 1.0 : values.reduce((a, b) => a > b ? a : b);
-        final minVal = values.isEmpty ? 0.0 : values.reduce((a, b) => a < b ? a : b);
-        final range = maxVal - minVal;
-
+      rows: rows.map((row) {
         return DataRow(cells: [
-          DataCell(Text(metrics[mIdx], style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
+          DataCell(Text(row.$1, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12))),
           ...List.generate(AppConstants.maxTeams, (tIdx) {
-            final val = values[tIdx];
-            final ratio = range > 0 ? (val - minVal) / range : 0.5;
-            final cellColor = Color.lerp(AppColors.dangerLight, AppColors.secondaryLight, ratio)!.withValues(alpha: 0.15);
+            final label = cell(_overviewTeam(teams, tIdx + 1), row);
             return DataCell(Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(color: cellColor, borderRadius: BorderRadius.circular(4)),
-              child: Text(
-                val.abs() > 999999 ? '${(val / 1000000).toStringAsFixed(1)}M' :
-                val.abs() > 999 ? '${(val / 1000).toStringAsFixed(1)}K' :
-                val.toStringAsFixed(0),
-                style: GoogleFonts.jetBrainsMono(fontSize: 11),
-              ),
+              decoration: BoxDecoration(color: cellColor(label), borderRadius: BorderRadius.circular(4)),
+              child: Text(label, style: GoogleFonts.jetBrainsMono(fontSize: 11)),
             ));
           }),
         ]);
-      }),
+      }).toList(),
     );
   }
 }
@@ -3964,8 +3883,7 @@ class _DownloadsTabState extends State<_DownloadsTab> {
   Future<void> _exportTeamReport() async {
     setState(() => _loadingTeamReport = true);
     try {
-      final teamsStatus = await widget.repo.getTeamsStatus();
-      final teamsData = teamsStatus['data'] as Map<String, dynamic>? ?? teamsStatus;
+      final teams = await widget.repo.getTeamOverviewTeams();
       final buffer = StringBuffer();
       buffer.writeln('=== TEAM REPORTS ===');
       buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
@@ -3973,11 +3891,29 @@ class _DownloadsTabState extends State<_DownloadsTab> {
 
       for (int i = 0; i < AppConstants.maxTeams; i++) {
         final teamKey = 'Team ${i + 1}';
-        final team = teamsData[teamKey] as Map<String, dynamic>? ?? {};
-        buffer.writeln('--- $teamKey ---');
-        for (final entry in team.entries) {
-          buffer.writeln('  ${entry.key}: ${entry.value}');
+        final team = _overviewTeam(teams, i + 1);
+        buffer.writeln('--- ${team?['teamName'] ?? teamKey} ---');
+        if (team == null) {
+          buffer.writeln('  (not on the server)');
+          buffer.writeln('');
+          continue;
         }
+        buffer.writeln('  round: ${team['currentRound']}');
+        buffer.writeln('  module: ${team['currentModule']}');
+        final ms = team['moduleStatus'];
+        if (ms is Map) {
+          for (final m in ['financing', 'investing', 'operating']) {
+            final st = ms[m];
+            if (st is Map) {
+              buffer.writeln('  $m: ${st['status']} (${(st['scenarios'] as List?)?.join(', ') ?? ''})');
+            }
+          }
+        }
+        final members = (team['connectedMembers'] as List?)
+                ?.map((m) => (m as Map)['playerName']?.toString() ?? 'Anonymous')
+                .toList() ??
+            const [];
+        buffer.writeln('  members (${members.length}): ${members.join(', ')}');
         buffer.writeln('');
       }
 
@@ -4146,9 +4082,18 @@ class _SettingsTabState extends State<_SettingsTab> {
   bool _clearingProgress = false;
 
   Future<void> _toggleScenarioResults(AppStrings s, bool val) async {
-    setState(() => _scenarioResultsVisible = val);
-    await widget.repo.setScenarioResultsVisible(val);
+    final ok = await widget.repo.setScenarioResultsVisible(val);
     if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(s.tr('Could not change scenario results visibility', 'تعذّر تغيير إظهار نتائج السيناريو')),
+        backgroundColor: AppColors.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+      return;
+    }
+    setState(() => _scenarioResultsVisible = val);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(val
           ? s.tr('Scenario results are now visible to learners', 'أصبحت نتائج السيناريو مرئية للمتعلّمين')
@@ -4337,12 +4282,12 @@ class _GameChecksTabState extends State<_GameChecksTab> {
     {'name': 'Round State', 'endpoint': '/round/state', 'icon': Icons.play_circle_rounded},
     {'name': 'Teams Data', 'endpoint': '/teams', 'icon': Icons.groups_rounded},
     {'name': 'Leaderboard', 'endpoint': '/leaderboard/day', 'icon': Icons.leaderboard_rounded},
-    {'name': 'Excel Connection', 'endpoint': '/excel/connection-status', 'icon': Icons.table_chart_rounded},
+    {'name': 'Engine Connection', 'endpoint': ApiEndpoints.healthConnection, 'icon': Icons.table_chart_rounded},
     {'name': 'Timer Status', 'endpoint': '/timer/status', 'icon': Icons.timer_rounded},
     {'name': 'Game State', 'endpoint': '/facilitator/status', 'icon': Icons.gamepad_rounded},
     {'name': 'Shocks', 'endpoint': '/shocks/predefined', 'icon': Icons.flash_on_rounded},
     {'name': 'Education', 'endpoint': '/education-modules/status', 'icon': Icons.school_rounded},
-    {'name': 'Site Access', 'endpoint': '/site-access/check', 'icon': Icons.public_rounded},
+    {'name': 'Game Gate', 'endpoint': ApiEndpoints.facilitatorSimulationAccess, 'icon': Icons.public_rounded},
   ];
 
   Future<void> _runAllChecks() async {
@@ -4354,6 +4299,8 @@ class _GameChecksTabState extends State<_GameChecksTab> {
     for (int i = 0; i < _checks.length; i++) {
       final start = DateTime.now();
       try {
+        // runHealthCheck throws on a 4xx or success:false, so a dead route
+        // shows as failed rather than passed-with-latency.
         await widget.repo.runHealthCheck(_checks[i]['endpoint'] as String);
         final elapsed = DateTime.now().difference(start).inMilliseconds;
         if (mounted) {

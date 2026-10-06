@@ -7,13 +7,40 @@ class FacilitatorRepository {
 
   FacilitatorRepository(this._api);
 
+  /// Kept for the few routes whose router reads the password from the request
+  /// BODY rather than the x-facilitator-password header: reset-game,
+  /// /education/admin/reset-all and /shocks/clear-all.
+  String? _password;
+
+  /// Capital-budgeting scenario ids on the website
+  /// (client/src/data/capitalBudgetingEducationalContent.ts,
+  /// capitalBudgetingScenarios). The "show scenario results" switch unlocks or
+  /// locks all of them at once, exactly as the website facilitator panel does.
+  static const List<String> capitalBudgetingScenarioIds = [
+    'restaurant-kitchen-riyadh',
+    'coffee-expansion-dubai',
+    'delivery-fleet-jeddah',
+    'gym-equipment-abudhabi',
+    'retail-expansion-muscat',
+    'hotel-renovation-doha',
+    'equipment-npv',
+    'payback-basic',
+    'future-value',
+    'present-value',
+    'pi-calculation',
+    'irr-decision',
+  ];
+
   Future<bool> login(String password) async {
     final response = await _api.post(ApiEndpoints.facilitatorAuth, data: {
       'password': password,
     });
     final ok = response['success'] == true;
     // Attach the password to every later facilitator-gated request.
-    if (ok) _api.setFacilitatorPassword(password);
+    if (ok) {
+      _api.setFacilitatorPassword(password);
+      _password = password;
+    }
     return ok;
   }
 
@@ -25,12 +52,23 @@ class FacilitatorRepository {
     throw Exception(response['error'] ?? 'Failed to get facilitator state');
   }
 
-  Future<Map<String, dynamic>> getTeamsStatus() async {
-    final response = await _api.get(ApiEndpoints.facilitatorTeamsStatus);
-    if (response['success'] == true) {
-      return response['data'] as Map<String, dynamic>;
+  /// GET /facilitator/team-overview: every team's round, module, per-module
+  /// decision status and signed-in members in one call. Returns the whole
+  /// response ({currentRound, gameState, teams:[...]}); see ApiEndpoints.
+  Future<Map<String, dynamic>> getTeamOverview() async {
+    final response = await _api.get(ApiEndpoints.facilitatorTeamOverview);
+    if (response['success'] == true && response['teams'] is List) {
+      return response;
     }
-    throw Exception(response['error'] ?? 'Failed to get teams status');
+    throw Exception(response['error'] ?? 'Failed to get team overview');
+  }
+
+  /// The teams[] array of [getTeamOverview].
+  Future<List<Map<String, dynamic>>> getTeamOverviewTeams() async {
+    final res = await getTeamOverview();
+    return (res['teams'] as List)
+        .map((t) => Map<String, dynamic>.from(t as Map))
+        .toList();
   }
 
   Future<void> lockModule(String module, bool locked) async {
@@ -55,16 +93,22 @@ class FacilitatorRepository {
     }
   }
 
-  Future<void> startGame() async {
-    await _api.post(ApiEndpoints.facilitatorStartGame);
+  // ── Game controls ──
+  // Each returns true only when the server confirmed the change; a dead route
+  // (404 {success:false}) or an auth failure comes back false.
+  Future<bool> startGame() async {
+    final res = await _api.post(ApiEndpoints.facilitatorStartGame);
+    return res['success'] == true;
   }
 
-  Future<void> pauseGame() async {
-    await _api.post(ApiEndpoints.facilitatorPauseGame);
+  Future<bool> pauseGame() async {
+    final res = await _api.post(ApiEndpoints.facilitatorPauseGame);
+    return res['success'] == true;
   }
 
-  Future<void> continueGame() async {
-    await _api.post(ApiEndpoints.facilitatorContinueGame);
+  Future<bool> continueGame() async {
+    final res = await _api.post(ApiEndpoints.facilitatorContinueGame);
+    return res['success'] == true;
   }
 
   Future<List<Shock>> fetchShocks() async {
@@ -117,10 +161,14 @@ class FacilitatorRepository {
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
-  /// Best-effort "clear all shocks" (deactivate + restore parameters).
+  /// Clear every active shock and revert its model impact
+  /// (POST /shocks/clear-all; the password goes in the body).
   Future<bool> clearAllShocks() async {
     try {
-      final res = await _api.post(ApiEndpoints.shocksClear);
+      final res = await _api.post(ApiEndpoints.shocksClearAll, data: {
+        'password': _password,
+        'revertModel': true,
+      });
       return res['success'] == true;
     } catch (_) {
       return false;
@@ -188,10 +236,12 @@ class FacilitatorRepository {
     await _api.post(ApiEndpoints.facilitatorRemoveTeamLeader, data: {'teamId': teamId});
   }
 
-  Future<void> resetGame(String password) async {
-    await _api.post(ApiEndpoints.facilitatorResetGame, data: {
-      'password': password,
+  /// Full game reset (closes the lobby and the game gate, archives decisions).
+  Future<bool> resetGame() async {
+    final res = await _api.post(ApiEndpoints.facilitatorResetGame, data: {
+      'password': _password,
     });
+    return res['success'] == true;
   }
 
   Future<void> moveMember(String playerId, String fromTeam, String toTeam) async {
@@ -206,21 +256,12 @@ class FacilitatorRepository {
     await _api.post(ApiEndpoints.facilitatorClearSignins);
   }
 
-  Future<Map<String, dynamic>> toggleSiteAccess(bool enabled) async {
-    return await _api.post(ApiEndpoints.facilitatorSiteAccess, data: {
-      'enabled': enabled,
-    });
-  }
-
+  /// POST /facilitator/toggle-corporate-mode {enabled}. On success the response
+  /// carries corporateModeEnabled and the freshly minted corporateAccessCode
+  /// (empty when disabling). Callers must check `success` before updating UI.
   Future<Map<String, dynamic>> toggleCorporateMode(bool enabled) async {
-    return await _api.post(ApiEndpoints.facilitatorCorporateMode, data: {
+    return await _api.post(ApiEndpoints.facilitatorToggleCorporateMode, data: {
       'enabled': enabled,
-    });
-  }
-
-  Future<Map<String, dynamic>> gameControl(String action) async {
-    return await _api.post(ApiEndpoints.facilitatorGameControl, data: {
-      'action': action,
     });
   }
 
@@ -228,16 +269,6 @@ class FacilitatorRepository {
     return await _api.post(ApiEndpoints.facilitatorLobbyStatus, data: {
       'open': open,
     });
-  }
-
-  Future<Map<String, dynamic>> getTeamSignins() async {
-    try {
-      final response = await _api.get(ApiEndpoints.facilitatorTeamSignin);
-      return response;
-    } catch (_) {
-      // Fallback to teams-status if team-signin endpoint doesn't exist
-      return await _api.get(ApiEndpoints.facilitatorTeamsStatus);
-    }
   }
 
   Future<List<dynamic>> getLeaderboard() async {
@@ -276,8 +307,14 @@ class FacilitatorRepository {
     await _api.post(ApiEndpoints.cacheClear);
   }
 
+  /// One Game Checks row. Throws when the route answered 4xx or said
+  /// success:false, so a dead route is reported as failed, not passed.
   Future<Map<String, dynamic>> runHealthCheck(String endpoint) async {
-    return await _api.get(endpoint);
+    final res = await _api.get(endpoint);
+    if (apiFailed(res)) {
+      throw Exception(res['error'] ?? 'HTTP ${res[httpStatusKey]}');
+    }
+    return res;
   }
 
   Future<void> removePlayer(String playerName, String teamId) async {
@@ -287,19 +324,27 @@ class FacilitatorRepository {
     });
   }
 
-  // ── Timer overlay broadcast (best-effort) ──
-  /// Show the live timer overlay on every participant screen.
-  Future<void> showTimerOverlay() async {
+  // ── Timer overlay broadcast ──
+  /// Start the live countdown overlay on every participant screen
+  /// (POST /facilitator/timer-overlay/start; the server broadcasts
+  /// facilitator:timer_start). Returns true when the server confirmed it.
+  Future<bool> showTimerOverlay() async {
     try {
-      await _api.post('/facilitator/timer-show');
-    } catch (_) {/* best-effort */}
+      final res = await _api.post(ApiEndpoints.facilitatorTimerOverlayStart);
+      return res['success'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
-  /// Hide the live timer overlay on every participant screen.
-  Future<void> hideTimerOverlay() async {
+  /// Stop the overlay (POST /facilitator/timer-overlay/stop).
+  Future<bool> hideTimerOverlay() async {
     try {
-      await _api.post('/facilitator/timer-hide');
-    } catch (_) {/* best-effort */}
+      final res = await _api.post(ApiEndpoints.facilitatorTimerOverlayStop);
+      return res['success'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ── Covenant threshold overrides ──
@@ -320,23 +365,6 @@ class FacilitatorRepository {
     }
   }
 
-  // ── Budget / team constraints ──
-  /// Set the budget constraint for a difficulty level (best-effort).
-  Future<bool> setTeamConstraints({
-    required String level,
-    required double budget,
-  }) async {
-    try {
-      final res = await _api.post('/facilitator/constraints', data: {
-        'level': level,
-        'budget': budget,
-      });
-      return res['success'] != false;
-    } catch (_) {
-      return false;
-    }
-  }
-
   // ── Excel worksheet viewer ──
   /// Fetch the Excel workbook financials (baseline read). Returns
   /// `{ success, data:{ incomeStatement, balanceSheet, cashFlow, ... } }`.
@@ -345,20 +373,30 @@ class FacilitatorRepository {
   }
 
   // ── Scenario results visibility ──
-  /// Toggle whether scenario results are shown to learners (best-effort).
-  Future<void> setScenarioResultsVisible(bool visible) async {
+  /// Show or hide the capital-budgeting scenario results to learners
+  /// (POST /facilitator/unlock-all-scenario-results with every scenario id).
+  /// Learners read the result from GET /capital-budgeting/status.
+  Future<bool> setScenarioResultsVisible(bool visible) async {
     try {
-      await _api.post('/facilitator/scenario-results', data: {'visible': visible});
-    } catch (_) {/* best-effort */}
+      final res = await _api.post(ApiEndpoints.facilitatorUnlockAllScenarioResults, data: {
+        'scenarioIds': capitalBudgetingScenarioIds,
+        'unlock': visible,
+      });
+      return res['success'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ── Education progress reset ──
-  /// Clear all education progress for all teams. Returns true on success
-  /// (best-effort).
+  /// Clear every team's education progress (POST /education/admin/reset-all).
+  /// That router authenticates from the body, so the password is sent there.
   Future<bool> clearEducationProgress() async {
     try {
-      final res = await _api.post('/facilitator/clear-education-progress');
-      return res['success'] != false;
+      final res = await _api.post(ApiEndpoints.educationAdminReset, data: {
+        'password': _password,
+      });
+      return res['success'] == true;
     } catch (_) {
       return false;
     }

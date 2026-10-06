@@ -11,7 +11,6 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../core/services/education_progress_sync.dart';
 import '../../../core/services/education_storage_migration.dart';
-import '../../../providers/repository_providers.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../widgets/games/memory_match_game.dart';
@@ -250,8 +249,9 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
   void _onQuizComplete() {
     HapticFeedback.heavyImpact();
     setState(() => _quizComplete = true);
+    // The quiz score reaches the server through EducationProgressSync
+    // (POST /education/progress/{teamName}/sync), queued by _saveProgress.
     _saveProgress('quiz', true, scoreKey: 'quizScore', scoreValue: _quizScore);
-    _submitProgress();
   }
 
   // Website tab colors
@@ -325,23 +325,6 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
         ),
       ),
     );
-  }
-
-  Future<void> _submitProgress() async {
-    try {
-      final repo = ref.read(educationRepositoryProvider);
-      final prefs = await SharedPreferences.getInstance();
-      final teamId = prefs.getInt('edu_team_id') ?? 1;
-      await repo.submitQuiz(
-        teamId: teamId,
-        moduleId: widget.moduleId,
-        answers: const [],
-        score: _quizScore,
-        total: _module.quizQuestions.length,
-      );
-    } catch (_) {
-      // Progress submission is non-critical — silently ignore
-    }
   }
 
   @override

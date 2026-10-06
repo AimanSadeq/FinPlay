@@ -65,21 +65,6 @@ class DecisionRepository {
     }
   }
 
-  Future<Map<String, dynamic>> validateDecision({
-    required String teamId,
-    required int round,
-    required String module,
-    required Map<String, dynamic> decisionData,
-  }) async {
-    final response = await _api.post(ApiEndpoints.decisionValidate, data: {
-      'teamId': teamId,
-      'roundNum': round,
-      'module': module,
-      'decisionData': decisionData,
-    });
-    return response;
-  }
-
   Future<Map<String, dynamic>> confirmDecision({
     required String teamId,
     required int round,

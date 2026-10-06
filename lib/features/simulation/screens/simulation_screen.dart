@@ -2031,35 +2031,36 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
       return;
     }
 
-    // Operating module → navigate to dashboard (like website)
-    if (widget.moduleKey == 'operating') {
-      if (mounted) {
-        context.go('/dashboard');
-      }
-      return;
-    }
-
-    // Determine next module (financing→investing, investing→operating)
-    final modules = ['financing', 'investing', 'operating'];
-    final currentIdx = modules.indexOf(widget.moduleKey);
-    final nextModule = modules[currentIdx + 1];
-
-    // Toast titles matching website
     final s = ref.read(stringsProvider);
-    final toastTitle = widget.moduleKey == 'financing'
-        ? s.tr('Ready for Investing!', 'جاهز للاستثمار!')
-        : s.tr('Ready for Operating!', 'جاهز للتشغيل!');
-
     setState(() => _advancing = true);
     try {
+      // POST /team-progression/advance/{teamId}, as the website does: the
+      // server re-checks the facilitator unlock and the confirmed decisions,
+      // moves this team's module pointer and broadcasts team:module_advanced
+      // to the rest of the team. Its 403/400 bodies carry {error, message}
+      // and no success flag, so anything but success:true is a failure.
       final api = ref.read(apiClientProvider);
-      await api.post(ApiEndpoints.excelAdvanceStage, data: {
-        'currentModule': widget.moduleKey,
-        'nextModule': nextModule,
-        'teamId': widget.teamId,
-      });
+      final res = await api.post(
+        '${ApiEndpoints.teamProgressionAdvance}/${Uri.encodeComponent(widget.teamId)}',
+      );
+      if (res['success'] != true) {
+        throw Exception(res['message'] ??
+            res['error'] ??
+            s.tr('The server did not advance the team', 'لم يُقدّم الخادم الفريق'));
+      }
+      final nextModule = res['nextModule']?.toString() ?? '';
       // Refresh game state
       ref.read(gameStateProvider.notifier).fetchGameState();
+      if (!mounted) return;
+      // Operating complete: the server answers nextModule 'dashboard'.
+      if (nextModule == 'dashboard') {
+        context.go('/dashboard');
+        return;
+      }
+      // Toast titles matching website
+      final toastTitle = nextModule == 'investing'
+          ? s.tr('Ready for Investing!', 'جاهز للاستثمار!')
+          : s.tr('Ready for Operating!', 'جاهز للتشغيل!');
       // Switch tab locally
       widget.onMoveNextTab();
       if (mounted) {
@@ -4585,7 +4586,7 @@ class _EducationalTooltipButton extends ConsumerWidget {
 
                     // AI Explanation button
                     const SizedBox(height: 16),
-                    _AiExplainButton(term: '${scenario.title}: ${scenario.description}'),
+                    _AiExplainButton(scenarioId: scenario.id, title: scenario.title),
 
                     // Full educational content button
                     const SizedBox(height: 12),
@@ -4845,8 +4846,9 @@ String _localizedModule(AppStrings s, String key, String fallback) {
 // AI Explanation Button (inside educational tooltip bottom sheet)
 // ---------------------------------------------------------------------------
 class _AiExplainButton extends ConsumerStatefulWidget {
-  final String term;
-  const _AiExplainButton({required this.term});
+  final String scenarioId;
+  final String title;
+  const _AiExplainButton({required this.scenarioId, required this.title});
 
   @override
   ConsumerState<_AiExplainButton> createState() => _AiExplainButtonState();
@@ -4860,14 +4862,25 @@ class _AiExplainButtonState extends ConsumerState<_AiExplainButton> {
     if (_explanation != null) return;
     setState(() => _loading = true);
     try {
+      // GET /scenarios/tooltip/{scenarioId}: bilingual {definition, whyItMatters}.
       final repo = ref.read(educationRepositoryProvider);
-      final result = await repo.fetchAiTooltip(term: widget.term);
+      final result = await repo.fetchScenarioTooltip(
+          scenarioId: widget.scenarioId, title: widget.title);
       if (mounted) {
         final s = ref.read(stringsProvider);
+        String pick(dynamic field) {
+          if (field is Map) {
+            return (s.tr(field['en']?.toString() ?? '', field['ar']?.toString() ?? '')).trim();
+          }
+          return field?.toString() ?? '';
+        }
+        final parts = [pick(result['definition']), pick(result['whyItMatters'])]
+            .where((p) => p.isNotEmpty)
+            .toList();
         setState(() {
-          _explanation = result['explanation'] as String? ??
-              result['tooltip'] as String? ??
-              s.tr('No explanation available.', 'لا يوجد تفسير متاح.');
+          _explanation = parts.isEmpty
+              ? s.tr('No explanation available.', 'لا يوجد تفسير متاح.')
+              : parts.join('\n\n');
           _loading = false;
         });
       }

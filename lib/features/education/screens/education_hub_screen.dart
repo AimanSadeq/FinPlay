@@ -337,42 +337,10 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   // Self-paced simulation unlocks once every content module's Learn is complete.
   bool _selfPacedSimUnlocked = false;
   Timer? _statusPollTimer;
-  // Whether the facilitator has enabled research mode (gates the research entry).
-  bool _researchEnabled = false;
-  // Who the research consent flow applies to: 'corporate' (default) gates only
-  // corporate/team participants; 'all' gates everyone incl. self-paced learners.
-  String _researchAudience = 'corporate';
 
   bool get _isSelfPaced {
     final auth = ref.read(authProvider);
     return auth.user != null && !auth.isFacilitator;
-  }
-
-  /// Mirror of the website's isCorporateParticipant(): a team participant who is
-  /// not a self-paced learner. Used to honor the research 'corporate' audience.
-  bool get _isCorporateParticipant {
-    if (_isSelfPaced) return false;
-    return ref.read(teamProvider).selectedTeam != null;
-  }
-
-  /// Whether to offer the research entry to THIS learner, honoring both the
-  /// enabled flag and the audience filter (website ResearchGate parity).
-  bool get _showResearchEntry =>
-      _researchEnabled && (_researchAudience == 'all' || _isCorporateParticipant);
-
-  Future<void> _fetchResearchConfig() async {
-    try {
-      final res = await ref.read(apiClientProvider).get(ApiEndpoints.researchConfig);
-      if (mounted) {
-        setState(() {
-          _researchEnabled = res['enabled'] == true;
-          final audience = res['audience']?.toString();
-          _researchAudience = audience == 'all' ? 'all' : 'corporate';
-        });
-      }
-    } catch (_) {
-      // Default off when unknown.
-    }
   }
 
   @override
@@ -380,7 +348,6 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     super.initState();
     _loadProgress();
     _syncProgress();
-    _fetchResearchConfig();
     WidgetsBinding.instance.addPostFrameCallback((_) => _checkMandatedAssessment());
     if (_isSelfPaced) {
       // Self-paced: progressive unlock — each module opens once the previous
@@ -1437,19 +1404,9 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
             ),
           ],
         ),
-        // Research participation is only offered when the facilitator has
-        // enabled RESEARCH_MODE (website parity — off by default).
-        if (_showResearchEntry) ...[
-          const SizedBox(height: 12),
-          _ExtraButton(
-            icon: Icons.science_rounded,
-            label: s.tr('Research Participation', 'المشاركة في البحث'),
-            sublabel: s.tr('Consent & questionnaires (voluntary)',
-                'الموافقة والاستبيانات (اختياري)'),
-            color: AppColors.purple,
-            onTap: () => context.push('/research'),
-          ),
-        ],
+        // No research tile: FinPlay does not collect the DBA study's data.
+        // The website removed the consent and instrument flow; study
+        // instruments are answered on a separate anonymous platform.
       ],
     );
   }

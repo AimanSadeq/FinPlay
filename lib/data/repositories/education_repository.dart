@@ -14,18 +14,22 @@ class EducationRepository {
     throw Exception(response['error'] ?? 'Failed to fetch break-even scenarios');
   }
 
-  Future<Map<String, dynamic>> fetchAiTooltip({
-    required String term,
-    String? language,
+  /// Bilingual AI explanation of a simulation scenario from
+  /// GET /scenarios/tooltip/{scenarioId}?title=. The server returns the
+  /// content object directly ({title, definition, whyItMatters, ...}, each
+  /// {en, ar}); a 503 means the AI service could not answer.
+  Future<Map<String, dynamic>> fetchScenarioTooltip({
+    required String scenarioId,
+    required String title,
   }) async {
-    final response = await _api.post(ApiEndpoints.aiTooltip, data: {
-      'term': term,
-      'language': ?language,
-    });
-    if (response['success'] == true) {
-      return response['data'] as Map<String, dynamic>;
+    final response = await _api.get(
+      '${ApiEndpoints.scenarioTooltip}/${Uri.encodeComponent(scenarioId)}',
+      params: {'title': title},
+    );
+    if (apiFailed(response) || response['definition'] == null) {
+      throw Exception(response['error'] ?? 'Failed to fetch scenario explanation');
     }
-    throw Exception(response['error'] ?? 'Failed to fetch tooltip');
+    return response;
   }
 
   /// Simple in-memory cache for structured ratio tooltips, keyed by
@@ -62,25 +66,5 @@ class EducationRepository {
       return data;
     }
     throw Exception(response['error'] ?? 'Failed to fetch ratio tooltip');
-  }
-
-  Future<Map<String, dynamic>> submitQuiz({
-    required int teamId,
-    required int moduleId,
-    required List<Map<String, dynamic>> answers,
-    int? score,
-    int? total,
-  }) async {
-    final response = await _api.post(ApiEndpoints.educationQuiz, data: {
-      'teamId': teamId,
-      'moduleId': moduleId,
-      'answers': answers,
-      'score': ?score,
-      'total': ?total,
-    });
-    if (response['success'] == true) {
-      return response['data'] as Map<String, dynamic>;
-    }
-    throw Exception(response['error'] ?? 'Failed to submit quiz');
   }
 }

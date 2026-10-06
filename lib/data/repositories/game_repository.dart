@@ -126,10 +126,6 @@ class GameRepository {
     return _api.get(ApiEndpoints.health);
   }
 
-  Future<Map<String, dynamic>> checkExcelConnection() async {
-    return _api.get(ApiEndpoints.excelConnectionStatus);
-  }
-
   Future<void> clearCache() async {
     await _cache.clearAll();
     await _api.get(ApiEndpoints.cacheClear);
