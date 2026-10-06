@@ -284,12 +284,50 @@ class FacilitatorRepository {
     await _api.post(ApiEndpoints.facilitatorQrHide);
   }
 
+  static const List<String> decisionModules = ['financing', 'investing', 'operating'];
+
+  /// GET /facilitator/all-decisions: every team's typed amounts by module,
+  /// team and round, `{ financing: { 'Team 1': { '1': [ {scenarioId, title,
+  /// amount, confirmed} ] } }, investing, operating }`. The server sends the
+  /// matrix bare (no success/data wrapper) and answers a failure with 500
+  /// {error} or, for a dead route, 404 {success:false}. Throws on either.
   Future<Map<String, dynamic>> getAllDecisions() async {
     final response = await _api.get(ApiEndpoints.facilitatorAllDecisions);
-    if (response['success'] == true) {
-      return response['data'] as Map<String, dynamic>;
+    if (apiFailed(response) || !decisionModules.any(response.containsKey)) {
+      throw Exception(response['error'] ?? 'Failed to get decisions');
     }
-    throw Exception(response['error'] ?? 'Failed to get decisions');
+    return {
+      for (final module in decisionModules)
+        module: Map<String, dynamic>.from(response[module] as Map? ?? const {}),
+    };
+  }
+
+  /// Pivots [getAllDecisions] by team for the Round Details cards:
+  /// `{ 'Team 1': { financing: { '1': [rows] }, investing: {...} } }`. Teams
+  /// with no decisions are absent; a module with none is absent for that team.
+  static Map<String, Map<String, Map<String, List<Map<String, dynamic>>>>> decisionsByTeam(
+      Map<String, dynamic> byModule) {
+    final out = <String, Map<String, Map<String, List<Map<String, dynamic>>>>>{};
+    for (final module in decisionModules) {
+      final teams = byModule[module];
+      if (teams is! Map) continue;
+      for (final teamEntry in teams.entries) {
+        final rounds = teamEntry.value;
+        if (rounds is! Map) continue;
+        final perRound = <String, List<Map<String, dynamic>>>{};
+        for (final roundEntry in rounds.entries) {
+          final rows = roundEntry.value;
+          if (rows is! List) continue;
+          perRound[roundEntry.key.toString()] = rows
+              .whereType<Map>()
+              .map((r) => Map<String, dynamic>.from(r))
+              .toList();
+        }
+        if (perRound.isEmpty) continue;
+        out.putIfAbsent(teamEntry.key.toString(), () => {})[module] = perRound;
+      }
+    }
+    return out;
   }
 
   Future<void> forceRound(int round) async {

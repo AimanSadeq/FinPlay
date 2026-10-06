@@ -66,6 +66,9 @@ class ApiEndpoints {
   // operating:{status, scenarios, isLocked}}, scenarioDetails, totalDecisions,
   // connectedMembers:[{playerName, joinedAt}], onlineCount}] }
   static const String facilitatorTeamOverview = '/facilitator/team-overview';
+  // GET -> { financing: { [teamId]: { [round]: [ {scenarioId, title, amount,
+  // confirmed} ] } }, investing: {...}, operating: {...} } with NO success/data
+  // wrapper (server/routes.ts); a failure is 500 {error}.
   static const String facilitatorAllDecisions = '/facilitator/all-decisions';
   static const String facilitatorStartGame = '/facilitator/start-game';
   static const String facilitatorPauseGame = '/facilitator/pause-game';

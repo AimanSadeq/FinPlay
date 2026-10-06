@@ -3433,7 +3433,8 @@ class _RoundDetailsTab extends StatefulWidget {
 class _RoundDetailsTabState extends State<_RoundDetailsTab> {
   // GET /facilitator/team-overview (teams[] with round, module, decision status).
   Map<String, dynamic>? _overview;
-  Map<String, dynamic>? _allDecisions;
+  // GET /facilitator/all-decisions pivoted by team: team -> module -> round -> rows.
+  Map<String, Map<String, Map<String, List<Map<String, dynamic>>>>>? _allDecisions;
   bool _isLoading = true;
   String? _error;
 
@@ -3453,7 +3454,7 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
       if (mounted) {
         setState(() {
           _overview = results[0];
-          _allDecisions = results[1];
+          _allDecisions = FacilitatorRepository.decisionsByTeam(results[1]);
           _isLoading = false;
         });
       }
@@ -3486,7 +3487,7 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
     final teams = ((_overview?['teams'] as List?) ?? const [])
         .map((t) => Map<String, dynamic>.from(t as Map))
         .toList();
-    final decisionsData = _allDecisions?['data'] as Map<String, dynamic>? ?? _allDecisions ?? {};
+    final decisionsData = _allDecisions ?? const {};
 
     return RefreshIndicator(
       onRefresh: _loadData,
@@ -3512,7 +3513,7 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
           ...List.generate(AppConstants.maxTeams, (i) {
             final teamKey = 'Team ${i + 1}';
             final color = AppColors.teamColor(i);
-            final teamDecisions = decisionsData[teamKey] as Map<String, dynamic>? ?? {};
+            final teamDecisions = decisionsData[teamKey] ?? const {};
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -3596,7 +3597,8 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
 class _ExpandableDecisionCard extends StatefulWidget {
   final String teamName;
   final Color color;
-  final Map<String, dynamic> decisions;
+  /// module -> round -> rows {scenarioId, title, amount, confirmed}.
+  final Map<String, Map<String, List<Map<String, dynamic>>>> decisions;
   const _ExpandableDecisionCard({required this.teamName, required this.color, required this.decisions});
 
   @override
@@ -3605,6 +3607,19 @@ class _ExpandableDecisionCard extends StatefulWidget {
 
 class _ExpandableDecisionCardState extends State<_ExpandableDecisionCard> {
   bool _expanded = false;
+
+  /// 1234567 -> "1,234,567"; -3000000 -> "-3,000,000".
+  static String _formatAmount(Object? amount) {
+    final n = amount is num ? amount : num.tryParse('$amount');
+    if (n == null) return '$amount';
+    final digits = n.abs().round().toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buf.write(',');
+      buf.write(digits[i]);
+    }
+    return '${n < 0 ? '-' : ''}$buf';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3651,6 +3666,8 @@ class _ExpandableDecisionCardState extends State<_ExpandableDecisionCard> {
                     ...modules.map((module) {
                       final moduleData = widget.decisions[module];
                       if (moduleData == null) return const SizedBox.shrink();
+                      final rounds = moduleData.keys.toList()
+                        ..sort((a, b) => (int.tryParse(a) ?? 0).compareTo(int.tryParse(b) ?? 0));
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Column(
@@ -3661,21 +3678,22 @@ class _ExpandableDecisionCardState extends State<_ExpandableDecisionCard> {
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: widget.color),
                             ),
                             const SizedBox(height: 4),
-                            if (moduleData is Map)
-                              ...moduleData.entries.map((e) => Padding(
-                                padding: const EdgeInsets.only(left: 8, top: 2),
-                                child: Text('${e.key}: ${e.value}', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
-                              ))
-                            else if (moduleData is List)
-                              ...moduleData.map((item) => Padding(
-                                padding: const EdgeInsets.only(left: 8, top: 2),
-                                child: Text('$item', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
-                              ))
-                            else
+                            for (final round in rounds) ...[
                               Padding(
                                 padding: const EdgeInsets.only(left: 8, top: 2),
-                                child: Text('$moduleData', style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+                                child: Text('Round $round',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context))),
                               ),
+                              ...moduleData[round]!.map((row) => Padding(
+                                padding: const EdgeInsets.only(left: 16, top: 2),
+                                child: Text(
+                                  '${row['title'] ?? 'Scenario ${row['scenarioId']}'}: '
+                                  '${_formatAmount(row['amount'])}'
+                                  '${row['confirmed'] == true ? '' : ' (not confirmed)'}',
+                                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                                ),
+                              )),
+                            ],
                           ],
                         ),
                       );
@@ -3991,8 +4009,8 @@ class _DownloadsTabState extends State<_DownloadsTab> {
 
   Future<void> _exportDecisions() async {
     try {
-      final decisions = await widget.repo.getAllDecisions();
-      final data = decisions['data'] as Map<String, dynamic>? ?? decisions;
+      // module -> team -> round -> rows, as the server sends it.
+      final data = await widget.repo.getAllDecisions();
       final buffer = StringBuffer();
       buffer.writeln('=== ALL DECISIONS ===');
       buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
