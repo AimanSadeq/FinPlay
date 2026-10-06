@@ -19,7 +19,6 @@ void main() {
           ApiEndpoints.scenarios,
           ApiEndpoints.resultsRound,
           ApiEndpoints.sheetsLeaderboard,
-          ApiEndpoints.sheetsBaseline,
           ApiEndpoints.selfPacedRegister,
           ApiEndpoints.selfPacedLogin,
           ApiEndpoints.selfPacedLogout,

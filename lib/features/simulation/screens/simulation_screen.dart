@@ -277,7 +277,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     if (team != null) {
       ref.read(financialProvider.notifier).fetchTeamFinancials(team.id);
       ref.read(decisionProvider.notifier).fetchTeamDecisions(team.id, round: round);
-      _fetchBaselineFinancials(team.id);
+      _fetchBaselineFinancials();
     }
     _fetchCaseStudyConstraints();
     // Poll for case-study activation/deactivation from admin (no socket push
@@ -288,23 +288,23 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     );
   }
 
-  Future<void> _fetchBaselineFinancials(String teamId) async {
+  /// Baseline (round 0) statements for the Baseline badge and the module
+  /// panels: the same GET /game/results/round reads the website's
+  /// BaselineFinancialStatements makes. The opening position is shared by
+  /// every team, so no team id is needed.
+  Future<void> _fetchBaselineFinancials() async {
     if (_loadingBaseline) return; // Prevent duplicate calls
     setState(() => _loadingBaseline = true);
     try {
-      final api = ref.read(apiClientProvider);
-      final response = await api.get(
-        ApiEndpoints.sheetsBaseline,
-        params: {'teamId': teamId},
-      );
+      final baseline = await ref.read(gameRepositoryProvider).fetchBaselineFinancialData();
       if (mounted) {
         setState(() {
-          _baselineFinancials = FinancialData.fromJson(response);
+          _baselineFinancials = baseline;
           _loadingBaseline = false;
         });
       }
     } catch (_) {
-      // Baseline not available (Excel not connected) - silently skip
+      // Baseline not served: the badge stays grey and the panels show nothing.
       if (mounted) setState(() => _loadingBaseline = false);
     }
   }

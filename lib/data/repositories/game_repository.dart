@@ -145,6 +145,18 @@ class GameRepository {
     return sheets;
   }
 
+  /// The baseline statements as a [FinancialData] (round 0, Team 1), for the
+  /// simulation screen's Baseline badge and module panels, which read the
+  /// row lists and the KPI getters. Throws like [fetchBaselineStatements].
+  Future<FinancialData> fetchBaselineFinancialData() async {
+    final sheets = await fetchBaselineStatements();
+    return FinancialData.fromSheetResponse({
+      'financials': sheets,
+      'round': 0,
+      'team': baselineTeamId,
+    });
+  }
+
   /// Fetch all 4 statement types in parallel (use for full refresh)
   Future<FinancialData> fetchFinancialData(String teamId,
       {int? round, bool selfPaced = false}) async {

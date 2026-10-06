@@ -52,6 +52,21 @@ void main() {
     );
   });
 
+  test('the simulation baseline badge gets the statements as FinancialData', () async {
+    final baseline = await GameRepository(ApiClient()).fetchBaselineFinancialData();
+
+    expect(server.requests.length, 4);
+    expect(baseline.teamId, GameRepository.baselineTeamId);
+    expect(baseline.roundNum, 0);
+    expect(baseline.incomeRows.map((r) => r.title), ['Sales', 'Net Income']);
+    expect(baseline.balanceRows.first.isHeader, isTrue);
+    expect(baseline.ratioRows.single.type, 'Liquidity');
+    // KPI getters fall back to the statement rows, as the dashboard does.
+    expect(baseline.revenue, 7000000);
+    expect(baseline.netIncome, 420000);
+    expect(baseline.incomeStatement, {'Sales': 7000000, 'Net Income': 420000});
+  });
+
   test('the facilitator Excel tab reads the same statements', () async {
     final sheets = await FacilitatorRepository(ApiClient()).fetchExcelData();
 

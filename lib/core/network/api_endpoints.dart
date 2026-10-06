@@ -44,7 +44,6 @@ class ApiEndpoints {
   static const String resultsRound = '/game/results/round';
   static const String sheetsLeaderboard = '/sheets/leaderboard';
   static const String leaderboardDay = '/leaderboard/live';
-  static const String sheetsBaseline = '/sheets/baseline/direct';
   static const String balanceValidation = '/sheets/balance-validation';
   static const String dashboardData = '/dashboard-data';
 
