@@ -36,7 +36,12 @@ class ApiEndpoints {
   static const String scenarios = '/scenarios';
 
   // Financial Data & Results
-  static const String resultsRound = '/sheets/results/round';
+  // GET /game/results/round?teamId&round&statement=income|balance|cashflow|ratios
+  // -> { round, team, financials:{ incomeStatement, balanceSheet, cashFlow, ratios }, kpis }.
+  // Round 0 is the baseline (opening position). The server still rewrites the
+  // retired /sheets/results/round path to this handler, but that alias is
+  // deprecated, so the app calls the canonical path the website uses.
+  static const String resultsRound = '/game/results/round';
   static const String sheetsLeaderboard = '/sheets/leaderboard';
   static const String leaderboardDay = '/leaderboard/live';
   static const String sheetsBaseline = '/sheets/baseline/direct';

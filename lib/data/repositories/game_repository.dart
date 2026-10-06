@@ -97,6 +97,54 @@ class GameRepository {
     return FinancialData.fromSheetResponse(response);
   }
 
+  /// The team whose round-0 statements the website shows as "the baseline".
+  /// The opening position is shared by every team (the facilitator model
+  /// editor keeps one set of baseline cells), and the website's
+  /// BaselineFinancialStatements always reads it as Team 1.
+  static const String baselineTeamId = 'Team 1';
+
+  /// Statement query values of GET /game/results/round, keyed by the
+  /// `financials` key each one fills in the response.
+  static const Map<String, String> baselineStatementQueries = {
+    'incomeStatement': 'income',
+    'balanceSheet': 'balance',
+    'cashFlow': 'cashflow',
+    'ratios': 'ratios',
+  };
+
+  /// Fetch the baseline (round 0) financial statements that the Excel tiles
+  /// and the facilitator Excel tab render. Four parallel reads of
+  /// GET /game/results/round, one per statement, merged into
+  /// `{ incomeStatement, balanceSheet, cashFlow, ratios }` where each value is
+  /// the server's row list: `[{ title, value, isHeader, isMajor, isCalculation, type? }]`.
+  /// Throws when any read fails, so callers can show an error state.
+  Future<Map<String, List<Map<String, dynamic>>>> fetchBaselineStatements() async {
+    final keys = baselineStatementQueries.keys.toList();
+    final responses = await Future.wait(keys.map((key) => _api.get(
+          ApiEndpoints.resultsRound,
+          params: {
+            'teamId': baselineTeamId,
+            'round': 0,
+            'statement': baselineStatementQueries[key],
+          },
+        )));
+
+    final sheets = <String, List<Map<String, dynamic>>>{};
+    for (var i = 0; i < keys.length; i++) {
+      final response = responses[i];
+      if (apiFailed(response)) {
+        throw Exception(response['error']?.toString() ??
+            'Baseline ${keys[i]} is not available');
+      }
+      final financials = response['financials'] as Map<String, dynamic>? ?? {};
+      final rows = financials[keys[i]];
+      sheets[keys[i]] = rows is List
+          ? rows.whereType<Map>().map((r) => Map<String, dynamic>.from(r)).toList()
+          : <Map<String, dynamic>>[];
+    }
+    return sheets;
+  }
+
   /// Fetch all 4 statement types in parallel (use for full refresh)
   Future<FinancialData> fetchFinancialData(String teamId,
       {int? round, bool selfPaced = false}) async {

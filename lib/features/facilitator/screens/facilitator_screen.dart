@@ -1254,7 +1254,15 @@ class _ExcelViewerTabState extends State<_ExcelViewerTab> {
   bool _loading = true;
   String? _error;
 
-  static const _sheetKeys = ['Income Statement', 'Balance Sheet', 'Cash Flow', 'Ratios'];
+  // Keys of the baseline statements payload (GameRepository.fetchBaselineStatements)
+  // in display order, with the sheet title shown for each.
+  static const _sheetKeys = ['incomeStatement', 'balanceSheet', 'cashFlow', 'ratios'];
+  static const _sheetTitles = {
+    'incomeStatement': 'Income Statement',
+    'balanceSheet': 'Balance Sheet',
+    'cashFlow': 'Cash Flow',
+    'ratios': 'Ratios',
+  };
 
   @override
   void initState() {
@@ -1266,13 +1274,7 @@ class _ExcelViewerTabState extends State<_ExcelViewerTab> {
     setState(() { _loading = true; _error = null; });
     try {
       final data = await widget.repo.fetchExcelData();
-      // The payload may be wrapped under a 'data' or 'sheets' key.
-      final inner = data['data'] is Map
-          ? Map<String, dynamic>.from(data['data'] as Map)
-          : data['sheets'] is Map
-              ? Map<String, dynamic>.from(data['sheets'] as Map)
-              : data;
-      if (mounted) setState(() { _data = inner; _loading = false; });
+      if (mounted) setState(() { _data = data; _loading = false; });
     } catch (e) {
       if (mounted) setState(() { _loading = false; _error = e.toString(); });
     }
@@ -1296,8 +1298,13 @@ class _ExcelViewerTabState extends State<_ExcelViewerTab> {
       for (var i = 0; i < sheet.length; i++) {
         final row = sheet[i];
         if (row is Map) {
-          final label = (row['label'] ?? row['name'] ?? row['key'] ?? 'Row ${i + 1}').toString();
-          final value = (row['value'] ?? row['amount'] ?? '').toString();
+          // Statement rows are { title, value, isHeader, ... }; a header row
+          // (a section label such as "ASSETS:") carries no amount.
+          final label = (row['title'] ?? row['label'] ?? row['name'] ?? row['key'] ?? 'Row ${i + 1}')
+              .toString();
+          final value = row['isHeader'] == true
+              ? ''
+              : (row['value'] ?? row['amount'] ?? '').toString();
           out.add(MapEntry(label, value));
         } else {
           out.add(MapEntry('Row ${i + 1}', '$row'));
@@ -1371,7 +1378,7 @@ class _ExcelViewerTabState extends State<_ExcelViewerTab> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _ExcelSheetCard(
-                    title: k,
+                    title: _sheetTitles[k] ?? k,
                     rowCount: _rowCount(sheet),
                     pairs: pairs,
                   ),

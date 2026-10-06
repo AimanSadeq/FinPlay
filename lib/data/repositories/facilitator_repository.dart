@@ -1,6 +1,7 @@
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../models/shock.dart';
+import 'game_repository.dart';
 
 class FacilitatorRepository {
   final ApiClient _api;
@@ -366,10 +367,13 @@ class FacilitatorRepository {
   }
 
   // ── Excel worksheet viewer ──
-  /// Fetch the Excel workbook financials (baseline read). Returns
-  /// `{ success, data:{ incomeStatement, balanceSheet, cashFlow, ... } }`.
-  Future<Map<String, dynamic>> fetchExcelData() async {
-    return await _api.get('/excel/baseline-financials');
+  /// Fetch the baseline financial statements the Excel tab renders:
+  /// `{ incomeStatement, balanceSheet, cashFlow, ratios }`, each a list of
+  /// `{ title, value, isHeader, ... }` rows from GET /game/results/round at
+  /// round 0 (the same reads as the website's BaselineFinancialStatements).
+  /// Throws when the server cannot serve them.
+  Future<Map<String, List<Map<String, dynamic>>>> fetchExcelData() async {
+    return GameRepository(_api).fetchBaselineStatements();
   }
 
   // ── Scenario results visibility ──

@@ -145,6 +145,13 @@ void main() {
         expect(ApiEndpoints.healthConnection, '/health/connection');
         expect(ApiEndpoints.scenarioTooltip, '/scenarios/tooltip');
       });
+
+      test('financial statements come from the results route the website reads', () {
+        // server/routes.ts registers /api/game/results/round; the website's
+        // BaselineFinancialStatements reads it at round 0. The old
+        // /excel/baseline-financials path is not served.
+        expect(ApiEndpoints.resultsRound, '/game/results/round');
+      });
     });
 
     group('education endpoints', () {
