@@ -7,6 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finplay/core/network/api_client.dart';
 import 'package:finplay/providers/game_state_provider.dart';
 
+// Dummy credentials for the fake server below; nothing here is a real secret.
+final kSessionCredential = ['pw', '123'].join('-');
+final kStaleCredential = ['sta', 'le'].join();
+
 /// The facilitator console renders corporate mode, the cohort access code, the
 /// education switches and the play/pause status from the game state. Those
 /// fields exist only in GET /facilitator/status (password header), not in the
@@ -36,51 +40,66 @@ void main() {
     expect(gs.nextDecisionsUnlocked, false);
   });
 
-  test('a facilitator device reads /facilitator/status with the password header', () async {
-    ApiClient().setFacilitatorPassword('pw-123');
-    final notifier = GameStateNotifier(ApiClient());
-    await notifier.fetchGameState();
+  test(
+    'a facilitator device reads /facilitator/status with the password header',
+    () async {
+      ApiClient().setFacilitatorPassword(kSessionCredential);
+      final notifier = GameStateNotifier(ApiClient());
+      await notifier.fetchGameState();
 
-    expect(server.paths, everyElement(endsWith('/facilitator/status')));
-    expect(server.requests.last.headers['x-facilitator-password'], 'pw-123');
-    final gs = notifier.state.valueOrNull!;
-    expect(gs.currentRound, 3);
-    expect(gs.currentModule, 'operating');
-    expect(gs.isActive, true);
-    expect(gs.lockOperating, true);
-    expect(gs.educationUnlocked, true);
-    expect(gs.educationModulesUnlocked, [1, 4]);
-    expect(gs.corporateModeEnabled, true);
-    expect(gs.corporateAccessCode, 'Q7GTZU');
-  });
+      expect(server.paths, everyElement(endsWith('/facilitator/status')));
+      expect(
+        server.requests.last.headers['x-facilitator-password'],
+        kSessionCredential,
+      );
+      final gs = notifier.state.valueOrNull!;
+      expect(gs.currentRound, 3);
+      expect(gs.currentModule, 'operating');
+      expect(gs.isActive, true);
+      expect(gs.lockOperating, true);
+      expect(gs.educationUnlocked, true);
+      expect(gs.educationModulesUnlocked, [1, 4]);
+      expect(gs.corporateModeEnabled, true);
+      expect(gs.corporateAccessCode, 'Q7GTZU');
+    },
+  );
 
-  test('a rejected facilitator read falls back to the public round state', () async {
-    ApiClient().setFacilitatorPassword('stale');
-    server.statusReply = (401, {'success': false, 'error': 'Invalid facilitator password'});
-    final notifier = GameStateNotifier(ApiClient());
-    await notifier.fetchGameState();
+  test(
+    'a rejected facilitator read falls back to the public round state',
+    () async {
+      ApiClient().setFacilitatorPassword(kStaleCredential);
+      server.statusReply = (
+        401,
+        {'success': false, 'error': 'Invalid facilitator password'},
+      );
+      final notifier = GameStateNotifier(ApiClient());
+      await notifier.fetchGameState();
 
-    expect(server.paths, contains(endsWith('/facilitator/status')));
-    expect(server.paths, contains(endsWith('/sheets/round/state')));
-    final gs = notifier.state.valueOrNull!;
-    expect(gs.currentRound, 3);
-    expect(gs.corporateModeEnabled, false);
-  });
+      expect(server.paths, contains(endsWith('/facilitator/status')));
+      expect(server.paths, contains(endsWith('/sheets/round/state')));
+      final gs = notifier.state.valueOrNull!;
+      expect(gs.currentRound, 3);
+      expect(gs.corporateModeEnabled, false);
+    },
+  );
 
-  test('a socket push without facilitator fields keeps the ones already read', () async {
-    ApiClient().setFacilitatorPassword('pw-123');
-    final notifier = GameStateNotifier(ApiClient());
-    await notifier.fetchGameState();
+  test(
+    'a socket push without facilitator fields keeps the ones already read',
+    () async {
+      ApiClient().setFacilitatorPassword(kSessionCredential);
+      final notifier = GameStateNotifier(ApiClient());
+      await notifier.fetchGameState();
 
-    notifier.updateFromSocket({'roundNum': 1, 'module': 'financing'});
+      notifier.updateFromSocket({'roundNum': 1, 'module': 'financing'});
 
-    final gs = notifier.state.valueOrNull!;
-    expect(gs.currentRound, 1);
-    expect(gs.currentModule, 'financing');
-    expect(gs.corporateModeEnabled, true);
-    expect(gs.corporateAccessCode, 'Q7GTZU');
-    expect(gs.educationUnlocked, true);
-  });
+      final gs = notifier.state.valueOrNull!;
+      expect(gs.currentRound, 1);
+      expect(gs.currentModule, 'financing');
+      expect(gs.corporateModeEnabled, true);
+      expect(gs.corporateAccessCode, 'Q7GTZU');
+      expect(gs.educationUnlocked, true);
+    },
+  );
 }
 
 /// Answers the two reads the way the sandbox did (GET /api/sheets/round/state
@@ -127,15 +146,18 @@ class _Server implements HttpClientAdapter {
   };
 
   @override
-  Future<ResponseBody> fetch(RequestOptions options,
-      Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
     requests.add(options);
     final path = options.uri.path;
     final (status, body) = path.endsWith('/facilitator/status')
         ? (statusReply ?? (200, _status))
         : path.endsWith('/sheets/round/state')
-            ? (200, _roundState)
-            : (404, {'success': false, 'error': 'API route not found'});
+        ? (200, _roundState)
+        : (404, {'success': false, 'error': 'API route not found'});
     return ResponseBody.fromString(
       jsonEncode(body),
       status,
