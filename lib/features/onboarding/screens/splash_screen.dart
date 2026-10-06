@@ -504,44 +504,47 @@ class _FinPlayTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        Text(
-          'Fin',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 48,
-            fontWeight: FontWeight.w800,
-            color: const Color(0xFF5793D6),
-            letterSpacing: -1.5,
-            height: 1.0,
-          ),
-        ),
-        Text(
-          'Play',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 48,
-            fontWeight: FontWeight.w800,
-            color: isDark ? Colors.white : const Color(0xFF243C76),
-            letterSpacing: -1.5,
-            height: 1.0,
-          ),
-        ),
-        // Registered mark
-        Padding(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: Text(
-            '\u00AE',
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(
+            'Fin',
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF243C76).withValues(alpha: 0.6),
+              fontSize: 48,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF5793D6),
+              letterSpacing: -1.5,
+              height: 1.0,
             ),
           ),
-        ),
-      ],
+          Text(
+            'Play',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 48,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF243C76),
+              letterSpacing: -1.5,
+              height: 1.0,
+            ),
+          ),
+          // Registered mark
+          Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Text(
+              '\u00AE',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF243C76).withValues(alpha: 0.6),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

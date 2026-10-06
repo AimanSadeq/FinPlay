@@ -491,26 +491,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   : const Color(0xFFF0F4FF),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Fin',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF5793D6),
+            child: Directionality(
+              textDirection: TextDirection.ltr,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Fin',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF5793D6),
+                    ),
                   ),
-                ),
-                Text(
-                  'Play',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : const Color(0xFF243C76),
+                  Text(
+                    'Play',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF243C76),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -555,27 +558,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         const SizedBox(height: 12),
 
         // FinPlay text
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              'Fin',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: const Color(0xFF5793D6),
+        // The wordmark is Latin: keep 'Fin' before 'Play' under an RTL locale, where a
+        // Row would otherwise mirror its children and read "PlayFin".
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Fin',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF5793D6),
+                ),
               ),
-            ),
-            Text(
-              'Play',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : const Color(0xFF243C76),
+              Text(
+                'Play',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF243C76),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ).animate().fadeIn(delay: 120.ms, duration: 400.ms),
 
         const SizedBox(height: 2),
