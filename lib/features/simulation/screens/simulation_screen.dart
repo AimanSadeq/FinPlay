@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../providers/auth_provider.dart';
@@ -13,6 +14,8 @@ import '../../../providers/scenario_provider.dart';
 import '../../../providers/decision_provider.dart';
 import '../../../providers/financial_provider.dart';
 import '../../../providers/socket_provider.dart';
+import '../../../providers/simulation_access_provider.dart';
+import '../../../core/utils/simulation_access.dart';
 import '../../../data/models/scenario.dart';
 import '../../../data/models/financial_data.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -29,6 +32,7 @@ import '../../../providers/self_paced_provider.dart';
 import '../widgets/self_paced_round_progress.dart';
 import '../widgets/self_paced_scenario_panel.dart';
 import '../widgets/self_paced_game_complete.dart';
+import '../widgets/simulation_access_waiting.dart';
 import 'scenario_education_screen.dart';
 
 // ---------------------------------------------------------------------------
@@ -139,6 +143,10 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
   // Track the last round we loaded data for, to detect round changes
   int? _lastLoadedRound;
 
+  // Corporate simulation gate: the learn-complete bypass the website grants a
+  // team that finished every Learn section (see simulationEntryFor).
+  bool _learnComplete = false;
+
   // Per-module selected scenario cache (for the 3 progress boxes)
   // Keyed by module name -> list of {title, amount}
   final Map<String, List<Map<String, dynamic>>> _moduleSelections = {
@@ -156,7 +164,23 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     // Load data after frame (team might still be loading from SharedPreferences)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _tryLoadData();
+      _loadSimulationGate();
     });
+  }
+
+  /// Corporate simulation gate: read the facilitator's switch (the website's
+  /// home page and hub read the same route) and the team's Learn completion.
+  /// Self-paced learners are never gated, so their devices skip the read.
+  Future<void> _loadSimulationGate() async {
+    final auth = ref.read(authProvider);
+    if (auth.user != null && !auth.isFacilitator) return;
+    ref.read(simulationAccessProvider.notifier).refresh();
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    // Same scope edu_module_screen writes under for a corporate team.
+    final scope = (prefs.getInt('edu_team_id') ?? 1).toString();
+    final done = learnCompleteForScope(prefs, scope);
+    if (done != _learnComplete) setState(() => _learnComplete = done);
   }
 
   /// Initial REST fetch of the team's active and unacknowledged market shocks
@@ -777,6 +801,36 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
       if (!_dataLoaded) {
         _dataLoaded = true;
         WidgetsBinding.instance.addPostFrameCallback((_) => _loadInitialData());
+      }
+    }
+
+    // Corporate simulation gate (website parity: home.tsx corporateSimLocked).
+    // A team member waits here until the facilitator opens the simulation;
+    // a facilitator's own device and a self-paced learner are never gated
+    // (_loadSimulationGate skips the read for a signed-in self-paced learner,
+    // so this block must skip them too or it would wait on a read never made).
+    final selfPacedSignedIn = authState.user != null && !authState.isFacilitator;
+    if (team != null && !selfPacedSignedIn) {
+      final isFacilitator =
+          authState.isFacilitator || ref.watch(apiClientProvider).hasFacilitatorPassword;
+      final access = ref.watch(simulationAccessProvider);
+      if (!isFacilitator && access.isLoading) {
+        return Scaffold(
+          body: Container(
+            decoration: BoxDecoration(gradient: AppColors.backgroundGradient(context)),
+            child: const Center(child: CircularProgressIndicator()),
+          ),
+        );
+      }
+      final entry = simulationEntryFor(
+        hasTeam: true,
+        isSelfPaced: false,
+        isFacilitator: isFacilitator,
+        gateOpen: access.valueOrNull,
+        learnComplete: _learnComplete,
+      );
+      if (entry == SimulationEntry.waitForFacilitator) {
+        return const SimulationAccessWaiting();
       }
     }
 

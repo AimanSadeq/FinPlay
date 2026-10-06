@@ -85,7 +85,6 @@ class AuthRepository {
   // There is no site-access password on the website; the /site-access/* gate
   // this repository used to call never existed on the server and could never
   // block sign-in. The website's only entry gate is the corporate simulation
-  // gate (GET/POST /facilitator/simulation-access), which this app does not
-  // implement yet.
-  // TODO(owner): decide whether to mirror /facilitator/simulation-access here.
+  // gate (GET/POST /facilitator/simulation-access), which the simulation
+  // screen enforces through FacilitatorRepository.fetchSimulationAccess.
 }

@@ -1,5 +1,6 @@
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
+import '../../core/utils/simulation_access.dart';
 import '../models/shock.dart';
 import 'game_repository.dart';
 
@@ -182,6 +183,18 @@ class FacilitatorRepository {
 
   Future<void> advanceRound() async {
     await _api.post(ApiEndpoints.facilitatorForceRound);
+  }
+
+  // ── Corporate simulation gate ──
+  /// GET /facilitator/simulation-access -> { success, open }. Public: the
+  /// website's home page and education hub read it on every learner device
+  /// (no facilitator password), and so does this app's simulation screen.
+  /// Returns true/false for the facilitator's switch, or null when the route
+  /// did not answer with it (dead route, auth error), so the caller can tell
+  /// "closed" from "unknown". Network failures propagate.
+  Future<bool?> fetchSimulationAccess() async {
+    final res = await _api.get(ApiEndpoints.facilitatorSimulationAccess);
+    return simulationAccessFromJson(res);
   }
 
   // ── Team leader ──

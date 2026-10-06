@@ -1037,7 +1037,7 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                     child: ElevatedButton.icon(
                       onPressed: () {
                         context.pop();
-                        context.push('/education/module/$_nextModuleId');
+                        context.push(moduleRouteFor(_nextModuleId!, arabic: s.ar));
                       },
                       icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                       label: Text(s.tr('Next Module', 'الوحدة التالية')),

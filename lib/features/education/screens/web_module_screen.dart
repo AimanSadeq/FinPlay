@@ -7,6 +7,19 @@ import '../../../app/theme/app_colors.dart';
 import '../../../data/education_catalog.dart';
 import '../../../shared/widgets/glass_card.dart';
 
+/// The website page for catalog module [catalogId], opened in the browser. The
+/// website reads `lang=ar` on any page, so under the Arabic locale the link
+/// carries it and the module opens translated; under English it carries no
+/// language parameter. Null for an unknown id. This is the one place the
+/// module's website URL is composed.
+String? websiteModuleUrl(int catalogId, {required bool arabic}) {
+  final entry = catalogEntry(catalogId);
+  if (entry == null) return null;
+  final uri = Uri.parse('$educationWebsiteBase${entry.href}');
+  if (!arabic) return uri.toString();
+  return uri.replace(queryParameters: {...uri.queryParameters, 'lang': 'ar'}).toString();
+}
+
 /// Shown for a catalog module whose slides and activities have not been ported
 /// to the app yet. It names the module exactly as the website does and opens it
 /// there, so the app never hides part of the curriculum or mislabels it.
@@ -75,8 +88,8 @@ class WebModuleScreen extends ConsumerWidget {
                           const SizedBox(height: 16),
                           Text(
                             s.tr(
-                              'This module is available on the FinPlay website. Your progress there syncs to this app once you sign in with the same account.',
-                              'هذه الوحدة متاحة على موقع FinPlay. يتزامن تقدمك هناك مع هذا التطبيق عند تسجيل الدخول بالحساب نفسه.',
+                              'This module opens on the FinPlay website in your browser. Sign in on the website with the same account you use in this app so your progress there syncs to the app.',
+                              'تُفتح هذه الوحدة على موقع FinPlay في المتصفح. سجّل الدخول على الموقع بالحساب نفسه الذي تستخدمه في هذا التطبيق ليتزامن تقدمك هناك مع التطبيق.',
                             ),
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
@@ -85,7 +98,7 @@ class WebModuleScreen extends ConsumerWidget {
                             width: double.infinity,
                             child: FilledButton.icon(
                               onPressed: () =>
-                                  _open(context, '$educationWebsiteBase${entry.href}'),
+                                  _open(context, websiteModuleUrl(moduleNum, arabic: s.ar)!),
                               icon: const Icon(Icons.open_in_new_rounded),
                               label: Text(s.tr('Open on the website', 'افتح على الموقع')),
                             ),

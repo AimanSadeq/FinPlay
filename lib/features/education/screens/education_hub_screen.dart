@@ -13,6 +13,7 @@ import '../../../providers/repository_providers.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/self_paced_provider.dart';
+import '../../../providers/simulation_access_provider.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../data/education_catalog.dart';
 import '../../self_paced/widgets/entitlement_banner.dart';
@@ -58,7 +59,9 @@ class _EduModule {
 // The education modules, in hub order, mirroring lib/data/education_catalog.dart
 // (and the website's shared/education-catalog.ts) + simulation banner.
 // `route` goes to the in-app screen for the eight ported modules, and to the
-// web-module screen for the rest. `catalogId` is the permanent catalog id.
+// web-module screen for the rest; a card opens moduleRouteFor(catalogId), which
+// also sends the eight to the website under the Arabic locale. `catalogId` is
+// the permanent catalog id.
 // ---------------------------------------------------------------------------
 const _modules = <_EduModule>[
   _EduModule(
@@ -424,6 +427,9 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   }
 
   Future<void> _fetchEducationStatus() async {
+    // The corporate simulation gate rides the same poll (the website refetches
+    // it on an interval too), so the Sim banner opens when the facilitator does.
+    ref.read(simulationAccessProvider.notifier).refresh();
     try {
       final api = ref.read(apiClientProvider);
       final res = await api.get(ApiEndpoints.educationModulesStatus);
@@ -536,7 +542,14 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     final auth = ref.watch(authProvider);
     final teamState = ref.watch(teamProvider);
 
-    final unlockedModules = _unlockedModules;
+    // The game (13) opens for a corporate room when the facilitator's
+    // simulation switch is on, or on a facilitator's own device (website hub:
+    // `progressiveUnlocked.has(13) || simAccessOpen || isFacilitatorSession`).
+    final simGateOpen = ref.watch(simulationAccessProvider).valueOrNull == true;
+    final unlockedModules =
+        (simGateOpen || auth.isFacilitator) && !_unlockedModules.contains(13)
+            ? [..._unlockedModules, 13]
+            : _unlockedModules;
 
     final isSelfPaced =
         auth.user != null && !auth.isFacilitator && teamState.selectedTeam == null;
@@ -628,8 +641,12 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                         ar: ref.watch(stringsProvider).ar,
                         isSelfPaced: _isSelfPaced,
                         // Refresh progressive unlocks when returning from a
-                        // module, and push the new work to the server.
-                        onTap: () => context.push(m.route).then((_) {
+                        // module, and push the new work to the server (this
+                        // also pulls in work done on the website's module).
+                        onTap: () => context
+                            .push(moduleRouteFor(m.catalogId,
+                                arabic: ref.read(stringsProvider).ar))
+                            .then((_) {
                           if (mounted) {
                             _loadProgress();
                             _syncProgress();
@@ -1554,7 +1571,7 @@ class _ModuleCardState extends State<_ModuleCard> {
               if (widget.onTap != null) {
                 widget.onTap!();
               } else {
-                context.push(m.route);
+                context.push(moduleRouteFor(m.catalogId, arabic: widget.ar));
               }
             },
       onTapCancel: () => setState(() => _pressed = false),
