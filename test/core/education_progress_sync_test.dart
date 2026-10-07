@@ -62,6 +62,10 @@ void main() {
         16: 300,
         17: 300,
         18: 300,
+        19: 300,
+        20: 300,
+        21: 300,
+        22: 300,
       });
     });
 
@@ -75,11 +79,13 @@ void main() {
     test('a module the server table lacks uses the server default (325)', () {
       // moduleMaxScore() in server/services/educationProgressMerge.ts.
       expect(EducationProgressSync.defaultModuleMaxScore, 325);
-      for (final m in [19, 20, 21, 22]) {
-        expect(EducationProgressSync.moduleMaxScores.containsKey(m), isFalse);
-        expect(EducationProgressSync.maxScoreFor(m), 325);
-      }
+      expect(EducationProgressSync.moduleMaxScores.containsKey(99), isFalse);
+      expect(EducationProgressSync.maxScoreFor(99), 325);
       expect(EducationProgressSync.maxScoreFor(5), 400);
+      // The library modules carry the Financial Risk Assessment set: 300.
+      for (final m in [19, 20, 21, 22]) {
+        expect(EducationProgressSync.maxScoreFor(m), 300);
+      }
     });
 
     test('pass threshold matches the server (70%)', () {

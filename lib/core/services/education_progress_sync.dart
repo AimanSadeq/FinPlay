@@ -59,11 +59,15 @@ class EducationProgressSync {
     16: 300,
     17: 300,
     18: 300,
+    19: 300,
+    20: 300,
+    21: 300,
+    22: 300,
   };
 
   /// What the server grades a module against when MODULE_MAX_SCORES has no
   /// entry for it (`moduleMaxScore` in server/services/educationProgressMerge.ts
-  /// falls back to 325). The library modules (ids 19 to 22) have no entry yet.
+  /// falls back to 325).
   static const int defaultModuleMaxScore = 325;
 
   /// The maximum score the server grades module [n] against.
