@@ -38,6 +38,13 @@ class EducationCatalogEntry {
   /// ported yet and the card opens the "available on the website" screen.
   final String? appRoute;
 
+  /// Part of the hub a learner sees when the server sends no module plan (or
+  /// cannot be reached). False for the library modules the admin adds to a
+  /// program on purpose: they appear only when the server's plan names them,
+  /// so a self-paced learner never meets them before the admin puts them in
+  /// the core set.
+  final bool inDefaultCore;
+
   const EducationCatalogEntry({
     required this.num,
     required this.titleEn,
@@ -46,6 +53,7 @@ class EducationCatalogEntry {
     required this.kind,
     this.optional = false,
     this.appRoute,
+    this.inDefaultCore = true,
   });
 
   bool get inApp => appRoute != null;
@@ -187,6 +195,40 @@ const List<EducationCatalogEntry> educationCatalog = [
     kind: EducationModuleKind.content,
     optional: true,
   ),
+  // Library modules. Website-only for now (no appRoute), and outside the
+  // default core set: a program shows them once the admin selects them.
+  EducationCatalogEntry(
+    num: 19,
+    titleEn: 'From Strategy to Budget',
+    titleAr: 'من الاستراتيجية إلى الموازنة',
+    href: '/education/strategy-to-budget',
+    kind: EducationModuleKind.content,
+    inDefaultCore: false,
+  ),
+  EducationCatalogEntry(
+    num: 20,
+    titleEn: 'Rolling and Flexible Budgets',
+    titleAr: 'الموازنات المتجددة والمرنة',
+    href: '/education/rolling-flexible-budgets',
+    kind: EducationModuleKind.content,
+    inDefaultCore: false,
+  ),
+  EducationCatalogEntry(
+    num: 21,
+    titleEn: 'Forecasting Methods',
+    titleAr: 'أساليب التنبؤ',
+    href: '/education/forecasting-methods',
+    kind: EducationModuleKind.content,
+    inDefaultCore: false,
+  ),
+  EducationCatalogEntry(
+    num: 22,
+    titleEn: 'Reporting to Senior Stakeholders',
+    titleAr: 'رفع التقارير إلى كبار أصحاب القرار',
+    href: '/education/reporting-stakeholders',
+    kind: EducationModuleKind.content,
+    inDefaultCore: false,
+  ),
   EducationCatalogEntry(
     num: 13,
     titleEn: 'Finance Simulation Game',
@@ -205,6 +247,12 @@ final int educationModuleCount =
 final int contentModuleCount =
     educationCatalog.where((m) => m.isContent).length;
 
+/// A counted noun in Arabic, as the website's `arabicCountedNoun`: the noun
+/// after a number is plural for 3 to 10 ("8 وحدات") and singular for 11 and
+/// above ("16 وحدة"). The forms for 1 and 2 never arise for a curriculum.
+String arabicCountedNoun(int n, String singular, String plural) =>
+    '$n ${n >= 3 && n <= 10 ? plural : singular}';
+
 /// Content modules whose slides and activities ship inside this app.
 final List<EducationCatalogEntry> inAppContentModules =
     educationCatalog.where((m) => m.isContent && m.inApp).toList();
@@ -212,6 +260,13 @@ final List<EducationCatalogEntry> inAppContentModules =
 /// Content modules that are only available on the website so far.
 final List<EducationCatalogEntry> webOnlyContentModules =
     educationCatalog.where((m) => m.isContent && !m.inApp).toList();
+
+/// The hub's modules when no server plan is in force, in catalog order: every
+/// entry except the game and the library modules outside the default core set.
+final List<int> defaultCoreModuleNums = educationCatalog
+    .where((m) => !m.isSimulation && m.inDefaultCore)
+    .map((m) => m.num)
+    .toList();
 
 final Map<int, EducationCatalogEntry> _byNum = {
   for (final m in educationCatalog) m.num: m,
@@ -244,8 +299,9 @@ String moduleRouteFor(int catalogId, {required bool arabic}) =>
         ? catalogEntry(catalogId)!.appRoute!
         : '/education/web/$catalogId';
 
-/// 1-based position of a module among the hub's cards (the game excluded), or
-/// null for an unknown id. Display only: never store or compare positions.
+/// 1-based position of a module among the catalog's cards (the game excluded),
+/// or null for an unknown id. Never store or compare positions, and never show
+/// one to a person: modules are named by title only.
 int? educationHubPosition(int num) {
   final cards = educationCatalog.where((m) => !m.isSimulation).toList();
   final idx = cards.indexWhere((m) => m.num == num);

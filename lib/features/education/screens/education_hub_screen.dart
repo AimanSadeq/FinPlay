@@ -14,15 +14,16 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/self_paced_provider.dart';
 import '../../../providers/simulation_access_provider.dart';
+import '../../../providers/module_plan_provider.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../data/education_catalog.dart';
+import '../../../data/module_plan.dart';
 import '../../self_paced/widgets/entitlement_banner.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for each education module
 // ---------------------------------------------------------------------------
 class _EduModule {
-  final int number; // hub card position, display only (see education_catalog.dart)
   final String descEn;
   final String descAr;
   final IconData icon;
@@ -35,7 +36,6 @@ class _EduModule {
   final int catalogId; // permanent catalog id (education_catalog.dart); 13 = simulation
 
   const _EduModule({
-    required this.number,
     required this.descEn,
     required this.descAr,
     required this.icon,
@@ -56,16 +56,17 @@ class _EduModule {
 }
 
 // ---------------------------------------------------------------------------
-// The education modules, in hub order, mirroring lib/data/education_catalog.dart
-// (and the website's shared/education-catalog.ts) + simulation banner.
-// `route` goes to the in-app screen for the eight ported modules, and to the
-// web-module screen for the rest; a card opens moduleRouteFor(catalogId), which
-// also sends the eight to the website under the Arabic locale. `catalogId` is
-// the permanent catalog id.
+// The card for every education module, in catalog order, mirroring
+// lib/data/education_catalog.dart (and the website's shared/education-catalog.ts).
+// The hub draws the cards the module plan names, in the plan's order
+// (see _modulesFor); the game has its own banner. `route` goes to the in-app
+// screen for the eight ported modules, and to the web-module screen for the
+// rest; a card opens moduleRouteFor(catalogId), which also sends the eight to
+// the website under the Arabic locale. `catalogId` is the permanent catalog id.
+// A module is named by its title alone: no card shows a module number.
 // ---------------------------------------------------------------------------
 const _modules = <_EduModule>[
   _EduModule(
-    number: 1,
     descEn:
         'The Three Pillars of Finance: Financing, Investing, Operating — covering Debt & Equity, Capital Structure, WACC, NPV & IRR, and Cash Flow Management.',
     descAr:
@@ -80,7 +81,6 @@ const _modules = <_EduModule>[
     catalogId: 1,
   ),
   _EduModule(
-    number: 2,
     descEn:
         'From the Accounting Cycle through Income Statement, Balance Sheet, Cash Flow Statement, and Auditing & Oversight.',
     descAr:
@@ -95,7 +95,6 @@ const _modules = <_EduModule>[
     catalogId: 3,
   ),
   _EduModule(
-    number: 3,
     descEn:
         'Master horizontal, vertical, and trend analysis. Five ratio categories and DuPont Analysis.',
     descAr:
@@ -110,7 +109,6 @@ const _modules = <_EduModule>[
     catalogId: 4,
   ),
   _EduModule(
-    number: 4,
     descEn:
         'Compounding and discounting, annuities and perpetuities, effective rates, loan amortization, and the bridge from present value to NPV.',
     descAr:
@@ -125,7 +123,6 @@ const _modules = <_EduModule>[
     catalogId: 5,
   ),
   _EduModule(
-    number: 5,
     descEn:
         'Learn how to calculate the point where your business covers all costs and starts making profit.',
     descAr:
@@ -140,7 +137,6 @@ const _modules = <_EduModule>[
     catalogId: 11,
   ),
   _EduModule(
-    number: 6,
     descEn:
         'Master investment analysis techniques including NPV, IRR, and Payback Period for evaluating capital projects.',
     descAr:
@@ -155,7 +151,6 @@ const _modules = <_EduModule>[
     catalogId: 12,
   ),
   _EduModule(
-    number: 7,
     descEn:
         '8 budget types, 9 approaches (ZBB, rolling, flexible, MTEF), the 6-stage government process, and a 10-dimension comparison.',
     descAr:
@@ -170,7 +165,6 @@ const _modules = <_EduModule>[
     catalogId: 6,
   ),
   _EduModule(
-    number: 8,
     descEn:
         'Compare IFRS and IPSAS: alignment in measurement, recognition, presentation, and public-sector divergences.',
     descAr:
@@ -185,7 +179,6 @@ const _modules = <_EduModule>[
     catalogId: 7,
   ),
   _EduModule(
-    number: 9,
     descEn:
         'Compare 12 dimensions across government and private sectors: objectives, revenue, accountability, IPSAS vs IFRS, and more.',
     descAr:
@@ -200,7 +193,6 @@ const _modules = <_EduModule>[
     catalogId: 2,
   ),
   _EduModule(
-    number: 10,
     descEn:
         'COSO framework, fraud prevention, procurement compliance, ethics, whistleblower protection, and Saudi regulations.',
     descAr:
@@ -215,7 +207,6 @@ const _modules = <_EduModule>[
     catalogId: 9,
   ),
   _EduModule(
-    number: 11,
     descEn:
         '5 audit types, risk-based auditing, IT analytics, audit quality standards, and emerging trends.',
     descAr:
@@ -230,7 +221,6 @@ const _modules = <_EduModule>[
     catalogId: 10,
   ),
   _EduModule(
-    number: 12,
     descEn:
         'Learn what actually creates value: invested capital, NOPAT, the ROIC minus WACC spread, economic profit, and the value drivers behind them.',
     descAr:
@@ -245,7 +235,6 @@ const _modules = <_EduModule>[
     catalogId: 14,
   ),
   _EduModule(
-    number: 13,
     descEn:
         'Build and challenge a valuation: free cash flow, terminal value, enterprise versus equity value, trading multiples, precedent transactions and deal pricing.',
     descAr:
@@ -260,7 +249,6 @@ const _modules = <_EduModule>[
     catalogId: 15,
   ),
   _EduModule(
-    number: 14,
     descEn:
         'Turn appraisal into a process: hurdle rates, ranking competing projects under a budget, stage gates, sensitivity analysis and honest post-investment review.',
     descAr:
@@ -275,7 +263,6 @@ const _modules = <_EduModule>[
     catalogId: 16,
   ),
   _EduModule(
-    number: 15,
     descEn:
         'Price the money: cost of debt, credit ratings and covenants, CAPM and the cost of equity, a full WACC build, capital structure, dilution and dividend policy.',
     descAr:
@@ -290,19 +277,75 @@ const _modules = <_EduModule>[
     catalogId: 17,
   ),
   _EduModule(
-    number: 16,
     descEn:
         'Read the risks behind the numbers: credit, market and liquidity risk, leverage and covenant headroom, early warning signs, the Altman Z-score, and sensitivity, scenario and reverse stress tests.',
     descAr:
         'اقرأ المخاطر الكامنة وراء الأرقام: مخاطر الائتمان والسوق والسيولة، والرافعة المالية وهامش التعهدات، وإشارات الإنذار المبكر، ونموذج ألتمان، واختبارات الحساسية والسيناريوهات والضغط العكسي.',
     icon: Icons.gpp_maybe_rounded,
-    categoryEn: 'RISK · OPTIONAL',
-    categoryAr: 'المخاطر · اختيارية',
+    categoryEn: 'RISK',
+    categoryAr: 'المخاطر',
     difficulty: 'advanced',
     topicsEn: ['Credit, Market & Liquidity', 'Warning Signs', 'Stress Testing'],
     topicsAr: ['الائتمان والسوق والسيولة', 'إشارات الإنذار', 'اختبار الضغط'],
     route: '/education/web/18',
     catalogId: 18,
+  ),
+  // Library modules: on the hub only when the program's plan names them.
+  _EduModule(
+    descEn:
+        'Align the budget with the strategy: cascade each objective through value drivers, KPIs, targets and initiatives to named budget lines, protect strategic spending, and review performance against the strategy.',
+    descAr:
+        'منهج عملي لمواءمة الموازنة مع الأهداف الاستراتيجية: تسلسل كل هدف عبر محركات القيمة ومؤشرات الأداء الرئيسية والمستهدفات والمبادرات وصولا إلى بنود موازنة محددة، وحماية الإنفاق الاستراتيجي، ومراجعة الأداء في ضوء الاستراتيجية.',
+    icon: Icons.account_tree_rounded,
+    categoryEn: 'PLANNING',
+    categoryAr: 'التخطيط',
+    difficulty: 'intermediate',
+    topicsEn: ['Value Drivers & KPIs', 'Strategic Spending', 'Performance Review'],
+    topicsAr: ['محركات القيمة والمؤشرات', 'الإنفاق الاستراتيجي', 'مراجعة الأداء'],
+    route: '/education/web/19',
+    catalogId: 19,
+  ),
+  _EduModule(
+    descEn:
+        'Keep plans current with a rolling forecast and judge performance fairly with a flexible budget: static, flexible and sales-volume variances, and when Beyond Budgeting fits.',
+    descAr:
+        'حافظ على حداثة الخطط بالتنبؤ المتجدد وقيّم الأداء بإنصاف بالموازنة المرنة: انحرافات الموازنة الثابتة والمرنة وحجم المبيعات، ومتى يناسب نموذج ما بعد الموازنة.',
+    icon: Icons.autorenew_rounded,
+    categoryEn: 'PLANNING',
+    categoryAr: 'التخطيط',
+    difficulty: 'intermediate',
+    topicsEn: ['Rolling Forecasts', 'Flexible Budgets', 'Variance Analysis'],
+    topicsAr: ['التنبؤ المتجدد', 'الموازنة المرنة', 'تحليل الانحرافات'],
+    route: '/education/web/20',
+    catalogId: 20,
+  ),
+  _EduModule(
+    descEn:
+        'Build forecasts that inform decisions: judgemental and statistical methods, regression on a driver, percent-of-sales statements, driver-based rolling forecasts, the 13-week cash forecast, and accuracy and bias.',
+    descAr:
+        'كيف نبني تنبؤات تخدم القرار: الأساليب التقديرية والإحصائية، والانحدار على مسبب، والقوائم المالية بطريقة النسبة المئوية من المبيعات، والتنبؤ المتجدد القائم على المسببات، وتنبؤ الثلاثة عشر أسبوعاً النقدي، وقياس الدقة والانحياز.',
+    icon: Icons.insights_rounded,
+    categoryEn: 'PLANNING',
+    categoryAr: 'التخطيط',
+    difficulty: 'intermediate',
+    topicsEn: ['Forecasting Methods', '13-Week Cash Forecast', 'Accuracy & Bias'],
+    topicsAr: ['أساليب التنبؤ', 'التنبؤ النقدي لثلاثة عشر أسبوعاً', 'الدقة والانحياز'],
+    route: '/education/web/21',
+    catalogId: 21,
+  ),
+  _EduModule(
+    descEn:
+        'Structure financial reports for the board, committees and lenders: answer first, a one-page executive summary, a well-ordered board pack, a few balanced KPIs and a recommendation that asks for a decision.',
+    descAr:
+        'كيف تبني التقارير المالية لمجلس الإدارة واللجان والمقرضين: الإجابة أولا، وملخص تنفيذي في صفحة واحدة، وحزمة تقارير مرتبة للمجلس، ومؤشرات أداء رئيسية قليلة ومتوازنة، وتوصية تطلب قرارا.',
+    icon: Icons.co_present_rounded,
+    categoryEn: 'REPORTING',
+    categoryAr: 'التقارير',
+    difficulty: 'intermediate',
+    topicsEn: ['Executive Summary', 'Board Pack', 'Management Commentary'],
+    topicsAr: ['الملخص التنفيذي', 'حزمة تقارير المجلس', 'تعليق الإدارة'],
+    route: '/education/web/22',
+    catalogId: 22,
   ),
 ];
 
@@ -310,6 +353,22 @@ const _modules = <_EduModule>[
 /// registry to the catalog's non-simulation entries.
 @visibleForTesting
 List<int> get educationHubCardIds => _modules.map((m) => m.catalogId).toList();
+
+final Map<int, _EduModule> _moduleById = {
+  for (final m in _modules) m.catalogId: m,
+};
+
+/// The hub's cards under [plan]: exactly the plan's modules, in its order.
+/// With no server plan that is the default core set (no library modules).
+List<_EduModule> _modulesFor(ModulePlan plan) => [
+      for (final n in plan.hubModuleNums)
+        if (_moduleById[n] != null) _moduleById[n]!,
+    ];
+
+/// Catalog ids of the cards the hub draws under [plan], in display order.
+@visibleForTesting
+List<int> educationHubCardIdsFor(ModulePlan plan) =>
+    _modulesFor(plan).map((m) => m.catalogId).toList();
 
 /// Workshop tools have no Learn section and web-only modules keep theirs on the
 /// website, so neither can gate the in-app progression chain or the sim gate.
@@ -346,19 +405,35 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     return auth.user != null && !auth.isFacilitator;
   }
 
+  /// The module plan in force: the cached or fallback plan straight away, the
+  /// server's once it answers. Never awaited, so the hub never waits on it.
+  ModulePlan get _plan => ref.read(modulePlanProvider);
+
+  /// The cards this hub draws, in order.
+  List<_EduModule> get _visible => _modulesFor(_plan);
+
   @override
   void initState() {
     super.initState();
     _loadProgress();
     _syncProgress();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkMandatedAssessment());
+    // A new plan changes the cards, the progression chain and the sim gate.
+    ref.listenManual<ModulePlan>(modulePlanProvider, (prev, next) {
+      if (prev != next && mounted) _loadProgress();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(modulePlanProvider.notifier).refresh();
+      _checkMandatedAssessment();
+    });
     if (_isSelfPaced) {
-      // Self-paced: progressive unlock — each module opens once the previous
+      // Self-paced: progressive unlock. Each module opens once the previous
       // module's Learn section is complete (website parity). _loadProgress
       // computes the set; seed the first module + tools so something is open.
+      final visible = _visible;
       _selfPacedUnlocked = {
-        _modules.first.catalogId,
-        for (final m in _modules)
+        if (visible.isNotEmpty) visible.first.catalogId,
+        for (final m in visible)
           if (_isToolOrWebOnly(m)) m.catalogId,
       };
       // Refresh entitlement (trial countdown / lapsed state) from /me so the
@@ -470,9 +545,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
 
   Future<void> _loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    final visible = _visible;
     final updated = <int, int>{};
     final passed = <int, bool>{};
-    for (final m in _modules) {
+    for (final m in visible) {
       updated[m.catalogId] =
           prefs.getInt('edu_progress_${m.catalogId}') ?? 0;
       passed[m.catalogId] =
@@ -482,7 +559,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     final unlocked = <int>{};
     if (_isSelfPaced) {
       bool gateOpen = true; // the next content module is unlocked while open
-      for (final m in _modules) {
+      for (final m in visible) {
         final isTool = _isToolOrWebOnly(m); // no in-app Learn to gate on
         if (gateOpen || isTool) unlocked.add(m.catalogId);
         if (!isTool) {
@@ -494,8 +571,14 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     }
     if (mounted) {
       setState(() {
-        _moduleProgress.addAll(updated);
-        _modulePassed.addAll(passed);
+        // Replaced, not merged, so a module the plan no longer shows stops
+        // counting toward the totals.
+        _moduleProgress
+          ..clear()
+          ..addAll(updated);
+        _modulePassed
+          ..clear()
+          ..addAll(passed);
         if (_isSelfPaced) {
           _selfPacedUnlocked = unlocked;
           // gateOpen is still true only if every content module's Learn is done.
@@ -505,10 +588,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     }
   }
 
+  /// The game opens once every in-app content module the plan requires has
+  /// its Learn section done; an optional module never holds it back.
   bool _selfPacedSimGate(SharedPreferences prefs) {
-    for (final m in _modules) {
-      if (_isToolOrWebOnly(m)) continue;
-      if (!(prefs.getBool('edu_module_sp_${m.catalogId}_learn') ?? false)) return false;
+    for (final n in _plan.requiredInAppContentNums) {
+      if (!(prefs.getBool('edu_module_sp_${n}_learn') ?? false)) return false;
     }
     return true;
   }
@@ -519,7 +603,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   int get _overallPercent {
     if (_moduleProgress.isEmpty) return 0;
     final total = _moduleProgress.values.fold<int>(0, (a, b) => a + b);
-    final contentCount = _modules
+    final contentCount = _visible
         .where((m) => catalogEntry(m.catalogId)?.isContent ?? false)
         .length;
     return contentCount == 0 ? 0 : (total / contentCount).round();
@@ -541,6 +625,8 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final auth = ref.watch(authProvider);
     final teamState = ref.watch(teamProvider);
+    final plan = ref.watch(modulePlanProvider);
+    final modules = _modulesFor(plan);
 
     // The game (13) opens for a corporate room when the facilitator's
     // simulation switch is on, or on a facilitator's own device (website hub:
@@ -613,6 +699,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                     context,
                     teamName: teamName,
                     unlockedModules: unlockedModules,
+                    modules: modules,
                   ),
                 ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
               ),
@@ -629,12 +716,13 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final m = _modules[index];
+                      final m = modules[index];
                       final isLocked = !_isUnlocked(m.catalogId, unlockedModules);
                       final completion = _moduleProgress[m.catalogId] ?? 0;
                       final passed = _modulePassed[m.catalogId] ?? false;
                       return _ModuleCard(
                         module: m,
+                        isOptional: plan.isOptional(m.catalogId),
                         isLocked: isLocked,
                         completionPercent: completion,
                         isPassed: passed,
@@ -657,7 +745,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                             duration: 350.ms,
                           );
                     },
-                    childCount: _modules.length,
+                    childCount: modules.length,
                   ),
                 ),
               ),
@@ -851,6 +939,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     BuildContext context, {
     required String teamName,
     required List<int> unlockedModules,
+    required List<_EduModule> modules,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final s = ref.watch(stringsProvider);
@@ -973,7 +1062,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   children: [
                     _ProgressStat(
                       value: '$_completedCount',
-                      sub: '/$educationModuleCount',
+                      sub: '/${modules.length}',
                       label: s.tr('Complete', 'مكتمل'),
                       color: AppColors.primaryLight,
                     ),
@@ -1015,8 +1104,8 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                 ),
                 const SizedBox(height: 8),
                 Row(
-                  children: List.generate(_modules.length, (i) {
-                    final m = _modules[i];
+                  children: List.generate(modules.length, (i) {
+                    final m = modules[i];
                     final isUnlocked =
                         _isUnlocked(m.catalogId, unlockedModules);
                     final completion =
@@ -1026,7 +1115,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                     return Expanded(
                       child: Padding(
                         padding: EdgeInsets.only(
-                          right: i < _modules.length - 1 ? 4 : 0,
+                          right: i < modules.length - 1 ? 4 : 0,
                         ),
                         child: Column(
                           children: [
@@ -1072,11 +1161,16 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                                               size: 12,
                                               color: AppColors.textTertiary(
                                                   context))
-                                          : Text(
-                                              '${i + 1}',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
+                                          // The module's icon, not a
+                                          // number: modules are named by
+                                          // title, which the tooltip gives.
+                                          : Tooltip(
+                                              message: s.ar
+                                                  ? m.titleAr
+                                                  : m.titleEn,
+                                              child: Icon(
+                                                m.icon,
+                                                size: 12,
                                                 color: completion > 0
                                                     ? const Color(0xFFB45309)
                                                     : AppColors.textSecondary(
@@ -1457,14 +1551,15 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _PathBadge(s.tr('Foundations (1-3)', 'الأساسيات (1-3)'), AppColors.secondaryLight,
+            // Stages only: no module number ranges (modules are named by title).
+            _PathBadge(s.tr('Foundations', 'الأساسيات'), AppColors.secondaryLight,
                 AppColors.secondarySurface),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Icon(Icons.arrow_forward_rounded,
                   size: 14, color: AppColors.textTertiary(context)),
             ),
-            _PathBadge(s.tr('Analysis (4-6)', 'التحليل (4-6)'), AppColors.primaryLight,
+            _PathBadge(s.tr('Analysis', 'التحليل'), AppColors.primaryLight,
                 AppColors.primarySurface),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1472,7 +1567,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   size: 14, color: AppColors.textTertiary(context)),
             ),
             _PathBadge(
-                s.tr('Advanced (7-$educationModuleCount)', 'المتقدّم (7-$educationModuleCount)'),
+                s.tr('Advanced', 'المتقدّم'),
                 const Color(0xFF7C3AED),
                 const Color(0xFFEDE9FE)),
           ],
@@ -1491,6 +1586,9 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
 // ---------------------------------------------------------------------------
 class _ModuleCard extends StatefulWidget {
   final _EduModule module;
+
+  /// Marked optional by the module plan: shown and scored, not required.
+  final bool isOptional;
   final bool isLocked;
   final int completionPercent;
   final bool isPassed;
@@ -1500,6 +1598,7 @@ class _ModuleCard extends StatefulWidget {
 
   const _ModuleCard({
     required this.module,
+    this.isOptional = false,
     required this.isLocked,
     required this.completionPercent,
     required this.isPassed,
@@ -1539,6 +1638,15 @@ class _ModuleCardState extends State<_ModuleCard> {
       default:
         return const Color(0xFFDBEAFE);
     }
+  }
+
+  /// The category, with the optional mark when the plan makes the module
+  /// optional.
+  String get _categoryLabel {
+    final m = widget.module;
+    final category = widget.ar ? m.categoryAr : m.categoryEn;
+    if (!widget.isOptional) return category;
+    return widget.ar ? '$category · اختيارية' : '$category · OPTIONAL';
   }
 
   String get _diffLabel {
@@ -1611,25 +1719,30 @@ class _ModuleCardState extends State<_ModuleCard> {
                   children: [
                     // Category tag + Difficulty badge row
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.accentSurface,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            widget.ar ? m.categoryAr : m.categoryEn,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1,
-                              color: AppColors.accentDark,
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentSurface,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              _categoryLabel,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1,
+                                color: AppColors.accentDark,
+                              ),
                             ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 6),
                         // Difficulty badge
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -1674,7 +1787,8 @@ class _ModuleCardState extends State<_ModuleCard> {
                           ),
                         ),
                         const Spacer(),
-                        // Module number badge with completion checkmark
+                        // Status badge (no module number: modules are named
+                        // by title) with completion checkmark
                         SizedBox(
                           width: 32,
                           height: 32,
@@ -1699,13 +1813,12 @@ class _ModuleCardState extends State<_ModuleCard> {
                                   ],
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    '${m.number}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
+                                  child: Icon(
+                                    widget.isPassed
+                                        ? Icons.emoji_events_rounded
+                                        : Icons.play_arrow_rounded,
+                                    size: 16,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),

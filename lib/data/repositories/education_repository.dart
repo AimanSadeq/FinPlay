@@ -1,10 +1,23 @@
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
+import '../module_plan.dart';
 
 class EducationRepository {
   final ApiClient _api;
 
   EducationRepository(this._api);
+
+  /// The module plan in force for this host (GET /education/module-plan).
+  /// Throws when the request fails or the route is missing, so the caller can
+  /// keep what it already has; a server answer of `moduleNums: null` is a real
+  /// answer and comes back as [ModulePlan.fallback].
+  Future<ModulePlan> fetchModulePlan() async {
+    final response = await _api.get(ApiEndpoints.educationModulePlan);
+    if (apiFailed(response)) {
+      throw Exception(response['error'] ?? 'Failed to fetch the module plan');
+    }
+    return ModulePlan.fromJson(response);
+  }
 
   Future<List<Map<String, dynamic>>> fetchBreakEvenScenarios() async {
     final response = await _api.get(ApiEndpoints.breakEvenScenarios);

@@ -12,6 +12,7 @@ import '../../../core/network/api_endpoints.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/module_plan_provider.dart';
 import '../../../core/services/cache_service.dart';
 import '../../../shared/widgets/team_leader_gate.dart';
 
@@ -256,6 +257,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Registered = has joined a team (corporate) or logged in self-paced. The
     // Education & Simulation cards stay locked until then (parity with website).
     final isRegistered = isSelfPaced || teamState.selectedTeam != null;
+    // The modules this program shows on the hub (the module plan, else the
+    // default core set), so the copy matches the cards a learner will see.
+    final moduleCount = ref.watch(modulePlanProvider).hubModuleNums.length;
 
     return Scaffold(
       body: AnimatedBuilder(
@@ -322,7 +326,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                       _ActionCard(
                         title: s.tr('Start Learning', 'ابدأ التعلّم'),
-                        subtitle: s.tr('$educationModuleCount interactive finance education modules', '$educationModuleCount وحدة تعليمية مالية تفاعلية'),
+                        subtitle: s.tr('$moduleCount interactive finance education modules',
+                            arabicCountedNoun(moduleCount, 'وحدة تعليمية مالية تفاعلية', 'وحدات تعليمية مالية تفاعلية')),
                         icon: Icons.school_rounded,
                         accentColor: const Color(0xFF10B981),
                         gradient: const [Color(0xFF10B981), Color(0xFF059669)],

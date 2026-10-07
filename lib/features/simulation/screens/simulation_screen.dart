@@ -15,6 +15,7 @@ import '../../../providers/decision_provider.dart';
 import '../../../providers/financial_provider.dart';
 import '../../../providers/socket_provider.dart';
 import '../../../providers/simulation_access_provider.dart';
+import '../../../providers/module_plan_provider.dart';
 import '../../../core/utils/simulation_access.dart';
 import '../../../data/models/scenario.dart';
 import '../../../data/models/financial_data.dart';
@@ -179,7 +180,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     if (!mounted) return;
     // Same scope edu_module_screen writes under for a corporate team.
     final scope = (prefs.getInt('edu_team_id') ?? 1).toString();
-    final done = learnCompleteForScope(prefs, scope);
+    final done = learnCompleteForScope(prefs, scope,
+        plan: ref.read(modulePlanProvider));
     if (done != _learnComplete) setState(() => _learnComplete = done);
   }
 

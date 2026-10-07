@@ -148,6 +148,11 @@ class ApiEndpoints {
 
   // Education modules (served under /api/education).
   static const String educationStatus = '/education/status';
+  // GET (unauthenticated; resolved from the host) -> { success, moduleNums:
+  // number[] | null (ordered), optionalModuleNums: number[], course: {slug,
+  // title:{en,ar}} | null, catalog, addons }. moduleNums null means no plan is
+  // set, and is also what the server answers when its lookup fails.
+  static const String educationModulePlan = '/education/module-plan';
 
   // Earnings Call (post-Round-2 analyst event). Stage machine off -> prep -> live,
   // driven by the facilitator and polled by teams.

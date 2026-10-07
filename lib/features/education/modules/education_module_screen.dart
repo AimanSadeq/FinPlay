@@ -12,6 +12,7 @@ import '../../../app/i18n/app_strings.dart';
 import '../../../core/services/education_progress_sync.dart';
 import '../../../core/services/education_storage_migration.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/module_plan_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../widgets/games/memory_match_game.dart';
 import '../widgets/games/classification_game.dart';
@@ -74,17 +75,21 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
 
   int get _maxGameScore => _availableGames.length * 50;
 
-  // Catalog ids of the modules with in-app content, in hub order (the two
-  // workshop tools and the web-only modules are skipped for next-module).
-  static final List<int> _moduleOrder =
-      inAppContentModules.map((m) => m.num).toList();
+  // Catalog ids of the modules with in-app content, in the hub order of the
+  // module plan (the two workshop tools, the web-only modules and modules the
+  // plan leaves out are skipped for next-module).
+  List<int> get _moduleOrder => [
+        for (final n in ref.read(modulePlanProvider).hubModuleNums)
+          if (catalogEntry(n)?.isContent == true && catalogEntry(n)!.inApp) n,
+      ];
 
   EducationModuleContent get _module => educationModuleContents[widget.moduleId]!;
 
   int? get _nextModuleId {
-    final idx = _moduleOrder.indexOf(widget.moduleId);
-    if (idx < 0 || idx >= _moduleOrder.length - 1) return null;
-    return _moduleOrder[idx + 1];
+    final order = _moduleOrder;
+    final idx = order.indexOf(widget.moduleId);
+    if (idx < 0 || idx >= order.length - 1) return null;
+    return order[idx + 1];
   }
 
   @override
@@ -347,8 +352,7 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(s.tr('Module ${educationHubPosition(widget.moduleId) ?? widget.moduleId}', 'الوحدة ${educationHubPosition(widget.moduleId) ?? widget.moduleId}'), style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
+                          // Named by its title alone, never by a number.
                           Text(_module.title, style: Theme.of(context).textTheme.titleMedium),
                         ],
                       ),
