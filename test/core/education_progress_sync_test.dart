@@ -42,7 +42,7 @@ void main() {
 
     test('restored modules cover every scored content module in the catalog', () {
       expect(EducationProgressSync.restoredModules,
-          [1, 3, 4, 5, 6, 7, 2, 9, 10, 14, 15, 16, 17, 18]);
+          [1, 3, 4, 5, 6, 7, 2, 9, 10, 14, 15, 16, 17, 18, 19, 20, 21, 22]);
     });
 
     test('max scores match the server table', () {
@@ -67,9 +67,19 @@ void main() {
 
     test('every restored module has a max score', () {
       for (final m in EducationProgressSync.restoredModules) {
-        expect(EducationProgressSync.moduleMaxScores[m], isNotNull,
+        expect(EducationProgressSync.maxScoreFor(m), greaterThan(0),
             reason: 'module $m has no max score');
       }
+    });
+
+    test('a module the server table lacks uses the server default (325)', () {
+      // moduleMaxScore() in server/services/educationProgressMerge.ts.
+      expect(EducationProgressSync.defaultModuleMaxScore, 325);
+      for (final m in [19, 20, 21, 22]) {
+        expect(EducationProgressSync.moduleMaxScores.containsKey(m), isFalse);
+        expect(EducationProgressSync.maxScoreFor(m), 325);
+      }
+      expect(EducationProgressSync.maxScoreFor(5), 400);
     });
 
     test('pass threshold matches the server (70%)', () {

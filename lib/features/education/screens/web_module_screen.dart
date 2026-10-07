@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../data/education_catalog.dart';
+import '../../../providers/module_plan_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 
 /// The website page for catalog module [catalogId], opened in the browser. The
@@ -40,7 +41,9 @@ class WebModuleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
     final entry = catalogEntry(moduleNum);
-    final position = educationHubPosition(moduleNum);
+    // Position and optional mark follow the module plan the hub draws from.
+    final plan = ref.watch(modulePlanProvider);
+    final position = plan.hubPosition(moduleNum);
 
     return Scaffold(
       appBar: AppBar(
@@ -75,7 +78,7 @@ class WebModuleScreen extends ConsumerWidget {
                             s.tr(entry.titleEn, entry.titleAr),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
-                          if (entry.optional) ...[
+                          if (plan.isOptional(moduleNum)) ...[
                             const SizedBox(height: 6),
                             Text(
                               s.tr(

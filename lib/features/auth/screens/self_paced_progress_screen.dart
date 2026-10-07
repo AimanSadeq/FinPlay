@@ -10,6 +10,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../shared/widgets/app_settings_button.dart';
 import '../../../data/education_catalog.dart';
+import '../../../providers/module_plan_provider.dart';
 
 class SelfPacedProgressScreen extends ConsumerStatefulWidget {
   const SelfPacedProgressScreen({super.key});
@@ -24,10 +25,10 @@ class _SelfPacedProgressScreenState
     with SingleTickerProviderStateMixin {
   late AnimationController _bgController;
 
-  // The Simulation tile is EARNED (website parity): it stays locked until every
-  // content module's Learn section is done, then opens. Same criterion the
-  // education hub uses to unlock its Simulation tile.
-  static const List<int> _simGateModules = [1, 2, 3, 4, 6, 7, 9, 10];
+  // The Simulation tile is EARNED (website parity): it stays locked until the
+  // Learn section of every in-app content module the module plan requires is
+  // done, then opens. Same criterion the education hub uses to unlock its
+  // Simulation tile.
   bool _simUnlocked = false;
 
   @override
@@ -38,11 +39,22 @@ class _SelfPacedProgressScreenState
       vsync: this,
     )..repeat(reverse: true);
     _loadSimGate();
+    // Follow the plan: recheck the gate when it changes, and refresh it in the
+    // background (the gate is computed from the cached plan meanwhile).
+    ref.listenManual(modulePlanProvider, (prev, next) {
+      if (prev != next && mounted) _loadSimGate();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(modulePlanProvider.notifier).refresh();
+    });
   }
 
   Future<void> _loadSimGate() async {
     final prefs = await SharedPreferences.getInstance();
-    final unlocked = _simGateModules
+    if (!mounted) return;
+    final unlocked = ref
+        .read(modulePlanProvider)
+        .requiredInAppContentNums
         .every((n) => prefs.getBool('edu_module_sp_${n}_learn') ?? false);
     if (mounted) setState(() => _simUnlocked = unlocked);
   }
@@ -70,6 +82,8 @@ class _SelfPacedProgressScreenState
     final displayName = user?.displayName ?? s.tr('Learner', 'متعلّم');
     final initials =
         displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U';
+    // The modules this learner's program shows on the hub.
+    final moduleCount = ref.watch(modulePlanProvider).hubModuleNums.length;
 
     return Scaffold(
       body: AnimatedBuilder(
@@ -125,8 +139,9 @@ class _SelfPacedProgressScreenState
                       _ActionCard(
                         title: s.tr('Start Learning', 'ابدأ التعلّم'),
                         subtitle:
-                            s.tr('$educationModuleCount interactive finance education modules',
-                                '$educationModuleCount وحدة تعليمية مالية تفاعلية'),
+                            s.tr('$moduleCount interactive finance education modules',
+                                arabicCountedNoun(moduleCount, 'وحدة تعليمية مالية تفاعلية',
+                                    'وحدات تعليمية مالية تفاعلية')),
                         icon: Icons.school_rounded,
                         accentColor: const Color(0xFF10B981),
                         gradient: const [

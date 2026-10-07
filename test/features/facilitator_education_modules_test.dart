@@ -19,5 +19,12 @@ void main() {
       expect(facilitatorEducationModuleIds, isNot(contains(13)));
       expect(facilitatorEducationModuleIds, isNot(contains(8))); // retired
     });
+
+    test('include the four library modules, so they can be opened for a room', () {
+      expect(facilitatorEducationModuleIds, containsAll([19, 20, 21, 22]));
+      // After Financial Risk Assessment, in catalog order.
+      final ids = facilitatorEducationModuleIds;
+      expect(ids.sublist(ids.indexOf(18) + 1), [19, 20, 21, 22]);
+    });
   });
 }

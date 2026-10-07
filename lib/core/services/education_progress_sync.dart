@@ -61,6 +61,14 @@ class EducationProgressSync {
     18: 300,
   };
 
+  /// What the server grades a module against when MODULE_MAX_SCORES has no
+  /// entry for it (`moduleMaxScore` in server/services/educationProgressMerge.ts
+  /// falls back to 325). The library modules (ids 19 to 22) have no entry yet.
+  static const int defaultModuleMaxScore = 325;
+
+  /// The maximum score the server grades module [n] against.
+  static int maxScoreFor(int n) => moduleMaxScores[n] ?? defaultModuleMaxScore;
+
   static const double passThreshold = 0.7; // 70%, same as the server
 
   /// The four activities a mobile module tracks. Pushed under these ids so a
@@ -135,7 +143,7 @@ class EducationProgressSync {
       // provisional, since nothing has confirmed its remapped value yet.
       if (entry is! Map) continue;
 
-      final maxScore = moduleMaxScores[n]!;
+      final maxScore = maxScoreFor(n);
       final serverScore = (entry['moduleScore'] as num?)?.toInt() ?? 0;
       final serverPercent = ((serverScore / maxScore) * 100).round().clamp(0, 100);
       final localPercent = prefs.getInt('edu_progress_$n') ?? 0;
@@ -224,7 +232,7 @@ class EducationProgressSync {
 
       for (final n in contentModules) {
         if (provisional.contains(n)) continue; // unconfirmed remap: never push
-        final maxScore = moduleMaxScores[n]!;
+        final maxScore = maxScoreFor(n);
         final flags = {
           for (final a in activities)
             a: prefs.getBool(_prefKey(scope, n, a)) ?? false,

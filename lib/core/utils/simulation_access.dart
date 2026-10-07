@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../data/education_catalog.dart';
+import '../../data/module_plan.dart';
 
 /// What the simulation screen does for the learner who just opened it.
 enum SimulationEntry {
@@ -47,12 +47,18 @@ bool? simulationAccessFromJson(Map<String, dynamic> json) {
 }
 
 /// The website's learn-complete bypass (`isEducationLearnComplete`): true once
-/// every content module a learner works through in this app has its Learn
-/// section done for the given progress [scope] (the team id for corporate
-/// teams; edu_module_screen writes `edu_module_<scope>_<id>_learn`).
-bool learnCompleteForScope(SharedPreferences prefs, String scope) {
-  for (final m in inAppContentModules) {
-    if (!(prefs.getBool('edu_module_${scope}_${m.num}_learn') ?? false)) {
+/// every content module the [plan] requires and a learner works through in this
+/// app has its Learn section done for the given progress [scope] (the team id
+/// for corporate teams; edu_module_screen writes
+/// `edu_module_<scope>_<id>_learn`). An optional module, or one the plan leaves
+/// out, never holds it back.
+bool learnCompleteForScope(
+  SharedPreferences prefs,
+  String scope, {
+  ModulePlan plan = ModulePlan.fallback,
+}) {
+  for (final n in plan.requiredInAppContentNums) {
+    if (!(prefs.getBool('edu_module_${scope}_${n}_learn') ?? false)) {
       return false;
     }
   }
