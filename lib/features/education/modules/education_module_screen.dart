@@ -332,13 +332,6 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
     );
   }
 
-  /// The card number this module has on the hub under the module plan, else
-  /// its catalog position. Display only.
-  int get _position =>
-      ref.watch(modulePlanProvider).hubPosition(widget.moduleId) ??
-      educationHubPosition(widget.moduleId) ??
-      widget.moduleId;
-
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
@@ -359,8 +352,7 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(s.tr('Module $_position', 'الوحدة $_position'), style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
+                          // Named by its title alone, never by a number.
                           Text(_module.title, style: Theme.of(context).textTheme.titleMedium),
                         ],
                       ),

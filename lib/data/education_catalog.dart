@@ -299,8 +299,9 @@ String moduleRouteFor(int catalogId, {required bool arabic}) =>
         ? catalogEntry(catalogId)!.appRoute!
         : '/education/web/$catalogId';
 
-/// 1-based position of a module among the hub's cards (the game excluded), or
-/// null for an unknown id. Display only: never store or compare positions.
+/// 1-based position of a module among the catalog's cards (the game excluded),
+/// or null for an unknown id. Never store or compare positions, and never show
+/// one to a person: modules are named by title only.
 int? educationHubPosition(int num) {
   final cards = educationCatalog.where((m) => !m.isSimulation).toList();
   final idx = cards.indexWhere((m) => m.num == num);

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../app/i18n/app_strings.dart';
-import '../../../app/theme/app_colors.dart';
 import '../../../data/education_catalog.dart';
 import '../../../providers/module_plan_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -41,9 +40,8 @@ class WebModuleScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
     final entry = catalogEntry(moduleNum);
-    // Position and optional mark follow the module plan the hub draws from.
+    // The optional mark follows the module plan the hub draws from.
     final plan = ref.watch(modulePlanProvider);
-    final position = plan.hubPosition(moduleNum);
 
     return Scaffold(
       appBar: AppBar(
@@ -65,15 +63,7 @@ class WebModuleScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (position != null)
-                            Text(
-                              s.tr('Module $position', 'الوحدة $position'),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textTertiary(context),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                            ),
-                          const SizedBox(height: 6),
+                          // Named by its title alone, never by a number.
                           Text(
                             s.tr(entry.titleEn, entry.titleAr),
                             style: Theme.of(context).textTheme.titleLarge,

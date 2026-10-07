@@ -63,7 +63,7 @@ class _EduModule {
 // screen for the eight ported modules, and to the web-module screen for the
 // rest; a card opens moduleRouteFor(catalogId), which also sends the eight to
 // the website under the Arabic locale. `catalogId` is the permanent catalog id.
-// The number on a card is its position among the cards shown, display only.
+// A module is named by its title alone: no card shows a module number.
 // ---------------------------------------------------------------------------
 const _modules = <_EduModule>[
   _EduModule(
@@ -722,7 +722,6 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                       final passed = _modulePassed[m.catalogId] ?? false;
                       return _ModuleCard(
                         module: m,
-                        position: index + 1,
                         isOptional: plan.isOptional(m.catalogId),
                         isLocked: isLocked,
                         completionPercent: completion,
@@ -792,7 +791,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
-                  child: _buildLearningPath(context, modules.length),
+                  child: _buildLearningPath(context),
                 ).animate().fadeIn(delay: 1000.ms, duration: 400.ms),
               ),
             ],
@@ -1162,11 +1161,16 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                                               size: 12,
                                               color: AppColors.textTertiary(
                                                   context))
-                                          : Text(
-                                              '${i + 1}',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
+                                          // The module's icon, not a
+                                          // number: modules are named by
+                                          // title, which the tooltip gives.
+                                          : Tooltip(
+                                              message: s.ar
+                                                  ? m.titleAr
+                                                  : m.titleEn,
+                                              child: Icon(
+                                                m.icon,
+                                                size: 12,
                                                 color: completion > 0
                                                     ? const Color(0xFFB45309)
                                                     : AppColors.textSecondary(
@@ -1521,7 +1525,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   // Learning Path
   // ─────────────────────────────────────────────────────────────────────────
-  Widget _buildLearningPath(BuildContext context, int moduleCount) {
+  Widget _buildLearningPath(BuildContext context) {
     final s = ref.watch(stringsProvider);
     return Column(
       children: [
@@ -1547,14 +1551,15 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _PathBadge(s.tr('Foundations (1-3)', 'الأساسيات (1-3)'), AppColors.secondaryLight,
+            // Stages only: no module number ranges (modules are named by title).
+            _PathBadge(s.tr('Foundations', 'الأساسيات'), AppColors.secondaryLight,
                 AppColors.secondarySurface),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Icon(Icons.arrow_forward_rounded,
                   size: 14, color: AppColors.textTertiary(context)),
             ),
-            _PathBadge(s.tr('Analysis (4-6)', 'التحليل (4-6)'), AppColors.primaryLight,
+            _PathBadge(s.tr('Analysis', 'التحليل'), AppColors.primaryLight,
                 AppColors.primarySurface),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -1562,7 +1567,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   size: 14, color: AppColors.textTertiary(context)),
             ),
             _PathBadge(
-                s.tr('Advanced (7-$moduleCount)', 'المتقدّم (7-$moduleCount)'),
+                s.tr('Advanced', 'المتقدّم'),
                 const Color(0xFF7C3AED),
                 const Color(0xFFEDE9FE)),
           ],
@@ -1582,9 +1587,6 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
 class _ModuleCard extends StatefulWidget {
   final _EduModule module;
 
-  /// 1-based position among the cards shown. Display only.
-  final int position;
-
   /// Marked optional by the module plan: shown and scored, not required.
   final bool isOptional;
   final bool isLocked;
@@ -1596,7 +1598,6 @@ class _ModuleCard extends StatefulWidget {
 
   const _ModuleCard({
     required this.module,
-    required this.position,
     this.isOptional = false,
     required this.isLocked,
     required this.completionPercent,
@@ -1786,7 +1787,8 @@ class _ModuleCardState extends State<_ModuleCard> {
                           ),
                         ),
                         const Spacer(),
-                        // Module number badge with completion checkmark
+                        // Status badge (no module number: modules are named
+                        // by title) with completion checkmark
                         SizedBox(
                           width: 32,
                           height: 32,
@@ -1811,13 +1813,12 @@ class _ModuleCardState extends State<_ModuleCard> {
                                   ],
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    '${widget.position}',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
+                                  child: Icon(
+                                    widget.isPassed
+                                        ? Icons.emoji_events_rounded
+                                        : Icons.play_arrow_rounded,
+                                    size: 16,
+                                    color: Colors.white,
                                   ),
                                 ),
                               ),

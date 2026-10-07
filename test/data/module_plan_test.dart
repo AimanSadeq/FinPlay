@@ -73,9 +73,6 @@ void main() {
       expect(plan.isServerPlan, isTrue);
       expect(plan.hubModuleNums, [20, 1, 19, 6, 18]);
       expect(plan.includes(3), isFalse);
-      expect(plan.hubPosition(20), 1);
-      expect(plan.hubPosition(18), 5);
-      expect(plan.hubPosition(3), isNull);
     });
 
     test('the self-paced core set reproduces today\'s hub', () {

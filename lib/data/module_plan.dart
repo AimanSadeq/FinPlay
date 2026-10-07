@@ -111,13 +111,6 @@ class ModulePlan {
           if (catalogEntry(n)!.inApp) n,
       ];
 
-  /// 1-based position of a module among the hub's cards under this plan, or
-  /// null when the plan does not show it. Display only.
-  int? hubPosition(int num) {
-    final idx = hubModuleNums.indexOf(num);
-    return idx < 0 ? null : idx + 1;
-  }
-
   @override
   bool operator ==(Object other) =>
       other is ModulePlan &&
