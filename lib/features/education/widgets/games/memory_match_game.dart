@@ -3,25 +3,45 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../providers/locale_provider.dart';
+import '../../modules/education_module_data.dart';
 
-class MemoryMatchGame extends StatefulWidget {
-  final List<Map<String, String>> pairs; // [{term, definition}]
+/// English term ↔ Arabic translation memory match (website MemoryMatchGame).
+class MemoryMatchGame extends ConsumerStatefulWidget {
+  final List<MemoryPair> pairs;
+  final int maxScore;
   final VoidCallback onComplete;
   final ValueChanged<int> onScoreUpdate;
 
   const MemoryMatchGame({
     super.key,
     required this.pairs,
+    this.maxScore = 50,
     required this.onComplete,
     required this.onScoreUpdate,
   });
 
+  /// Website `calculateMemoryMatchScore(moves, pairs)`: efficiency tiers
+  /// against the perfect run (one check per pair).
+  static int scoreFor(int moves, int pairCount, [int maxScore = 50]) {
+    final perfectMoves = pairCount;
+    if (moves <= perfectMoves) return maxScore;
+    if (moves <= perfectMoves * 1.5) return (maxScore * 0.9).round();
+    if (moves <= perfectMoves * 2) return (maxScore * 0.8).round();
+    if (moves <= perfectMoves * 2.5) return (maxScore * 0.7).round();
+    final efficiency = perfectMoves / moves;
+    final s = (maxScore * efficiency).round();
+    final floor = (maxScore * 0.5).round();
+    return s < floor ? floor : s;
+  }
+
   @override
-  State<MemoryMatchGame> createState() => _MemoryMatchGameState();
+  ConsumerState<MemoryMatchGame> createState() => _MemoryMatchGameState();
 }
 
-class _MemoryMatchGameState extends State<MemoryMatchGame> {
+class _MemoryMatchGameState extends ConsumerState<MemoryMatchGame> {
   late List<_MemoryCard> _cards;
   int? _firstFlippedIndex;
   int? _secondFlippedIndex;
@@ -30,18 +50,8 @@ class _MemoryMatchGameState extends State<MemoryMatchGame> {
   int _score = 0;
   bool _isChecking = false;
 
-  /// Website-matching efficiency-based scoring (max 50 points).
-  /// Tiers based on number of moves vs perfect moves.
-  int _calculateScore() {
-    const maxScore = 50;
-    final perfectMoves = widget.pairs.length; // minimum possible pair-checks
-    if (_moves <= perfectMoves) return maxScore;             // 50
-    if (_moves <= (perfectMoves * 1.5).ceil()) return (maxScore * 0.9).round(); // 45
-    if (_moves <= perfectMoves * 2) return (maxScore * 0.8).round();            // 40
-    if (_moves <= (perfectMoves * 2.5).ceil()) return (maxScore * 0.7).round(); // 35
-    final efficiency = perfectMoves / _moves;
-    return (maxScore * efficiency).round().clamp((maxScore * 0.5).round(), maxScore); // floor 25
-  }
+  int _calculateScore() =>
+      MemoryMatchGame.scoreFor(_moves, widget.pairs.length, widget.maxScore);
 
   @override
   void initState() {
@@ -52,8 +62,8 @@ class _MemoryMatchGameState extends State<MemoryMatchGame> {
   void _initCards() {
     _cards = [];
     for (int i = 0; i < widget.pairs.length; i++) {
-      _cards.add(_MemoryCard(id: i, text: widget.pairs[i]['term']!, isTerm: true));
-      _cards.add(_MemoryCard(id: i, text: widget.pairs[i]['definition']!, isTerm: false));
+      _cards.add(_MemoryCard(id: i, text: widget.pairs[i].term, isTerm: true));
+      _cards.add(_MemoryCard(id: i, text: widget.pairs[i].match, isTerm: false));
     }
     _cards.shuffle(Random());
   }
@@ -113,14 +123,29 @@ class _MemoryMatchGameState extends State<MemoryMatchGame> {
     });
   }
 
+  void _restart() {
+    setState(() {
+      _initCards();
+      _firstFlippedIndex = null;
+      _secondFlippedIndex = null;
+      _matchedCount = 0;
+      _moves = 0;
+      _score = 0;
+      _isChecking = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final ar = ref.watch(isArabicProvider);
+    String t(String en, String a) => ar ? a : en;
+    final done = _matchedCount == widget.pairs.length && widget.pairs.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Text('Matched: $_matchedCount/${widget.pairs.length}',
+            Text(t('Matched: $_matchedCount/${widget.pairs.length}', 'المطابقات: $_matchedCount/${widget.pairs.length}'),
               style: Theme.of(context).textTheme.bodyMedium),
             const Spacer(),
             Container(
@@ -129,18 +154,33 @@ class _MemoryMatchGameState extends State<MemoryMatchGame> {
                 color: AppColors.accentLight.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text('Moves: $_moves',
+              child: Text(t('Moves: $_moves', 'المحاولات: $_moves'),
                 style: const TextStyle(color: AppColors.accentLight, fontWeight: FontWeight.w600, fontSize: 13)),
             ),
           ],
         ),
+        if (done) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Text(t('Score: $_score / ${widget.maxScore}', 'النتيجة: $_score / ${widget.maxScore}'),
+                  style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.secondaryLight)),
+              const Spacer(),
+              OutlinedButton.icon(
+                onPressed: _restart,
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: Text(t('Play Again', 'العب مرة أخرى')),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: _cards.length <= 8 ? 2 : 3,
-            mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 1.4,
+            crossAxisCount: _cards.length <= 8 ? 2 : (_cards.length <= 24 ? 3 : 4),
+            mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: _cards.length > 24 ? 0.95 : 1.4,
           ),
           itemCount: _cards.length,
           itemBuilder: (context, index) {
@@ -169,11 +209,12 @@ class _MemoryMatchGameState extends State<MemoryMatchGame> {
                     padding: const EdgeInsets.all(8),
                     child: card.isFlipped || card.isMatched
                         ? Text(card.text,
+                            textDirection: card.isTerm ? TextDirection.ltr : TextDirection.rtl,
                             style: TextStyle(
                               fontSize: 11, fontWeight: FontWeight.w500,
                               color: card.isTerm ? AppColors.primaryLight : AppColors.secondaryLight,
                             ),
-                            textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis)
+                            textAlign: TextAlign.center, maxLines: 4, overflow: TextOverflow.ellipsis)
                         : Icon(Icons.help_outline_rounded,
                             color: AppColors.textTertiary(context).withValues(alpha: 0.5), size: 24),
                   ),

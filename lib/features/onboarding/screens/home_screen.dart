@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -9,12 +11,17 @@ import '../../../data/education_catalog.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../providers/socket_provider.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/team_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/module_plan_provider.dart';
 import '../../../core/services/cache_service.dart';
+import '../../../shared/widgets/account_menu_button.dart';
+import '../../../shared/widgets/legal_links_button.dart';
 import '../../../shared/widgets/team_leader_gate.dart';
+import '../../auth/providers/self_paced_plan_provider.dart';
+import '../../education/education_gating.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +36,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   String? _clientName;
   String? _appTitle;
 
+  // Corporate game gate (website home.tsx corporateSimLocked): the facilitator's
+  // GET /facilitator/simulation-access switch, null until it has answered so
+  // the tile is never dimmed on unknown state, and whether this team's device
+  // has finished every module's lessons.
+  bool? _simAccessOpen;
+  bool _learnComplete = false;
+  Timer? _simAccessTimer;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +57,40 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Fetch client name + dynamic app title
     _fetchClientName();
     _fetchAppTitle();
+    _refreshSimGate();
+    // The facilitator can open the game mid-session (website polls every 15s;
+    // the socket event 'facilitator:simulation_access' is not wired here).
+    _simAccessTimer = Timer.periodic(
+      const Duration(seconds: 15),
+      (_) => _refreshSimGate(),
+    );
+  }
+
+  /// Self-paced learners and the facilitator are never gated, so they skip the
+  /// lookups. (The team may still be restoring at first load, so a missing team
+  /// does not skip them; the gate itself checks for one.)
+  bool get _mayBeGated {
+    final auth = ref.read(authProvider);
+    return auth.user == null && !auth.isFacilitator;
+  }
+
+  Future<void> _refreshSimGate() async {
+    if (!_mayBeGated) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final scope = (prefs.getInt('edu_team_id') ?? 1).toString();
+      final complete = isEducationLearnComplete(
+        learnDone: (id) => prefs.getBool('edu_module_${scope}_${id}_learn') ?? false,
+        // Website-only modules cannot be finished in the app, so they never hold it.
+        passThrough: (id) => !(catalogEntry(id)?.inApp ?? false),
+      );
+      if (mounted) setState(() => _learnComplete = complete);
+    } catch (_) {/* keep last known */}
+    try {
+      final res = await ref.read(apiClientProvider).get(ApiEndpoints.facilitatorSimulationAccess);
+      final open = res['open'];
+      if (open is bool && mounted) setState(() => _simAccessOpen = open);
+    } catch (_) {/* unknown: the tile stays enabled */}
   }
 
   Future<void> _fetchClientName() async {
@@ -207,6 +256,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void dispose() {
     _bgController.dispose();
+    _simAccessTimer?.cancel();
     super.dispose();
   }
 
@@ -214,7 +264,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   /// first (parity with the website's TeamLeaderGate). Self-paced proceeds directly.
   Future<void> _enterWithLeaderGate(String route) async {
     final proceed = await showTeamLeaderGate(context, ref);
-    if (proceed && mounted) context.push(route);
+    if (proceed && mounted) {
+      // Lessons finished in the education area may open the game tile.
+      context.push(route).then((_) => _refreshSimGate());
+    }
   }
 
   /// Prompt an un-registered corporate user to join a team first (parity with the
@@ -246,6 +299,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Live facilitator Open/Close push (socket 'facilitator:simulation_access'); the
+    // poll stays as the fallback.
+    ref.listen<bool?>(simulationAccessProvider, (_, open) {
+      if (open != null && open != _simAccessOpen) setState(() => _simAccessOpen = open);
+    });
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final s = ref.watch(stringsProvider);
     final screenH = MediaQuery.of(context).size.height;
@@ -257,9 +315,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // Registered = has joined a team (corporate) or logged in self-paced. The
     // Education & Simulation cards stay locked until then (parity with website).
     final isRegistered = isSelfPaced || teamState.selectedTeam != null;
+<<<<<<< Updated upstream
     // The modules this program shows on the hub (the module plan, else the
     // default core set), so the copy matches the cards a learner will see.
     final moduleCount = ref.watch(modulePlanProvider).hubModuleNums.length;
+=======
+    // Corporate FinPlay gate: the game tile stays dimmed until the delegate finishes
+    // the learning modules OR the facilitator opens the game. Self-paced learners
+    // are never gated (website d0b00b0).
+    final corporateSimLocked = isCorporateSimLocked(
+      isSelfPaced: authState.user != null && !authState.isFacilitator,
+      hasTeam: teamState.selectedTeam != null,
+      isFacilitator: authState.isFacilitator,
+      isDemoAccount: ref.watch(isDemoAccountProvider),
+      simAccessOpen: _simAccessOpen,
+      learnComplete: _learnComplete,
+    );
+>>>>>>> Stashed changes
 
     return Scaffold(
       body: AnimatedBuilder(
@@ -349,19 +421,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         title: s.tr('Enter Simulation', 'ادخل المحاكاة'),
                         subtitle: isSelfPaced
                             ? s.tr('Continue your self-paced simulation', 'تابع محاكاتك في وضع التعلّم الذاتي')
-                            : teamState.selectedTeam != null
-                                ? s.tr('Playing as ', 'تلعب باسم ') + teamState.selectedTeam!.name
-                                : s.tr('Select a team first in the lobby', 'اختر فريقًا أولاً في الردهة'),
+                            : corporateSimLocked
+                                ? s.tr('Complete the learning modules first', 'أكمل وحدات التعلم أولاً')
+                                : teamState.selectedTeam != null
+                                    ? s.tr('Playing as ', 'تلعب باسم ') + teamState.selectedTeam!.name
+                                    : s.tr('Select a team first in the lobby', 'اختر فريقًا أولاً في الردهة'),
                         icon: Icons.play_circle_rounded,
                         accentColor: const Color(0xFFF59E0B),
                         gradient: const [Color(0xFFF59E0B), Color(0xFFEA580C)],
-                        isLocked: !isRegistered,
+                        isLocked: !isRegistered || corporateSimLocked,
                         lockedBadge: s.tr('LOCKED', 'مقفل'),
                         onTap: () {
                           HapticFeedback.mediumImpact();
                           // Corporate mode: must join a team first.
                           if (!isRegistered) {
                             _promptJoinFirst();
+                            return;
+                          }
+                          // Dimmed game tile: send the delegate to the modules they
+                          // still need to finish (website parity).
+                          if (corporateSimLocked) {
+                            context.push('/education').then((_) => _refreshSimGate());
                             return;
                           }
                           _enterWithLeaderGate('/simulation');
@@ -467,18 +547,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               ],
             ),
           ),
-          // Logout button for self-paced users
-          if (isSelfPaced)
-            IconButton(
-              icon: Icon(Icons.logout_rounded,
-                  size: 20, color: AppColors.textSecondary(context)),
-              tooltip: s.tr('Logout', 'تسجيل الخروج'),
-              onPressed: () async {
-                await ref.read(authProvider.notifier).logout();
-                if (context.mounted) context.go('/mode-selector');
-              },
-              visualDensity: VisualDensity.compact,
-            ),
+          // Account menu (Logout + Delete account) for self-paced users
+          if (isSelfPaced) const AccountMenuButton(),
+          // Privacy / Terms (website legal pages)
+          const LegalLinksButton(),
           // Admin button
           IconButton(
             icon: Icon(Icons.admin_panel_settings_rounded,
@@ -616,15 +688,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             label: s.tr('Glossary', 'المسرد'),
             color: AppColors.accentLight,
             onTap: () => context.push('/education/glossary'),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _QuickLink(
-            icon: Icons.table_chart_rounded,
-            label: s.tr('Excel Data', 'بيانات Excel'),
-            color: AppColors.dangerLight,
-            onTap: () => context.push('/education/excel'),
           ),
         ),
         const SizedBox(width: 8),

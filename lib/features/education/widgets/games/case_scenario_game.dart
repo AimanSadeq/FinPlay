@@ -9,18 +9,26 @@ import '../../modules/case_scenario_data.dart';
 
 /// Interactive Case Scenario Simulator — walks the learner through one or more
 /// multi-step role-play decision cases, scoring each choice and reporting an
-/// accuracy-based score out of 100. Ports the website's CaseScenarioSimulator.
+/// accuracy-based score: round(correct / totalSteps × [maxScore]). Ports the
+/// website's CaseScenarioSimulator (step title, description, context, data
+/// table, question, options with feedback and consequence), in Arabic when the
+/// app language is Arabic.
 class CaseScenarioGame extends ConsumerStatefulWidget {
   final List<CaseScenario> scenarios;
+  final int maxScore;
   final VoidCallback onComplete;
   final ValueChanged<int> onScoreUpdate;
 
   const CaseScenarioGame({
     super.key,
     required this.scenarios,
+    this.maxScore = 100,
     required this.onComplete,
     required this.onScoreUpdate,
   });
+
+  static int scoreFor(int correct, int totalSteps, int maxScore) =>
+      totalSteps == 0 ? 0 : (correct / totalSteps * maxScore).round();
 
   @override
   ConsumerState<CaseScenarioGame> createState() => _CaseScenarioGameState();
@@ -41,7 +49,7 @@ class _CaseScenarioGameState extends ConsumerState<CaseScenarioGame> {
       widget.scenarios.fold(0, (sum, s) => sum + s.steps.length);
 
   int get _scoreOutOf100 =>
-      _totalSteps == 0 ? 0 : ((_correct / _totalSteps) * 100).round();
+      CaseScenarioGame.scoreFor(_correct, _totalSteps, widget.maxScore);
 
   // Icon + color per step type; the label is localized in [_typeLabel].
   static const _typeMeta = {
@@ -72,7 +80,6 @@ class _CaseScenarioGameState extends ConsumerState<CaseScenarioGame> {
       _totalAnswered++;
       if (option.isCorrect) _correct++;
     });
-    widget.onScoreUpdate(_scoreOutOf100);
   }
 
   void _next() {
@@ -184,6 +191,61 @@ class _CaseScenarioGameState extends ConsumerState<CaseScenarioGame> {
         ),
         const SizedBox(height: 12),
 
+        if (_step.title.of(ar).isNotEmpty) ...[
+          Text(_step.title.of(ar), style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+        ],
+        if (_step.description.of(ar).isNotEmpty) ...[
+          Text(_step.description.of(ar),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.5)),
+          const SizedBox(height: 8),
+        ],
+        if (_step.context.of(ar).isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.accentLight.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.accentLight.withValues(alpha: 0.25)),
+            ),
+            child: Text(_step.context.of(ar),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.45)),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (_step.data.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.cardColor(context),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.borderColor(context)),
+            ),
+            child: Column(
+              children: _step.data
+                  .map((d) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                                child: Text(d.label.of(ar),
+                                    style: Theme.of(context).textTheme.bodySmall)),
+                            const SizedBox(width: 8),
+                            Text(d.value,
+                                textDirection: TextDirection.ltr,
+                                style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 12, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ))
+                  .toList(),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Text(_step.promptFor(ar),
             style: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700, height: 1.4)),
         const SizedBox(height: 14),
@@ -298,7 +360,7 @@ class _CaseScenarioGameState extends ConsumerState<CaseScenarioGame> {
 
   Widget _buildResults(bool ar) {
     final score = _scoreOutOf100;
-    final great = score >= 80;
+    final great = widget.maxScore > 0 && score * 100 >= 80 * widget.maxScore;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -313,13 +375,36 @@ class _CaseScenarioGameState extends ConsumerState<CaseScenarioGame> {
                 fontSize: 40,
                 fontWeight: FontWeight.w800,
                 color: great ? AppColors.accentLight : AppColors.primaryLight)),
-        Text(ar ? 'من 100' : 'out of 100', style: Theme.of(context).textTheme.bodySmall),
+        Text(ar ? 'من ${widget.maxScore}' : 'out of ${widget.maxScore}',
+            style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 8),
         Text(
             ar
                 ? '$_correct من $_totalAnswered قرارات صحيحة'
                 : '$_correct of $_totalAnswered correct decisions',
             style: Theme.of(context).textTheme.bodyMedium),
+        for (final sc in widget.scenarios)
+          if (sc.finalSummary.of(ar).isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(sc.titleFor(ar), style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(sc.finalSummary.of(ar),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.45)),
+                  ],
+                ),
+              ),
+            ),
         const SizedBox(height: 20),
         OutlinedButton.icon(
           onPressed: _restart,

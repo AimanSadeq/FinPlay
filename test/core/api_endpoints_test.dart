@@ -18,7 +18,10 @@ void main() {
           ApiEndpoints.decisionOperating,
           ApiEndpoints.scenarios,
           ApiEndpoints.resultsRound,
+<<<<<<< Updated upstream
           ApiEndpoints.sheetsLeaderboard,
+=======
+>>>>>>> Stashed changes
           ApiEndpoints.selfPacedRegister,
           ApiEndpoints.selfPacedLogin,
           ApiEndpoints.selfPacedLogout,
@@ -32,8 +35,13 @@ void main() {
           ApiEndpoints.shocksPredefined,
           ApiEndpoints.shocksTrigger,
           ApiEndpoints.shocksActive,
+<<<<<<< Updated upstream
           ApiEndpoints.teamProgressionAdvance,
           ApiEndpoints.facilitatorTeamOverview,
+=======
+          ApiEndpoints.selfPacedDemoLogin,
+          ApiEndpoints.educationModulePlan,
+>>>>>>> Stashed changes
           ApiEndpoints.timerStatus,
           ApiEndpoints.reportExport,
         ];
@@ -52,7 +60,11 @@ void main() {
           ApiEndpoints.selfPacedLogin,
           ApiEndpoints.facilitatorAuth,
           ApiEndpoints.shocksActive,
+<<<<<<< Updated upstream
           ApiEndpoints.teamProgressionAdvance,
+=======
+          ApiEndpoints.facilitatorSimulationAccess,
+>>>>>>> Stashed changes
         ];
 
         for (final endpoint in endpoints) {
@@ -177,8 +189,13 @@ void main() {
           ApiEndpoints.selfPacedRegister,
           ApiEndpoints.facilitatorAuth,
           ApiEndpoints.roundState,
+<<<<<<< Updated upstream
           ApiEndpoints.sheetsLeaderboard,
           ApiEndpoints.facilitatorTeamOverview,
+=======
+          ApiEndpoints.resultsRound,
+          ApiEndpoints.educationModulePlan,
+>>>>>>> Stashed changes
         };
         // A Set removes duplicates, so length should stay the same
         expect(endpoints.length, 12);

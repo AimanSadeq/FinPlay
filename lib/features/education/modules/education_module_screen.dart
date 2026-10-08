@@ -10,7 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../core/services/education_progress_sync.dart';
+<<<<<<< Updated upstream
 import '../../../core/services/education_storage_migration.dart';
+=======
+import '../../../core/services/learn_resume.dart';
+import '../../../data/repositories/education_repository.dart';
+import '../../../providers/repository_providers.dart';
+>>>>>>> Stashed changes
 import '../../../providers/auth_provider.dart';
 import '../../../providers/module_plan_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
@@ -20,11 +26,15 @@ import '../widgets/games/ordering_game.dart';
 import '../widgets/games/quiz_widget.dart';
 import '../widgets/games/statement_builder_game.dart';
 import '../widgets/games/case_scenario_game.dart';
+import '../widgets/games/calculator_exercise.dart';
 import '../widgets/slide_narration_bar.dart';
 import '../../../data/education_catalog.dart';
+import '../../auth/providers/self_paced_plan_provider.dart';
 import 'education_module_data.dart';
-import 'case_scenario_data.dart';
 
+/// One in-app education module: Learn slides plus every Practice / Games / Sim
+/// activity the website module has (keyed by the website's activity ids, scored
+/// against the website's maxima, synced through [EducationProgressSync]).
 class EducationModuleScreen extends ConsumerStatefulWidget {
   final int moduleId;
   const EducationModuleScreen({super.key, required this.moduleId});
@@ -33,46 +43,22 @@ class EducationModuleScreen extends ConsumerStatefulWidget {
   ConsumerState<EducationModuleScreen> createState() => _EducationModuleScreenState();
 }
 
-class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> with SingleTickerProviderStateMixin {
+class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  // Per-activity scores matching website max values
-  int _gameScore = 0;   // sum across all games in the module
-  int _quizScore = 0;   // max 50
-  int _simScore = 0;    // max 100
   bool _lessonComplete = false;
-  bool _gameComplete = false;
-  bool _quizComplete = false;
-  bool _simComplete = false;
   int _currentSlide = 0;
 
-  // Multi-game support: a module can ship several games (memory + classification
-  // + ordering). The website renders all of them; we surface each as a sub-tab
-  // inside the Games tab and require all to be completed.
-  final Set<GameType> _gamesDone = {};
-  final Map<GameType, int> _gameScores = {};
-  GameType? _activeGame;
+  /// Best score + completion per website activity id.
+  final Map<String, ActivityRecord> _records = {};
 
-  int get _totalScore => _gameScore + _quizScore + _simScore;
+  /// Selected activity per tab (several activities share a tab).
+  final Map<ActivityTab, String> _active = {};
 
-  /// Games this module actually has data for, primary (declared) game first.
-  List<GameType> get _availableGames {
-    final m = _module;
-    final games = <GameType>[];
-    void add(GameType g, bool has) {
-      if (has && !games.contains(g)) games.add(g);
-    }
-    // Declared gameType first so the intended primary game leads.
-    add(m.gameType, switch (m.gameType) {
-      GameType.memoryMatch => m.memoryPairs != null,
-      GameType.classification => m.classificationItems != null,
-      GameType.ordering => m.orderingItems != null,
-    });
-    add(GameType.memoryMatch, m.memoryPairs != null);
-    add(GameType.classification, m.classificationItems != null);
-    add(GameType.ordering, m.orderingItems != null);
-    return games.isEmpty ? [m.gameType] : games;
-  }
+  /// Last score reported by an activity widget, recorded on completion.
+  final Map<String, int> _pendingScore = {};
 
+<<<<<<< Updated upstream
   int get _maxGameScore => _availableGames.length * 50;
 
   // Catalog ids of the modules with in-app content, in the hub order of the
@@ -82,8 +68,14 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
         for (final n in ref.read(modulePlanProvider).hubModuleNums)
           if (catalogEntry(n)?.isContent == true && catalogEntry(n)!.inApp) n,
       ];
+=======
+  late LearnResumeRecorder _resume;
+>>>>>>> Stashed changes
 
   EducationModuleContent get _module => educationModuleContents[widget.moduleId]!;
+
+  // Catalog ids of the modules with in-app content, in hub order.
+  static final List<int> _moduleOrder = inAppContentModules.map((m) => m.num).toList();
 
   int? get _nextModuleId {
     final order = _moduleOrder;
@@ -92,57 +84,67 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
     return order[idx + 1];
   }
 
+  int get _totalScore => _module.activities
+      .fold(0, (t, a) => t + (_records[a.id]?.score ?? 0).clamp(0, a.maxScore));
+
+  int get _maxScore =>
+      EducationProgressSync.moduleMaxScores[widget.moduleId] ?? _module.maxScore;
+
+  int _tabScore(ActivityTab tab) =>
+      _module.activitiesIn(tab).fold(0, (t, a) => t + (_records[a.id]?.score ?? 0));
+
+  bool _tabDone(ActivityTab tab) {
+    final acts = _module.activitiesIn(tab);
+    return acts.isNotEmpty && acts.every((a) => _records[a.id]?.completed ?? false);
+  }
+
+  bool get _allComplete =>
+      _lessonComplete && ActivityTab.values.every(_tabDone);
+
   @override
   void initState() {
     super.initState();
+    _resume = LearnResumeRecorder(LearnResumeStore.moduleKeyFor(widget.moduleId));
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_guardLockedTabs);
     _restoreProgress();
   }
 
-  // Progress scope: 'sp' for self-paced learners (per-user), else the gov team id
-  // (per-team). Keeps each team's / each self-paced learner's progress separate.
+  // Progress scope: 'sp' for self-paced learners (per-user), else the corporate
+  // team id (per-team).
   String _scope = 'sp';
-  String _prefKey(String activity) => 'edu_module_${_scope}_${widget.moduleId}_$activity';
+  int? _teamId; // corporate team joined on this device, null when none
 
   Future<void> _restoreProgress() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     final auth = ref.read(authProvider);
     final isSelfPaced = auth.user != null && !auth.isFacilitator;
-    _scope = isSelfPaced ? 'sp' : (prefs.getInt('edu_team_id') ?? 1).toString();
-    setState(() {
-      _lessonComplete = prefs.getBool(_prefKey('learn')) ?? false;
-      _gameComplete = prefs.getBool(_prefKey('game')) ?? false;
-      _quizComplete = prefs.getBool(_prefKey('quiz')) ?? false;
-      _simComplete = prefs.getBool(_prefKey('sim')) ?? false;
-      _gameScore = prefs.getInt(_prefKey('gameScore')) ?? 0;
-      _quizScore = prefs.getInt(_prefKey('quizScore')) ?? 0;
-      _simScore = prefs.getInt(_prefKey('simScore')) ?? 0;
-      // Restore per-game completion + scores.
-      _gamesDone
-        ..clear()
-        ..addAll((prefs.getStringList(_prefKey('gamesDone')) ?? [])
-            .map((n) => GameType.values.asNameMap()[n])
-            .whereType<GameType>());
-      _gameScores.clear();
-      for (final g in GameType.values) {
-        final s = prefs.getInt(_prefKey('gameScore_${g.name}'));
-        if (s != null) _gameScores[g] = s;
-      }
-      _activeGame ??= _availableGames.first;
-    });
-  }
-
-  Future<void> _saveProgress(String activity, bool value, {String? scoreKey, int? scoreValue}) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefKey(activity), value);
-    if (scoreKey != null && scoreValue != null) {
-      await prefs.setInt(_prefKey(scoreKey), scoreValue);
+    _scope = LearnResumeStore.scopeFor(isSelfPaced: isSelfPaced, prefs: prefs);
+    _teamId = prefs.getInt('edu_team_id');
+    final m = _module;
+    if (await ModuleProgressStore.migrateLegacy(prefs, _scope, m)) {
+      await ModuleProgressStore.recompute(prefs, _scope, m, writeHub: _scope == 'sp');
     }
-    await _syncHubProgress(prefs);
+    final saved = await LearnResumeStore.get(_scope, LearnResumeStore.moduleKeyFor(m.id));
+    if (!mounted) return;
+    setState(() {
+      _lessonComplete =
+          prefs.getBool(ModuleProgressStore.key(_scope, m.id, 'learn')) ?? false;
+      _records
+        ..clear()
+        ..addAll({
+          for (final a in m.activities)
+            a.id: ModuleProgressStore.read(prefs, _scope, m.id, a.id),
+        });
+      _currentSlide = LearnResumeStore.indexIn(m.sectionIds, saved?.sectionId);
+    });
+    // Stamp the position on open too, so merely visiting a module makes it the
+    // hub's "Continue where you left off" target (website parity).
+    _recordSlide();
   }
 
+<<<<<<< Updated upstream
   /// Mirror this module's completion into the keys the /education hub reads
   /// (`edu_progress_<id>` / `edu_passed_<id>`) so its grid % and badge count
   /// reflect real progress. Only for self-paced learners (the 'sp' scope).
@@ -156,57 +158,84 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
     await prefs.setInt('edu_progress_${widget.moduleId}', done * 25);
     await prefs.setBool('edu_passed_${widget.moduleId}', done == 4);
     _queueServerSync();
+=======
+  void _recordSlide() {
+    final ids = _module.sectionIds;
+    if (_currentSlide < 0 || _currentSlide >= ids.length) return;
+    _resume.record(ref, ids[_currentSlide]);
+>>>>>>> Stashed changes
   }
 
-  // Debounce so a burst of saves (finishing a game updates several keys) results
-  // in a single round-trip.
+  void _goToSlide(int i) {
+    setState(() => _currentSlide = i);
+    _recordSlide();
+  }
+
+  // Debounce so a burst of saves results in a single round-trip.
   Timer? _serverSyncDebounce;
 
   /// Push this module's progress to the database so it survives a reinstall and
-  /// shows up on the learner's other devices / the website. Fire-and-forget:
-  /// SharedPreferences stays the source of truth until the next successful sync.
-  void _queueServerSync() {
+  /// shows up on the learner's other devices / the website.
+  ///
+  /// Follows the hub's identity rule: no push for a facilitator previewing or a
+  /// corporate device that never joined a team (it would write into Team 1).
+  /// Returns the push for this device's identity, or null when it must not
+  /// push. Reads [ref], so callers take it before any await; the closure needs
+  /// no ref, so [dispose] can still flush it.
+  Future<bool> Function()? _syncPush() {
+    final auth = ref.read(authProvider);
+    final identity = EducationProgressSync.progressIdentity(
+      isFacilitator: auth.isFacilitator,
+      isSelfPaced: auth.user != null && !auth.isFacilitator,
+      email: auth.user?.email,
+      teamId: _teamId,
+    );
+    if (identity == null) return null;
+    final sync = ref.read(educationProgressSyncProvider);
+    return () => sync.sync(teamName: identity.teamName, scope: identity.scope);
+  }
+
+  void _scheduleSync(Future<bool> Function()? push) {
+    if (push == null) return;
+    if (!mounted) {
+      push(); // screen already gone: push now rather than drop it
+      return;
+    }
     _serverSyncDebounce?.cancel();
-    _serverSyncDebounce = Timer(const Duration(seconds: 2), () async {
-      if (!mounted) return;
-      final auth = ref.read(authProvider);
-      final isSelfPaced = auth.user != null && !auth.isFacilitator;
-      final teamName = isSelfPaced ? (auth.user?.email ?? '') : 'Team $_scope';
-      if (isSelfPaced && teamName.isEmpty) return;
-      await ref
-          .read(educationProgressSyncProvider)
-          .sync(teamName: teamName, scope: _scope);
-    });
+    _pendingSync = push;
+    _serverSyncDebounce = Timer(const Duration(seconds: 2), _flushServerSync);
+  }
+
+  Future<bool> Function()? _pendingSync;
+
+  void _flushServerSync() {
+    final p = _pendingSync;
+    _pendingSync = null;
+    p?.call();
   }
 
   @override
   void didUpdateWidget(covariant EducationModuleScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.moduleId != widget.moduleId) {
+      _resume.dispose();
+      _resume = LearnResumeRecorder(LearnResumeStore.moduleKeyFor(widget.moduleId));
       _currentSlide = 0;
+      _active.clear();
       _tabController.animateTo(0);
       _restoreProgress();
     }
   }
 
-  /// Prevent navigating to tabs 1-4 when Learn is not complete (like website).
-  /// Also triggers rebuild so tab highlight stays in sync.
+  /// Practice / Games / Sim / Results open once Learn is complete, or straight
+  /// away for a demo account (plan == 'demo', website isDemoAccount()). The lock
+  /// icons say so; the website dropped its "Complete the Learn section" banner.
+  bool get _activitiesOpen => _lessonComplete || ref.read(isDemoAccountProvider);
+
   void _guardLockedTabs() {
-    if (!_lessonComplete && _tabController.index > 0) {
+    if (!_activitiesOpen && _tabController.index > 0) {
       _tabController.animateTo(0);
-      if (mounted) {
-        final s = ref.read(stringsProvider);
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
-            content: Text(s.tr('Complete the Learn section first to unlock other activities',
-                'أكمل قسم التعلّم أولًا لفتح بقية الأنشطة')),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ));
-      }
     }
-    // Rebuild to keep selected-tab highlight in sync
     if (mounted) setState(() {});
   }
 
@@ -215,70 +244,75 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
     _tabController.removeListener(_guardLockedTabs);
     _tabController.dispose();
     _serverSyncDebounce?.cancel();
+    _flushServerSync(); // leaving right after finishing must still push
+    _resume.dispose();
     super.dispose();
   }
 
-  void _onGameScoreUpdate(GameType game, int score) {
-    setState(() {
-      _gameScores[game] = score;
-      _gameScore = _gameScores.values.fold(0, (a, b) => a + b);
-    });
-    _persistGames();
-  }
-
-  void _onGameComplete(GameType game) {
-    HapticFeedback.heavyImpact();
-    setState(() {
-      _gamesDone.add(game);
-      // Module game activity is done only when every available game is done.
-      _gameComplete = _availableGames.every(_gamesDone.contains);
-      // Auto-advance to the next not-yet-done game for convenience.
-      final next = _availableGames.where((g) => !_gamesDone.contains(g));
-      if (next.isNotEmpty) _activeGame = next.first;
-    });
-    _persistGames();
-  }
-
-  Future<void> _persistGames() async {
+  Future<void> _markLearnComplete() async {
+    HapticFeedback.mediumImpact();
+    final push = _syncPush();
+    setState(() => _lessonComplete = true);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_prefKey('game'), _gameComplete);
-    await prefs.setInt(_prefKey('gameScore'), _gameScore);
-    await prefs.setStringList(
-        _prefKey('gamesDone'), _gamesDone.map((g) => g.name).toList());
-    for (final e in _gameScores.entries) {
-      await prefs.setInt(_prefKey('gameScore_${e.key.name}'), e.value);
-    }
-    await _syncHubProgress(prefs);
+    await prefs.setBool(ModuleProgressStore.key(_scope, widget.moduleId, 'learn'), true);
+    await ModuleProgressStore.recompute(prefs, _scope, _module, writeHub: _scope == 'sp');
+    _scheduleSync(push);
   }
 
-  void _onQuizComplete() {
+  Future<void> _onActivityComplete(ModuleActivity a) async {
     HapticFeedback.heavyImpact();
+<<<<<<< Updated upstream
     setState(() => _quizComplete = true);
     // The quiz score reaches the server through EducationProgressSync
     // (POST /education/progress/{teamName}/sync), queued by _saveProgress.
     _saveProgress('quiz', true, scoreKey: 'quizScore', scoreValue: _quizScore);
+=======
+    final push = _syncPush();
+    final repo = ref.read(educationRepositoryProvider);
+    final score = (_pendingScore[a.id] ?? 0).clamp(0, a.maxScore);
+    final prev = _records[a.id] ?? const ActivityRecord();
+    setState(() {
+      _records[a.id] = ActivityRecord(
+          completed: true, score: score > prev.score ? score : prev.score);
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await ModuleProgressStore.record(prefs, _scope, widget.moduleId, a, score);
+    await ModuleProgressStore.recompute(prefs, _scope, _module, writeHub: _scope == 'sp');
+    _scheduleSync(push);
+    if (a.kind == ActivityKind.quiz) _submitQuiz(repo, a, score);
+  }
+
+  Future<void> _submitQuiz(EducationRepository repo, ModuleActivity a, int score) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final teamId = prefs.getInt('edu_team_id') ?? 1;
+      await repo.submitQuiz(
+        teamId: teamId,
+        moduleId: widget.moduleId,
+        answers: const [],
+        score: score,
+        total: a.questions.length,
+      );
+    } catch (_) {
+      // Non-critical.
+    }
+>>>>>>> Stashed changes
   }
 
   // Website tab colors
-  static const _activeBlue = Color(0xFF0B5ED7);      // blue-700
+  static const _activeBlue = Color(0xFF0B5ED7); // blue-700
   static const _activeBorderBlue = Color(0xFF0D6EFD); // blue-600
-  static const _inactiveText = Color(0xFF131B2B);     // dark gray
+  static const _inactiveText = Color(0xFF131B2B); // dark gray
 
-  /// Builds a single tab matching website mobile layout (icon above text, 5 equal cols).
-  Widget _buildTab(int index, IconData icon, String label, {
-    required bool isLocked,
-    required bool isComplete,
-  }) {
+  Widget _buildTab(int index, IconData icon, String label,
+      {required bool isLocked, required bool isComplete}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSelected = _tabController.index == index;
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          if (isLocked) {
-            _guardLockedTabs();
-          } else {
-            setState(() => _tabController.animateTo(index));
-          }
+          if (isLocked) return;
+          setState(() => _tabController.animateTo(index));
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -289,7 +323,7 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: isSelected
-                ? Border(bottom: BorderSide(color: _activeBorderBlue, width: 2))
+                ? const Border(bottom: BorderSide(color: _activeBorderBlue, width: 2))
                 : null,
             boxShadow: isSelected
                 ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2)]
@@ -335,25 +369,37 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
+    ref.watch(isDemoAccountProvider); // rebuild if /me reports a demo plan
+    final activitiesLocked = !_activitiesOpen;
+    final position = educationHubPosition(widget.moduleId) ?? widget.moduleId;
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(gradient: AppColors.backgroundGradient(context)),
         child: SafeArea(
           child: Column(
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => context.pop()),
+                    IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded),
+                        onPressed: () => context.pop()),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+<<<<<<< Updated upstream
                           // Named by its title alone, never by a number.
                           Text(_module.title, style: Theme.of(context).textTheme.titleMedium),
+=======
+                          Text(s.tr('Module $position', 'الوحدة $position'),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: const Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
+                          Text(_module.titleFor(s.ar),
+                              style: Theme.of(context).textTheme.titleMedium),
+>>>>>>> Stashed changes
                         ],
                       ),
                     ),
@@ -368,91 +414,57 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                         children: [
                           const Icon(Icons.star_rounded, size: 16, color: AppColors.accentLight),
                           const SizedBox(width: 4),
-                          Text('$_totalScore', style: GoogleFonts.jetBrainsMono(
-                            color: AppColors.accentLight, fontWeight: FontWeight.w600, fontSize: 13)),
+                          Text('$_totalScore',
+                              style: GoogleFonts.jetBrainsMono(
+                                  color: AppColors.accentLight,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13)),
                         ],
                       ),
                     ),
                   ],
                 ),
               ).animate().fadeIn(),
-
               const SizedBox(height: 8),
-
-              // Tabs — 5 equal-width columns, icon above text (matches website mobile)
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: Theme.of(context).brightness == Brightness.dark
                       ? AppColors.darkSurface
-                      : const Color(0xFFE5E5E5), // muted gray like website
+                      : const Color(0xFFE5E5E5),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
                     _buildTab(0, Icons.menu_book_rounded, s.tr('Learn', 'تعلّم'),
-                      isLocked: false,
-                      isComplete: _lessonComplete),
+                        isLocked: false, isComplete: _lessonComplete),
                     _buildTab(1, Icons.help_outline_rounded, s.tr('Practice', 'تدريب'),
-                      isLocked: !_lessonComplete,
-                      isComplete: _quizComplete),
+                        isLocked: activitiesLocked, isComplete: _tabDone(ActivityTab.practice)),
                     _buildTab(2, Icons.gamepad_rounded, s.tr('Games', 'ألعاب'),
-                      isLocked: !_lessonComplete,
-                      isComplete: _gameComplete),
+                        isLocked: activitiesLocked, isComplete: _tabDone(ActivityTab.games)),
                     _buildTab(3, Icons.widgets_rounded, s.tr('Sim', 'محاكاة'),
-                      isLocked: !_lessonComplete,
-                      isComplete: _simComplete),
+                        isLocked: activitiesLocked, isComplete: _tabDone(ActivityTab.sim)),
                     _buildTab(4, Icons.emoji_events_rounded, s.tr('Results', 'النتائج'),
-                      isLocked: !_lessonComplete,
-                      isComplete: _lessonComplete && _gameComplete && _quizComplete && _simComplete),
+                        isLocked: activitiesLocked, isComplete: _allComplete),
                   ],
                 ),
               ),
-
-              // Warning banner when Learn is not complete
-              if (!_lessonComplete)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
-                  ),
-                  child: Row(
+              const SizedBox(height: 8),
+              Expanded(
+                child: Directionality(
+                  textDirection: s.ar ? TextDirection.rtl : TextDirection.ltr,
+                  child: TabBarView(
+                    controller: _tabController,
+                    physics: const NeverScrollableScrollPhysics(),
                     children: [
-                      const Icon(Icons.lock_rounded, size: 16, color: Color(0xFFD97706)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          s.tr('Complete the Learn section to unlock other activities',
-                              'أكمل قسم التعلّم لفتح بقية الأنشطة'),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: const Color(0xFF92400E),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
+                      _buildLearnTab(),
+                      _buildActivityTab(ActivityTab.practice),
+                      _buildActivityTab(ActivityTab.games),
+                      _buildActivityTab(ActivityTab.sim),
+                      _buildResultsTab(),
                     ],
                   ),
-                ),
-
-              const SizedBox(height: 8),
-
-              // Tab content — swiping disabled so users must tap tabs
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildLearnTab(),
-                    _buildQuizTab(),
-                    _buildPlayTab(),
-                    _buildSimulationTab(),
-                    _buildResultsTab(),
-                  ],
                 ),
               ),
             ],
@@ -462,9 +474,8 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
     );
   }
 
-  /// Localized value for a slide field: Arabic (`<field>Ar`) when the UI is Arabic
-  /// and a translation exists, else the English value. Falls back gracefully so a
-  /// partially-translated module still renders (website parity).
+  /// Localized value for a slide field: Arabic (`<field>Ar`) when the UI is
+  /// Arabic and a translation exists, else the English value.
   String _slideText(Map<String, String> slide, String field) {
     final ar = ref.read(stringsProvider).ar;
     if (ar) {
@@ -474,7 +485,6 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
     return slide[field] ?? '';
   }
 
-  /// Show the module's Key Terms glossary in a bottom sheet (website's Key Terms panel).
   void _showKeyTerms() {
     final s = ref.read(stringsProvider);
     final terms = _module.keyTerms;
@@ -496,7 +506,8 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
             children: [
               const SizedBox(height: 10),
               Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
                   color: AppColors.textTertiary(ctx).withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
@@ -521,13 +532,22 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                   separatorBuilder: (_, i) => const Divider(height: 20),
                   itemBuilder: (_, i) {
                     final t = terms[i];
-                    final term = s.ar && (t['termAr']?.isNotEmpty ?? false) ? t['termAr']! : (t['term'] ?? '');
-                    final def = s.ar && (t['defAr']?.isNotEmpty ?? false) ? t['defAr']! : (t['def'] ?? '');
+                    final term = s.ar && (t['termAr']?.isNotEmpty ?? false)
+                        ? t['termAr']!
+                        : (t['term'] ?? '');
+                    final other = s.ar ? (t['term'] ?? '') : (t['termAr'] ?? '');
+                    final def = s.ar && (t['defAr']?.isNotEmpty ?? false)
+                        ? t['defAr']!
+                        : (t['def'] ?? '');
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(term,
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                        if (other.isNotEmpty && other != term)
+                          Text(other,
+                              style: TextStyle(
+                                  fontSize: 12, color: AppColors.textTertiary(ctx))),
                         if (def.isNotEmpty) ...[
                           const SizedBox(height: 4),
                           Text(def,
@@ -546,15 +566,60 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
     );
   }
 
+  Widget _callout(IconData icon, Color color, String text, {String? title}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (title != null && title.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(title,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
+                  ),
+                Text(text, style: TextStyle(fontSize: 13, color: color, height: 1.4)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLearnTab() {
     final s = ref.watch(stringsProvider);
     final slides = _module.slides;
+    if (slides.isEmpty) return const SizedBox.shrink();
+    final idx = _currentSlide.clamp(0, slides.length - 1);
+    final slide = slides[idx];
     final hasKeyTerms = _module.keyTerms?.isNotEmpty ?? false;
+    final keyPoint = _slideText(slide, 'keyPoint');
+    final highlight = _slideText(slide, 'highlight');
+    final examples = _slideText(slide, 'examples');
+    final highlightType = slide['highlightType'] ?? 'info';
+    final (hlIcon, hlColor) = switch (highlightType) {
+      'warning' => (Icons.warning_amber_rounded, AppColors.dangerLight),
+      'tip' => (Icons.tips_and_updates_rounded, AppColors.secondaryLight),
+      'formula' => (Icons.functions_rounded, AppColors.primaryLight),
+      _ => (Icons.info_outline_rounded, AppColors.info),
+    };
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Slide viewer
           GlassCard(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -568,8 +633,9 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                         color: AppColors.purple.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: Text('${_currentSlide + 1}/${slides.length}',
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
+                      child: Text('${idx + 1}/${slides.length}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
                     ),
                     if (hasKeyTerms) ...[
                       const SizedBox(width: 8),
@@ -590,94 +656,68 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                               const SizedBox(width: 4),
                               Text(s.tr('Key Terms', 'المصطلحات'),
                                   style: const TextStyle(
-                                      fontSize: 11, color: Color(0xFFA78BFA), fontWeight: FontWeight.w600)),
+                                      fontSize: 11,
+                                      color: Color(0xFFA78BFA),
+                                      fontWeight: FontWeight.w600)),
                             ],
                           ),
                         ),
                       ),
                     ],
                     const Spacer(),
-                    if (_currentSlide == slides.length - 1 && !_lessonComplete)
+                    if (idx == slides.length - 1 && !_lessonComplete)
                       TextButton(
-                        onPressed: () {
-                          HapticFeedback.mediumImpact();
-                          setState(() {
-                            _lessonComplete = true;
-                          });
-                          _saveProgress('learn', true);
-                        },
+                        onPressed: _markLearnComplete,
                         child: Text(s.tr('Mark Complete', 'وضع علامة مكتمل')),
                       ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                // Slide text renders in the UI language; Arabic flips to RTL.
-                Align(
-                  alignment: s.ar ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Text(
-                    _slideText(slides[_currentSlide], 'title'),
-                    textAlign: s.ar ? TextAlign.right : TextAlign.left,
-                    textDirection: s.ar ? TextDirection.rtl : TextDirection.ltr,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                ),
+                Text(_slideText(slide, 'title'), style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 12),
-                Text(
-                  _slideText(slides[_currentSlide], 'content'),
-                  textAlign: s.ar ? TextAlign.right : TextAlign.left,
-                  textDirection: s.ar ? TextDirection.rtl : TextDirection.ltr,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6),
-                ),
-                if (_slideText(slides[_currentSlide], 'keyPoint').isNotEmpty) ...[
+                Text(_slideText(slide, 'content'),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.6)),
+                if (examples.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: AppColors.accentLight.withValues(alpha: 0.08),
-                      border: Border.all(color: AppColors.accentLight.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.lightbulb_rounded, color: AppColors.accentLight, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(
-                          _slideText(slides[_currentSlide], 'keyPoint'),
-                          textAlign: s.ar ? TextAlign.right : TextAlign.left,
-                          textDirection: s.ar ? TextDirection.rtl : TextDirection.ltr,
-                          style: const TextStyle(fontSize: 13, color: AppColors.accentLight, height: 1.4))),
-                      ],
-                    ),
-                  ),
+                  _callout(Icons.list_alt_rounded, AppColors.primaryLight,
+                      examples.split('\n').map((e) => '• $e').join('\n'),
+                      title: _slideText(slide, 'examplesTitle')),
+                ],
+                if (keyPoint.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _callout(Icons.lightbulb_rounded, AppColors.accentLight,
+                      keyPoint.split(' • ').map((e) => '• $e').join('\n')),
+                ],
+                if (highlight.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _callout(hlIcon, hlColor, highlight),
                 ],
                 const SizedBox(height: 16),
-                // AI audio narration for this slide (website parity). Keyed per
-                // slide so navigating away disposes the player (auto-stop).
                 SlideNarrationBar(
-                  key: ValueKey('narration-${_module.id}-$_currentSlide'),
+                  key: ValueKey('narration-${_module.id}-$idx-${s.ar}'),
                   moduleId: _module.id,
-                  sectionId: '$_currentSlide',
+                  sectionId: slide['id'] ?? '$idx',
+                  language: s.ar ? 'ar' : 'en',
                   text: [
-                    _slideText(slides[_currentSlide], 'title'),
-                    _slideText(slides[_currentSlide], 'content'),
-                    _slideText(slides[_currentSlide], 'keyPoint'),
+                    _slideText(slide, 'title'),
+                    _slideText(slide, 'content'),
+                    keyPoint,
                   ].where((t) => t.isNotEmpty).join('\n\n'),
                 ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    if (_currentSlide > 0)
+                    if (idx > 0)
                       OutlinedButton.icon(
-                        onPressed: () => setState(() => _currentSlide--),
-                        icon: const Icon(Icons.arrow_back, size: 16),
+                        onPressed: () => _goToSlide(idx - 1),
+                        icon: Icon(s.ar ? Icons.arrow_forward : Icons.arrow_back, size: 16),
                         label: Text(s.tr('Back', 'رجوع')),
                       ),
                     const Spacer(),
-                    if (_currentSlide < slides.length - 1)
+                    if (idx < slides.length - 1)
                       ElevatedButton.icon(
-                        onPressed: () => setState(() => _currentSlide++),
-                        icon: const Icon(Icons.arrow_forward, size: 16),
+                        onPressed: () => _goToSlide(idx + 1),
+                        icon: Icon(s.ar ? Icons.arrow_back : Icons.arrow_forward, size: 16),
                         label: Text(s.tr('Next', 'التالي')),
                       ),
                   ],
@@ -685,26 +725,30 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
               ],
             ),
           ).animate().fadeIn(),
-
           const SizedBox(height: 12),
-
-          // Slide dots
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(slides.length, (i) => Container(
-              width: i == _currentSlide ? 20 : 8, height: 8,
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(4),
-                color: i == _currentSlide
-                    ? AppColors.purple
-                    : i <= _currentSlide
-                        ? AppColors.purple.withValues(alpha: 0.4)
-                        : AppColors.cardColor(context),
+          Wrap(
+            alignment: WrapAlignment.center,
+            runSpacing: 6,
+            children: List.generate(
+              slides.length,
+              (i) => GestureDetector(
+                onTap: () => _goToSlide(i),
+                child: Container(
+                  width: i == idx ? 20 : 8,
+                  height: 8,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    color: i == idx
+                        ? AppColors.purple
+                        : i <= idx
+                            ? AppColors.purple.withValues(alpha: 0.4)
+                            : AppColors.cardColor(context),
+                  ),
+                ),
               ),
-            )),
+            ),
           ),
-
           if (_lessonComplete) ...[
             const SizedBox(height: 16),
             Container(
@@ -721,13 +765,19 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                     children: [
                       const Icon(Icons.check_circle, color: AppColors.secondaryLight, size: 22),
                       const SizedBox(width: 8),
-                      Text(s.tr('Lesson Complete!', 'اكتمل الدرس!'), style: const TextStyle(
-                        color: AppColors.secondaryLight, fontWeight: FontWeight.w700, fontSize: 15)),
+                      Text(s.tr('Lesson Complete!', 'اكتمل الدرس!'),
+                          style: const TextStyle(
+                              color: AppColors.secondaryLight,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15)),
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(s.tr('You can now access all other activities.', 'يمكنك الآن الوصول إلى جميع الأنشطة الأخرى.'),
-                    style: TextStyle(fontSize: 12, color: AppColors.secondaryLight.withValues(alpha: 0.8))),
+                  Text(
+                      s.tr('You can now access all other activities.',
+                          'يمكنك الآن الوصول إلى جميع الأنشطة الأخرى.'),
+                      style: TextStyle(
+                          fontSize: 12, color: AppColors.secondaryLight.withValues(alpha: 0.8))),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
@@ -752,37 +802,28 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
     );
   }
 
-  static const Map<GameType, (IconData, String)> _gameMeta = {
-    GameType.memoryMatch: (Icons.style_rounded, 'Term Match'),
-    GameType.classification: (Icons.category_rounded, 'Sort & Classify'),
-    GameType.ordering: (Icons.format_list_numbered_rounded, 'Sequence'),
+  static const Map<ActivityKind, IconData> _kindIcon = {
+    ActivityKind.quiz: Icons.help_outline_rounded,
+    ActivityKind.calculator: Icons.calculate_rounded,
+    ActivityKind.memoryMatch: Icons.style_rounded,
+    ActivityKind.classification: Icons.category_rounded,
+    ActivityKind.ordering: Icons.format_list_numbered_rounded,
+    ActivityKind.caseScenario: Icons.account_tree_rounded,
+    ActivityKind.statementBuilder: Icons.widgets_rounded,
   };
 
-  Widget _buildPlayTab() {
+  Widget _buildActivityTab(ActivityTab tab) {
     final s = ref.watch(stringsProvider);
-    final games = _availableGames;
-    _activeGame ??= games.first;
-    final active = games.contains(_activeGame) ? _activeGame! : games.first;
-
-    if (_gameComplete) {
-      return Center(
-        child: GlassCard(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.emoji_events_rounded, color: AppColors.accentLight, size: 48),
-              const SizedBox(height: 16),
-              Text(games.length > 1 ? s.tr('All Games Complete!', 'اكتملت جميع الألعاب!') : s.tr('Game Complete!', 'اكتملت اللعبة!'),
-                style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(s.tr('Score: $_totalScore', 'النتيجة: $_totalScore'), style: GoogleFonts.jetBrainsMono(
-                fontSize: 24, color: AppColors.accentLight, fontWeight: FontWeight.w700)),
-            ],
-          ),
-        ).animate().scale(begin: const Offset(0.8, 0.8)).fadeIn(),
-      );
+    final acts = _module.activitiesIn(tab);
+    if (acts.isEmpty) {
+      return Center(child: Text(s.tr('No activities here.', 'لا توجد أنشطة هنا.')));
     }
+    final activeId = _active[tab];
+    final active = acts.firstWhere((a) => a.id == activeId,
+        orElse: () => acts.firstWhere((a) => !(_records[a.id]?.completed ?? false),
+            orElse: () => acts.first));
+    final doneCount = acts.where((a) => _records[a.id]?.completed ?? false).length;
+    final rec = _records[active.id];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -791,46 +832,37 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Icon(Icons.gamepad_rounded, color: Color(0xFFA78BFA), size: 22),
-                const SizedBox(width: 8),
-                Expanded(child: Text(_module.gameTitle, style: Theme.of(context).textTheme.titleLarge)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(_module.gameDescription, style: Theme.of(context).textTheme.bodySmall),
-            const SizedBox(height: 16),
-
-            // Sub-tab chip selector when the module has more than one game.
-            if (games.length > 1) ...[
+            if (acts.length > 1) ...[
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: games.map((g) {
-                  final meta = _gameMeta[g]!;
-                  final done = _gamesDone.contains(g);
-                  final selected = g == active;
+                children: acts.map((a) {
+                  final done = _records[a.id]?.completed ?? false;
+                  final selected = a.id == active.id;
                   return ChoiceChip(
                     avatar: Icon(
-                      done ? Icons.check_circle_rounded : meta.$1,
+                      done ? Icons.check_circle_rounded : _kindIcon[a.kind],
                       size: 16,
                       color: done
                           ? AppColors.secondaryLight
-                          : selected ? Colors.white : AppColors.textSecondary(context),
+                          : selected
+                              ? Colors.white
+                              : AppColors.textSecondary(context),
                     ),
-                    label: Text(meta.$2),
+                    label: Text(a.title.of(s.ar)),
                     selected: selected,
-                    onSelected: (_) => setState(() => _activeGame = g),
+                    onSelected: (_) => setState(() => _active[tab] = a.id),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 8),
-              Text(s.tr('${_gamesDone.length}/${games.length} games complete',
-                  'اكتملت ${_gamesDone.length}/${games.length} ألعاب'),
-                style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                  s.tr('$doneCount/${acts.length} complete',
+                      'اكتمل $doneCount/${acts.length}'),
+                  style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 16),
             ],
+<<<<<<< Updated upstream
 
             // Keep game state isolated per type with a ValueKey.
             KeyedSubtree(
@@ -903,96 +935,97 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+=======
+>>>>>>> Stashed changes
             Row(
               children: [
-                const Icon(Icons.help_outline_rounded, color: Color(0xFFA78BFA), size: 22),
-                const SizedBox(width: 8),
-                Text(s.tr('Knowledge Check', 'اختبار المعرفة'), style: Theme.of(context).textTheme.titleLarge),
-              ],
-            ),
-            const SizedBox(height: 16),
-            QuizWidget(
-              questions: _module.quizQuestions,
-              onComplete: _onQuizComplete,
-              onScoreUpdate: (score) {
-                setState(() => _quizScore = score);
-                _saveProgress('quiz', _quizComplete, scoreKey: 'quizScore', scoreValue: score);
-              },
-            ),
-          ],
-        ),
-      ).animate().fadeIn(),
-    );
-  }
-
-  void _onSimComplete() {
-    HapticFeedback.heavyImpact();
-    setState(() => _simComplete = true);
-    _saveProgress('sim', true, scoreKey: 'simScore', scoreValue: _simScore);
-  }
-
-  void _onSimScore(int score) {
-    setState(() => _simScore = score);
-    _saveProgress('sim', _simComplete, scoreKey: 'simScore', scoreValue: score);
-  }
-
-  Widget _buildSimulationTab() {
-    final s = ref.watch(stringsProvider);
-    // Modules that ship branching case scenarios render the Case Scenario
-    // Simulator here; the rest keep the Statement Builder activity.
-    final scenarios = caseScenariosByModule[widget.moduleId];
-    final useCases = scenarios != null && scenarios.isNotEmpty;
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: GlassCard(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(useCases ? Icons.account_tree_rounded : Icons.widgets_rounded,
-                    color: const Color(0xFFA78BFA), size: 22),
+                Icon(_kindIcon[active.kind], color: const Color(0xFFA78BFA), size: 22),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(useCases ? s.tr('Case Scenario Simulator', 'محاكي دراسات الحالة') : s.tr('Financial Statement Builder', 'منشئ القوائم المالية'),
-                      style: Theme.of(context).textTheme.titleLarge),
-                ),
+                    child: Text(active.title.of(s.ar),
+                        style: Theme.of(context).textTheme.titleLarge)),
               ],
             ),
             const SizedBox(height: 4),
+            Text(active.description.of(s.ar), style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 6),
             Text(
-              useCases
-                  ? s.tr('Work through a real-world case: analyse, decide, and recommend. Each choice is scored.',
-                      'اعمل على حالة واقعية: حلّل وقرّر وأوصِ. تُحتسب نقاط لكل اختيار.')
-                  : s.tr('Drag or tap each item to classify it into the correct financial statement.',
-                      'اسحب أو انقر كل عنصر لتصنيفه ضمن القائمة المالية الصحيحة.'),
-              style: Theme.of(context).textTheme.bodySmall,
+              rec?.completed ?? false
+                  ? s.tr('Best score: ${rec!.score} / ${active.maxScore}',
+                      'أفضل نتيجة: ${rec.score} / ${active.maxScore}')
+                  : s.tr('Up to ${active.maxScore} points', 'حتى ${active.maxScore} نقطة'),
+              style: const TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.accentLight),
             ),
             const SizedBox(height: 16),
-            if (useCases)
-              CaseScenarioGame(
-                scenarios: scenarios,
-                onComplete: _onSimComplete,
-                onScoreUpdate: _onSimScore,
-              )
-            else
-              StatementBuilderGame(
-                categories: _module.statementBuilderCategories,
-                items: _module.statementBuilderItems,
-                onComplete: _onSimComplete,
-                onScoreUpdate: _onSimScore,
-              ),
+            KeyedSubtree(
+              key: ValueKey('activity-${widget.moduleId}-${active.id}'),
+              child: _buildActivity(active),
+            ),
           ],
         ),
       ).animate().fadeIn(),
     );
+  }
+
+  Widget _buildActivity(ModuleActivity a) {
+    void onScore(int v) => _pendingScore[a.id] = v;
+    void onDone() => _onActivityComplete(a);
+    switch (a.kind) {
+      case ActivityKind.quiz:
+        return QuizWidget(
+            questions: a.questions,
+            maxScore: a.maxScore,
+            onComplete: onDone,
+            onScoreUpdate: onScore);
+      case ActivityKind.calculator:
+        return CalculatorExercise(
+            instruction: a.instruction,
+            problems: a.problems,
+            maxScore: a.maxScore,
+            onComplete: onDone,
+            onScoreUpdate: onScore);
+      case ActivityKind.memoryMatch:
+        return MemoryMatchGame(
+            pairs: a.pairs, maxScore: a.maxScore, onComplete: onDone, onScoreUpdate: onScore);
+      case ActivityKind.classification:
+        return ClassificationGame(
+            categories: a.categories,
+            items: a.items,
+            maxScore: a.maxScore,
+            onComplete: onDone,
+            onScoreUpdate: onScore);
+      case ActivityKind.ordering:
+        return OrderingGame(
+            instruction: a.instruction,
+            steps: a.steps,
+            maxScore: a.maxScore,
+            onComplete: onDone,
+            onScoreUpdate: onScore);
+      case ActivityKind.caseScenario:
+        return CaseScenarioGame(
+            scenarios: a.scenarios,
+            maxScore: a.maxScore,
+            onComplete: onDone,
+            onScoreUpdate: onScore);
+      case ActivityKind.statementBuilder:
+        return StatementBuilderGame(
+            categories: a.categories,
+            items: a.items,
+            maxScore: a.maxScore,
+            onComplete: onDone,
+            onScoreUpdate: onScore);
+    }
   }
 
   Widget _buildResultsTab() {
     final s = ref.watch(stringsProvider);
-    final allComplete = _lessonComplete && _gameComplete && _quizComplete && _simComplete;
+    final allComplete = _allComplete;
+    final pct = ModuleProgressStore.percentOf(_totalScore, _maxScore);
+    final passed = pct >= EducationProgressSync.passThreshold * 100;
+
+    Widget tabRow(ActivityTab tab, IconData icon, String label) => _buildActivityRow(
+        icon, label, _tabDone(tab), '${_tabScore(tab)} / ${_module.maxScoreIn(tab)}');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1009,32 +1042,38 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  allComplete ? s.tr('Module Complete!', 'اكتملت الوحدة!') : s.tr('Module Progress', 'تقدّم الوحدة'),
+                  allComplete
+                      ? s.tr('Module Complete!', 'اكتملت الوحدة!')
+                      : s.tr('Module Progress', 'تقدّم الوحدة'),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  s.tr('Total Score: $_totalScore', 'النتيجة الإجمالية: $_totalScore'),
+                  '$_totalScore / $_maxScore',
+                  textDirection: TextDirection.ltr,
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 28,
                     color: allComplete ? AppColors.accentLight : AppColors.textSecondary(context),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  passed
+                      ? s.tr('$pct%: passed (70% needed)', '$pct%: ناجح (المطلوب 70%)')
+                      : s.tr('$pct% (70% needed to pass)', '$pct% (المطلوب 70% للنجاح)'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const SizedBox(height: 24),
-
-                // Activity progress
-                _buildActivityRow(Icons.menu_book_rounded, s.tr('Learn', 'تعلّم'), _lessonComplete, _lessonComplete ? s.tr('Done', 'مكتمل') : '—'),
+                _buildActivityRow(Icons.menu_book_rounded, s.tr('Learn', 'تعلّم'), _lessonComplete,
+                    _lessonComplete ? s.tr('Done', 'مكتمل') : '-'),
                 const SizedBox(height: 8),
-                _buildActivityRow(Icons.help_outline_rounded, s.tr('Practice', 'تدريب'), _quizComplete, '$_quizScore / 50'),
+                tabRow(ActivityTab.practice, Icons.help_outline_rounded, s.tr('Practice', 'تدريب')),
                 const SizedBox(height: 8),
-                _buildActivityRow(Icons.gamepad_rounded, s.tr('Games', 'ألعاب'), _gameComplete, '$_gameScore / $_maxGameScore'),
+                tabRow(ActivityTab.games, Icons.gamepad_rounded, s.tr('Games', 'ألعاب')),
                 const SizedBox(height: 8),
-                _buildActivityRow(Icons.widgets_rounded, s.tr('Sim', 'محاكاة'), _simComplete, '$_simScore / 100'),
-
+                tabRow(ActivityTab.sim, Icons.widgets_rounded, s.tr('Sim', 'محاكاة')),
                 const SizedBox(height: 24),
-
-                // Next module button
                 if (allComplete && _nextModuleId != null)
                   SizedBox(
                     width: double.infinity,
@@ -1043,11 +1082,11 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
                         context.pop();
                         context.push(moduleRouteFor(_nextModuleId!, arabic: s.ar));
                       },
-                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                      icon: Icon(s.ar ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
+                          size: 18),
                       label: Text(s.tr('Next Module', 'الوحدة التالية')),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
+                          padding: const EdgeInsets.symmetric(vertical: 14)),
                     ),
                   )
                 else if (allComplete)
@@ -1078,9 +1117,7 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        color: complete
-            ? AppColors.secondary.withValues(alpha: 0.08)
-            : AppColors.cardColor(context),
+        color: complete ? AppColors.secondary.withValues(alpha: 0.08) : AppColors.cardColor(context),
         border: Border.all(
           color: complete
               ? AppColors.secondaryLight.withValues(alpha: 0.3)
@@ -1089,14 +1126,19 @@ class _EducationModuleScreenState extends ConsumerState<EducationModuleScreen> w
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: complete ? AppColors.secondaryLight : AppColors.textTertiary(context)),
+          Icon(icon,
+              size: 18, color: complete ? AppColors.secondaryLight : AppColors.textTertiary(context)),
           const SizedBox(width: 10),
-          Expanded(child: Text(label, style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: complete ? AppColors.secondaryLight : AppColors.textSecondary(context),
-          ))),
-          Text(detail, style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+          Expanded(
+              child: Text(label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: complete ? AppColors.secondaryLight : AppColors.textSecondary(context),
+                  ))),
+          Text(detail,
+              textDirection: TextDirection.ltr,
+              style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
           const SizedBox(width: 8),
           Icon(
             complete ? Icons.check_circle_rounded : Icons.radio_button_unchecked,

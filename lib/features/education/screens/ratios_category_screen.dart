@@ -45,6 +45,10 @@ class _RatioCategory {
       this.questionAr, this.icon, this.color, this.ratios);
 }
 
+// The 18 key ratios the simulation's engine reports (template rows 113-130), grouped by the
+// category the template assigns them — the same set the website's /ratios/:category pages
+// show. Formulas are the template's own (e.g. operating margin and interest coverage use
+// Operating Profit (EBITDA); turnovers use period-end balances).
 const _categories = <_RatioCategory>[
   _RatioCategory(
     'liquidity',
@@ -56,23 +60,16 @@ const _categories = <_RatioCategory>[
     AppColors.primaryLight,
     [
       _RatioInfo('Current Ratio', 'النسبة المتداولة',
-          'Current Assets / Current Liabilities',
+          'Total Current Assets / Total Current Liabilities',
           'Healthy ≈ 1.5–3.0; below 1.0 signals stress',
           'صحية ≈ 1.5–3.0؛ أقل من 1.0 يشير إلى ضغط'),
       _RatioInfo('Quick Ratio', 'النسبة السريعة',
-          '(Current Assets − Inventory) / Current Liabilities',
+          '(Total Current Assets − Inventory) / Total Current Liabilities',
           '≥ 1.0 is comfortable', '≥ 1.0 مريحة'),
       _RatioInfo('Cash Ratio', 'النسبة النقدية',
-          'Cash & Equivalents / Current Liabilities',
+          'Cash and Cash Equivalents / Total Current Liabilities',
           'Most conservative; 0.5+ is strong',
           'الأكثر تحفظًا؛ 0.5+ قوية'),
-      _RatioInfo('Working Capital', 'رأس المال العامل',
-          'Current Assets − Current Liabilities',
-          'Positive = short-term cushion', 'موجب = وسادة قصيرة الأجل'),
-      _RatioInfo('Operating Cash Flow Ratio', 'نسبة التدفق النقدي التشغيلي',
-          'Operating Cash Flow / Current Liabilities',
-          '> 1.0 means operations cover obligations',
-          '> 1.0 تعني أن العمليات تغطي الالتزامات'),
     ],
   ),
   _RatioCategory(
@@ -85,23 +82,16 @@ const _categories = <_RatioCategory>[
     AppColors.secondaryLight,
     [
       _RatioInfo('Inventory Turnover', 'معدل دوران المخزون',
-          'COGS / Average Inventory',
+          'Cost of Sales / Inventory',
           'Higher = inventory sells faster', 'الأعلى = بيع المخزون أسرع'),
-      _RatioInfo('Days Sales Outstanding', 'متوسط فترة التحصيل',
-          'Accounts Receivable / Revenue × 365',
-          'Lower = faster collection', 'الأقل = تحصيل أسرع'),
-      _RatioInfo('Days Payable Outstanding', 'متوسط فترة السداد',
-          'Accounts Payable / COGS × 365',
-          'Higher preserves cash (within terms)',
-          'الأعلى يحافظ على النقد (ضمن الشروط)'),
-      _RatioInfo('Asset Turnover', 'معدل دوران الأصول',
-          'Revenue / Total Assets',
-          'Higher = assets generate more sales',
-          'الأعلى = الأصول تولّد مبيعات أكثر'),
       _RatioInfo('Receivables Turnover', 'معدل دوران الذمم المدينة',
-          'Revenue / Average Receivables',
+          'Sales / Accounts Receivable',
           'Higher = efficient credit collection',
           'الأعلى = تحصيل ائتماني فعّال'),
+      _RatioInfo('Total Asset Turnover', 'معدل دوران إجمالي الأصول',
+          'Sales / Total Assets',
+          'Higher = assets generate more sales',
+          'الأعلى = الأصول تولّد مبيعات أكثر'),
     ],
   ),
   _RatioCategory(
@@ -113,15 +103,15 @@ const _categories = <_RatioCategory>[
     Icons.trending_up_rounded,
     AppColors.accentLight,
     [
-      _RatioInfo('Gross Margin', 'هامش الربح الإجمالي',
-          'Gross Profit / Revenue',
+      _RatioInfo('Gross Profit Margin', 'هامش الربح الإجمالي',
+          'Gross Profit / Sales',
           'Higher = stronger pricing/cost control',
           'الأعلى = تسعير/تحكم في التكاليف أقوى'),
-      _RatioInfo('Operating Margin', 'هامش الربح التشغيلي',
-          'Operating Income / Revenue',
+      _RatioInfo('Operating Profit Margin', 'هامش الربح التشغيلي',
+          'Operating Profit (EBITDA) / Sales',
           'Core operating profitability', 'الربحية التشغيلية الأساسية'),
       _RatioInfo('Net Profit Margin', 'هامش صافي الربح',
-          'Net Income / Revenue',
+          'Net Income / Sales',
           'Bottom-line profit per \$ of sales',
           'صافي الربح لكل دولار مبيعات'),
       _RatioInfo('Return on Assets (ROA)', 'العائد على الأصول (ROA)',
@@ -129,7 +119,7 @@ const _categories = <_RatioCategory>[
           'Profit generated per \$ of assets',
           'الربح المتولّد لكل دولار أصول'),
       _RatioInfo('Return on Equity (ROE)', 'العائد على حقوق الملكية (ROE)',
-          'Net Income / Total Equity',
+          "Net Income / Total Shareholders' Equity",
           '15%+ generally considered strong',
           '15%+ تُعد قوية عمومًا'),
     ],
@@ -143,22 +133,20 @@ const _categories = <_RatioCategory>[
     Icons.balance_rounded,
     AppColors.purple,
     [
-      _RatioInfo('Debt-to-Equity', 'الدين إلى حقوق الملكية',
-          'Total Debt / Total Equity',
+      _RatioInfo('Debt to Equity Ratio', 'نسبة الدين إلى حقوق الملكية',
+          "Total Liabilities / Total Shareholders' Equity",
           'Lower = less financial risk', 'الأقل = مخاطر مالية أقل'),
       _RatioInfo('Debt Ratio', 'نسبة الدين',
-          'Total Debt / Total Assets',
+          'Total Liabilities / Total Assets',
           'Share of assets financed by debt',
           'حصة الأصول المموّلة بالدين'),
-      _RatioInfo('Interest Coverage', 'تغطية الفائدة',
-          'EBIT / Interest Expense',
+      _RatioInfo('Equity Ratio', 'نسبة حقوق الملكية',
+          "Total Shareholders' Equity / Total Assets",
+          'Share of assets financed by owners',
+          'حصة الأصول المموّلة من الملاك'),
+      _RatioInfo('Interest Coverage Ratio', 'نسبة تغطية الفائدة',
+          'Operating Profit (EBITDA) / Interest Expense',
           '≥ 3–4× is comfortable', '≥ 3–4× مريحة'),
-      _RatioInfo('Equity Multiplier', 'مضاعف حقوق الملكية',
-          'Total Assets / Total Equity',
-          'Leverage amplifier', 'مضخّم الرافعة المالية'),
-      _RatioInfo('Debt Service Coverage', 'تغطية خدمة الدين',
-          'Operating Income / Total Debt Service',
-          '> 1.25× preferred by lenders', '> 1.25× يفضّلها المُقرضون'),
     ],
   ),
   _RatioCategory(
@@ -170,26 +158,35 @@ const _categories = <_RatioCategory>[
     Icons.show_chart_rounded,
     AppColors.warning,
     [
-      _RatioInfo('Price / Earnings (P/E)', 'السعر إلى الأرباح (P/E)',
+      _RatioInfo('Earnings per Share (EPS)', 'ربحية السهم (EPS)',
+          'Net Income / Shares Outstanding\n(Shares = Common Stock / Par Value)',
+          'Profit attributable to each share',
+          'الربح العائد لكل سهم'),
+      _RatioInfo('Price to Earnings (P/E) Ratio', 'مكرر الربحية (P/E)',
           'Share Price / EPS',
           'Growth expectation vs earnings', 'توقع النمو مقابل الأرباح'),
-      _RatioInfo('Price / Book (P/B)', 'السعر إلى القيمة الدفترية (P/B)',
-          'Market Cap / Book Value',
+      _RatioInfo('Market to Book Ratio', 'نسبة القيمة السوقية إلى الدفترية',
+          "(Share Price × Shares Outstanding) / Total Shareholders' Equity",
           'Value vs accounting net worth',
           'القيمة مقابل صافي القيمة المحاسبية'),
-      _RatioInfo('EV / EBITDA', 'قيمة المنشأة إلى EBITDA',
-          'Enterprise Value / EBITDA',
-          'Capital-structure-neutral valuation',
-          'تقييم محايد لهيكل رأس المال'),
-      _RatioInfo('Dividend Yield', 'عائد التوزيعات',
-          'Dividend per Share / Share Price',
-          'Cash return to shareholders', 'العائد النقدي للمساهمين'),
-      _RatioInfo('Earnings Yield', 'عائد الأرباح',
-          'EPS / Share Price',
-          'Inverse of P/E', 'عكس مكرر الربحية P/E'),
     ],
   ),
 ];
+
+/// A ratio value as the website's ratios-category page shows it: n/m for a ratio the
+/// engine voids, percent to two decimals for margins and returns, EPS in SAR, everything
+/// else to two decimals.
+String formatCategoryRatio(double? value, String title) {
+  if (value == null) return 'n/m';
+  final t = title.toLowerCase();
+  if (t.contains('margin') || t.contains('roa') || t.contains('roe') || t.contains('return on')) {
+    return '${(value * 100).toStringAsFixed(2)}%';
+  }
+  if (t.contains('eps') || t.contains('earnings per share')) {
+    return 'SAR ${value.toStringAsFixed(2)}';
+  }
+  return value.toStringAsFixed(2);
+}
 
 class _RatiosCategoryScreenState extends ConsumerState<RatiosCategoryScreen> {
   late int _active;
@@ -336,7 +333,20 @@ class _RatiosCategoryScreenState extends ConsumerState<RatiosCategoryScreen> {
                   const SizedBox(height: 12),
                   ...cat.ratios.map((r) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
-                        child: _RatioCard(ratio: r, color: cat.color, categoryKey: cat.key),
+                        child: Consumer(builder: (context, ref, _) {
+                          final latest = ref.watch(gameMetricsProvider).latest;
+                          String? value;
+                          if (latest != null) {
+                            for (final row in latest.ratioRows) {
+                              if (row.title.trim().toLowerCase() == r.name.toLowerCase()) {
+                                value = formatCategoryRatio(row.value, r.name);
+                                break;
+                              }
+                            }
+                          }
+                          return _RatioCard(
+                              ratio: r, color: cat.color, categoryKey: cat.key, latestValue: value);
+                        }),
                       )),
                 ],
               ),
@@ -352,7 +362,11 @@ class _RatioCard extends StatelessWidget {
   final _RatioInfo ratio;
   final Color color;
   final String categoryKey;
-  const _RatioCard({required this.ratio, required this.color, required this.categoryKey});
+
+  /// The team's (or learner's) value in the latest played round, when there is game data.
+  final String? latestValue;
+  const _RatioCard(
+      {required this.ratio, required this.color, required this.categoryKey, this.latestValue});
 
   @override
   Widget build(BuildContext context) {
@@ -371,8 +385,12 @@ class _RatioCard extends StatelessWidget {
                       color: color);
                 }),
               ),
+              if (latestValue != null)
+                Text(latestValue!,
+                    style: GoogleFonts.jetBrainsMono(
+                        fontSize: 14, fontWeight: FontWeight.w800, color: color)),
               // Structured AI explanation (definition/formula/benchmarks/impact/risk).
-              AiTooltipButton(term: ratio.name, type: categoryKey, color: color),
+              AiTooltipButton(term: ratio.name, type: categoryKey, color: color, value: latestValue),
             ],
           ),
           const SizedBox(height: 10),

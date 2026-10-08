@@ -1,64 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../app/theme/app_colors.dart';
+import '../../../../providers/locale_provider.dart';
+import '../../modules/education_module_data.dart';
 
-class StatementBuilderGame extends StatefulWidget {
+/// Place-every-item-then-check builder (website FinancialStatementBuilder /
+/// StatementItemBuilder / SectorScenarioBuilder). Score on check:
+/// round(correct / items × [maxScore]); checking completes the activity and the
+/// learner may try again to improve.
+class StatementBuilderGame extends ConsumerStatefulWidget {
   final VoidCallback onComplete;
   final ValueChanged<int> onScoreUpdate;
-  final List<String>? categories;
-  final List<Map<String, String>>? items;
+  final List<ClassCategory> categories;
+  final List<ClassItem> items;
+  final int maxScore;
 
   const StatementBuilderGame({
     super.key,
     required this.onComplete,
     required this.onScoreUpdate,
-    this.categories,
-    this.items,
+    required this.categories,
+    required this.items,
+    this.maxScore = 100,
   });
 
+  static int scoreFor(int correct, int total, int maxScore) =>
+      total == 0 ? 0 : (correct / total * maxScore).round();
+
   @override
-  State<StatementBuilderGame> createState() => _StatementBuilderGameState();
+  ConsumerState<StatementBuilderGame> createState() => _StatementBuilderGameState();
 }
 
 class _FinancialItem {
-  final String name;
-  final String correctCategory;
+  final ClassItem item;
   String? placedCategory;
   bool get isPlaced => placedCategory != null;
-  bool get isCorrect => placedCategory == correctCategory;
+  bool get isCorrect => placedCategory == item.category;
 
-  _FinancialItem({required this.name, required this.correctCategory});
+  _FinancialItem(this.item);
 }
 
-class _StatementBuilderGameState extends State<StatementBuilderGame> {
+class _StatementBuilderGameState extends ConsumerState<StatementBuilderGame> {
   late List<_FinancialItem> _items;
-  late List<String> _categories;
+  late List<ClassCategory> _categories;
   late Map<String, Color> _categoryColors;
   late Map<String, IconData> _categoryIcons;
   bool _submitted = false;
   int _score = 0;
-
-  static const _defaultCategories = [
-    'Income Statement',
-    'Balance Sheet',
-    'Cash Flow Statement',
-  ];
-
-  static const _defaultItems = [
-    {'name': 'Revenue', 'category': 'Income Statement'},
-    {'name': 'Cost of Goods Sold', 'category': 'Income Statement'},
-    {'name': 'Operating Expenses', 'category': 'Income Statement'},
-    {'name': 'Net Income', 'category': 'Income Statement'},
-    {'name': 'Total Assets', 'category': 'Balance Sheet'},
-    {'name': 'Total Liabilities', 'category': 'Balance Sheet'},
-    {'name': 'Shareholders\' Equity', 'category': 'Balance Sheet'},
-    {'name': 'Accounts Receivable', 'category': 'Balance Sheet'},
-    {'name': 'Operating Cash Flow', 'category': 'Cash Flow Statement'},
-    {'name': 'Capital Expenditure', 'category': 'Cash Flow Statement'},
-    {'name': 'Debt Repayment', 'category': 'Cash Flow Statement'},
-    {'name': 'Dividends Paid', 'category': 'Cash Flow Statement'},
-  ];
+  bool _ar = false;
 
   static const _colorPalette = [
     Color(0xFF3B82F6),
@@ -89,25 +80,16 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
   @override
   void initState() {
     super.initState();
-    _categories = widget.categories ?? _defaultCategories;
-    final itemData = widget.items ?? _defaultItems;
-
+    _categories = widget.categories;
     _categoryColors = {
       for (int i = 0; i < _categories.length; i++)
-        _categories[i]: _colorPalette[i % _colorPalette.length],
+        _categories[i].id: _colorPalette[i % _colorPalette.length],
     };
     _categoryIcons = {
       for (int i = 0; i < _categories.length; i++)
-        _categories[i]: _iconPalette[i % _iconPalette.length],
+        _categories[i].id: _iconPalette[i % _iconPalette.length],
     };
-
-    _items = itemData
-        .map((item) => _FinancialItem(
-              name: item['name']!,
-              correctCategory: item['category']!,
-            ))
-        .toList()
-      ..shuffle();
+    _items = widget.items.map(_FinancialItem.new).toList()..shuffle();
   }
 
   void _placeItem(_FinancialItem item, String category) {
@@ -131,7 +113,7 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
     HapticFeedback.heavyImpact();
 
     final correct = _items.where((item) => item.isCorrect).length;
-    final score = ((correct / _items.length) * 100).round();
+    final score = StatementBuilderGame.scoreFor(correct, _items.length, widget.maxScore);
 
     setState(() {
       _submitted = true;
@@ -139,9 +121,7 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
     });
 
     widget.onScoreUpdate(score);
-    if (correct >= _items.length * 0.6) {
-      widget.onComplete();
-    }
+    widget.onComplete();
   }
 
   void _reset() {
@@ -156,8 +136,12 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
     });
   }
 
+  String _t(String en, String ar) => _ar ? ar : en;
+
   @override
   Widget build(BuildContext context) {
+    _ar = ref.watch(isArabicProvider);
+    final pct = widget.maxScore == 0 ? 0 : _score * 100 ~/ widget.maxScore;
     final unplaced = _items.where((item) => !item.isPlaced).toList();
     final allPlaced = _items.every((item) => item.isPlaced);
 
@@ -166,14 +150,15 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
       children: [
         // Instructions
         Text(
-          'Classify each financial item into the correct statement.',
+          _t('Drag each item to its category, or tap it to choose. Check when all are placed.',
+              'اسحب كل عنصر إلى فئته، أو انقر عليه للاختيار. تحقق عند وضع جميع العناصر.'),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 16),
 
         // Unplaced items
         if (unplaced.isNotEmpty) ...[
-          Text('Items to classify:', style: Theme.of(context).textTheme.labelLarge),
+          Text(_t('Items to classify (${unplaced.length}):', 'عناصر للتصنيف (${unplaced.length}):'), style: Theme.of(context).textTheme.labelLarge),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -195,7 +180,7 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
             child: ElevatedButton.icon(
               onPressed: _submit,
               icon: const Icon(Icons.check_rounded, size: 18),
-              label: const Text('Check Answers'),
+              label: Text(_t('Check Answers', 'تحقق من الإجابات')),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
@@ -208,15 +193,15 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              color: _score >= 80
+              color: pct >= 80
                   ? AppColors.secondary.withValues(alpha: 0.1)
-                  : _score >= 60
+                  : pct >= 60
                       ? AppColors.accentLight.withValues(alpha: 0.1)
                       : Colors.red.withValues(alpha: 0.1),
               border: Border.all(
-                color: _score >= 80
+                color: pct >= 80
                     ? AppColors.secondaryLight.withValues(alpha: 0.3)
-                    : _score >= 60
+                    : pct >= 60
                         ? AppColors.accentLight.withValues(alpha: 0.3)
                         : Colors.red.withValues(alpha: 0.3),
               ),
@@ -224,26 +209,26 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
             child: Column(
               children: [
                 Text(
-                  'Score: $_score / 100',
+                  _t('Score: $_score / ${widget.maxScore}', 'النتيجة: $_score / ${widget.maxScore}'),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: _score >= 80
+                    color: pct >= 80
                         ? AppColors.secondaryLight
-                        : _score >= 60
+                        : pct >= 60
                             ? AppColors.accentLight
                             : Colors.red,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${_items.where((i) => i.isCorrect).length} of ${_items.length} correct',
+                  _t('${_items.where((i) => i.isCorrect).length} of ${_items.length} correct', '${_items.where((i) => i.isCorrect).length} من ${_items.length} صحيحة'),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: _reset,
                   icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('Try Again'),
+                  label: Text(_t('Try Again', 'حاول مجددًا')),
                 ),
               ],
             ),
@@ -265,17 +250,17 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
             color: AppColors.primary.withValues(alpha: 0.9),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Text(item.name, style: const TextStyle(color: Colors.white, fontSize: 13)),
+          child: Text(item.item.name.of(_ar), style: const TextStyle(color: Colors.white, fontSize: 13)),
         ),
       ),
       childWhenDragging: Opacity(
         opacity: 0.3,
         child: Chip(
-          label: Text(item.name, style: const TextStyle(fontSize: 12)),
+          label: Text(item.item.name.of(_ar), style: const TextStyle(fontSize: 12)),
         ),
       ),
       child: ActionChip(
-        label: Text(item.name, style: const TextStyle(fontSize: 12, color: AppColors.primaryDark)),
+        label: Text(item.item.name.of(_ar), style: const TextStyle(fontSize: 12, color: AppColors.primaryDark)),
         backgroundColor: AppColors.primary.withValues(alpha: 0.12),
         side: BorderSide(color: AppColors.primary.withValues(alpha: 0.3)),
         onPressed: () => _showCategoryPicker(item),
@@ -286,31 +271,46 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
   void _showCategoryPicker(_FinancialItem item) {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => SafeArea(
+      builder: (ctx) => Directionality(
+        textDirection: _ar ? TextDirection.rtl : TextDirection.ltr,
+        child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Place "${item.name}" in:', style: Theme.of(ctx).textTheme.titleMedium),
+              Text(_t('Place "${item.item.name.of(_ar)}" in:', 'ضع "${item.item.name.of(_ar)}" في:'),
+                  style: Theme.of(ctx).textTheme.titleMedium),
+              if (item.item.hint.of(_ar).isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(item.item.hint.of(_ar), style: Theme.of(ctx).textTheme.bodySmall),
+              ],
               const SizedBox(height: 12),
-              ..._categories.map((cat) => ListTile(
-                leading: Icon(_categoryIcons[cat], color: _categoryColors[cat]),
-                title: Text(cat),
-                onTap: () {
-                  _placeItem(item, cat);
-                  Navigator.pop(ctx);
-                },
-              )),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: _categories.map((cat) => ListTile(
+                    leading: Icon(_categoryIcons[cat.id], color: _categoryColors[cat.id]),
+                    title: Text(cat.name.of(_ar)),
+                    subtitle: cat.description.of(_ar).isEmpty ? null : Text(cat.description.of(_ar)),
+                    onTap: () {
+                      _placeItem(item, cat.id);
+                      Navigator.pop(ctx);
+                    },
+                  )).toList(),
+                ),
+              ),
             ],
           ),
         ),
       ),
+      ),
     );
   }
 
-  Widget _buildCategoryTarget(String category) {
+  Widget _buildCategoryTarget(ClassCategory cat) {
+    final category = cat.id;
     final placedItems = _items.where((item) => item.placedCategory == category).toList();
     final color = _categoryColors[category]!;
     final icon = _categoryIcons[category]!;
@@ -340,11 +340,13 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
                 children: [
                   Icon(icon, size: 18, color: color),
                   const SizedBox(width: 8),
-                  Text(category, style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: color,
-                  )),
+                  Expanded(
+                    child: Text(cat.name.of(_ar), style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: color,
+                    )),
+                  ),
                 ],
               ),
               if (placedItems.isNotEmpty) ...[
@@ -363,7 +365,7 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
                       label: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(item.name, style: TextStyle(fontSize: 12, color: chipColor)),
+                          Flexible(child: Text(item.item.name.of(_ar), style: TextStyle(fontSize: 12, color: chipColor))),
                           if (statusIcon != null) ...[
                             const SizedBox(width: 4),
                             Icon(statusIcon, size: 14, color: chipColor),
@@ -382,7 +384,7 @@ class _StatementBuilderGameState extends State<StatementBuilderGame> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    'Drop items here',
+                    _t('Drop items here', 'أفلت العناصر هنا'),
                     style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.5)),
                   ),
                 ),

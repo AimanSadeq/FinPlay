@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/network/api_client.dart';
@@ -6,6 +7,7 @@ import '../core/network/api_endpoints.dart';
 import '../core/services/education_progress_sync.dart';
 import '../core/utils/constants.dart';
 import '../data/models/user.dart';
+import '../data/repositories/auth_repository.dart';
 import '../app/router/app_router.dart';
 import 'repository_providers.dart';
 import 'self_paced_provider.dart';
@@ -74,6 +76,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (token != null) await prefs.setString(AppConstants.selfPacedTokenKey, token);
       await prefs.setString(_userKey, jsonEncode(user.toStorageJson()));
     } catch (_) {/* non-critical */}
+  }
+
+  /// Adopt a session the server issued outside [loginSelfPaced] (the demo
+  /// sign-in): persist it like a login and mark the user signed in.
+  Future<void> adoptSession(String token, SelfPacedUser user) async {
+    await _persistSession(token, user);
+    _api.setAuthToken(token);
+    state = state.copyWith(status: AuthStatus.authenticated, user: user, token: token);
   }
 
   /// Restore a saved self-paced session on app launch. Returns true if a session
@@ -372,6 +382,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       await _ref.read(authRepositoryProvider).logout();
     } catch (_) {/* ignore */}
+    await _clearLocalSession();
+  }
+
+  /// The local half of [logout]: stored token + user, in-memory headers, cached
+  /// self-paced progress/entitlement, and the auth state.
+  Future<void> _clearLocalSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(AppConstants.selfPacedTokenKey);
@@ -382,6 +398,82 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // Reset any cached self-paced progress so it can't bleed into a next session.
     _ref.invalidate(selfPacedProvider);
     state = const AuthState(status: AuthStatus.unauthenticated);
+  }
+
+  /// Permanently delete the signed-in self-paced account (Apple 5.1.1(v)).
+  ///
+  /// The password is re-checked by the server. On success the session is
+  /// cleared exactly like [logout] (without the server logout call: the token
+  /// is already dead) and this learner's on-device data is wiped too. On a
+  /// wrong password, demo account, rate limit or error the learner stays
+  /// signed in. A 401 that is not a wrong password means the session expired:
+  /// the learner is signed out locally so they can sign in again.
+  Future<DeleteAccountResult> deleteAccount(String password) async {
+    final user = state.user;
+    if (user == null || state.isFacilitator) {
+      return const DeleteAccountResult(DeleteAccountStatus.notSignedIn);
+    }
+    if (password.isEmpty) {
+      return const DeleteAccountResult(DeleteAccountStatus.wrongPassword);
+    }
+    final DeleteAccountResult result;
+    try {
+      result = await _ref.read(authRepositoryProvider).deleteAccount(password);
+    } catch (_) {
+      return const DeleteAccountResult(DeleteAccountStatus.error);
+    }
+    switch (result.status) {
+      case DeleteAccountStatus.success:
+        // Drop the bearer and the user first, so any request still in flight
+        // that now 401s cannot trigger the expired-session redirect.
+        _api.clearAuthToken();
+        state = const AuthState(status: AuthStatus.unauthenticated);
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await clearDeletedUserData(prefs, email: user.email);
+        } catch (_) {/* best-effort */}
+        await _clearLocalSession();
+      case DeleteAccountStatus.notSignedIn:
+        await _clearLocalSession();
+      case DeleteAccountStatus.wrongPassword:
+      case DeleteAccountStatus.demoAccount:
+      case DeleteAccountStatus.rateLimited:
+      case DeleteAccountStatus.error:
+        break;
+    }
+    return result;
+  }
+
+  /// Remove what this device stored for a self-paced learner whose account was
+  /// just deleted. Corporate (team-scoped) progress and device settings
+  /// (language, theme, corporate access code, cohort host, narration) stay.
+  ///
+  /// - `edu_module_sp_*`, `edu_resume_sp_*`, `edu_tool_visited_sp_*`: the
+  ///   self-paced education scope (activities, resume positions, tool visits).
+  /// - `edu_progress_*`, `edu_passed_*`, `edu_badges_*`: the hub's roll-up
+  ///   mirror, last written by whichever scope was active; the corporate scope
+  ///   rebuilds it from its own `edu_module_<team>_*` keys and server sync.
+  /// - `assessment_pre_score` / `assessment_post_score`: last local scores.
+  /// - `self_paced_plan_<email>`: cached billing plan.
+  @visibleForTesting
+  static Future<void> clearDeletedUserData(SharedPreferences prefs,
+      {required String email}) async {
+    const prefixes = [
+      'edu_module_sp_',
+      'edu_resume_sp_',
+      'edu_tool_visited_sp_',
+      'edu_progress_',
+      'edu_passed_',
+      'edu_badges_',
+    ];
+    for (final k in prefs.getKeys().toList()) {
+      if (prefixes.any(k.startsWith)) await prefs.remove(k);
+    }
+    await prefs.remove('assessment_pre_score');
+    await prefs.remove('assessment_post_score');
+    if (email.isNotEmpty) await prefs.remove('self_paced_plan_$email');
+    await prefs.remove(AppConstants.selfPacedTokenKey);
+    await prefs.remove(_userKey);
   }
 }
 

@@ -4,10 +4,16 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+<<<<<<< Updated upstream
 import 'package:finplay/core/network/api_client.dart';
 import 'package:finplay/core/network/api_endpoints.dart';
 import 'package:finplay/core/services/education_progress_sync.dart';
 import 'package:finplay/core/services/education_storage_migration.dart';
+=======
+import 'package:finplay/core/network/api_endpoints.dart';
+import 'package:finplay/core/services/education_progress_sync.dart';
+import 'package:finplay/features/education/modules/education_module_data.dart';
+>>>>>>> Stashed changes
 
 /// Contract tests for the cross-device education progress sync. The score table
 /// and module list here MUST stay in step with MODULE_MAX_SCORES in the website's
@@ -97,6 +103,7 @@ void main() {
     });
   });
 
+<<<<<<< Updated upstream
   group('EducationProgressSync with provisional (remapped) ids', () {
     late _FakeServer server;
     late EducationProgressSync sync;
@@ -234,4 +241,262 @@ class _FakeServer implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {}
+=======
+  group('push payload', () {
+    ModuleActivity act(int module, String id) =>
+        educationModuleContents[module]!.activities.firstWhere((a) => a.id == id);
+
+    test('keeps the server __resume when local has none, and every web activity', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await ModuleProgressStore.record(prefs, 'sp', 4, act(4, 'quiz'), 40);
+      final server = {
+        'module4': {
+          'moduleScore': 20,
+          'badges': ['m4_complete'],
+          'activityData': {
+            'quiz': {'score': 20, 'maxScore': 50, 'completed': true},
+            'quiz3': {'score': 30, 'maxScore': 50, 'completed': true},
+            '__meta': {'score': 0, 'maxScore': 0, 'completed': true},
+            '__resume': {
+              'score': 0,
+              'maxScore': 0,
+              'completed': false,
+              'sectionId': 'section-4-7',
+              'at': '2026-10-01T10:00:00.000Z',
+            },
+          },
+        },
+        'module14': {'moduleScore': 120, 'badges': [], 'activityData': {'quiz1': {'score': 50}}},
+      };
+      final body = (await EducationProgressSync.buildPushPayload(prefs,
+          scope: 'sp', serverModules: server))!;
+      final m4 = body['modules']['module4'] as Map;
+      final ad = m4['activityData'] as Map;
+      expect(ad['__resume']['sectionId'], 'section-4-7');
+      expect(ad['__meta']['completed'], isTrue);
+      expect(ad['quiz']['score'], 40); // local best wins
+      expect(ad['quiz3']['score'], 30); // website activity kept
+      expect(m4['totalScore'], 70);
+      // A website-only module is echoed so the team total stays whole.
+      expect((body['modules'] as Map).containsKey('module14'), isTrue);
+      expect(body['modules']['module14']['totalScore'], 120);
+    });
+
+    test('a newer local resume replaces the server one (self-paced)', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await LearnResumeStore.save('sp', 'module3', 'section-3-9',
+          at: DateTime.utc(2026, 10, 2));
+      final server = {
+        'module3': {
+          'moduleScore': 0,
+          'activityData': {
+            '__resume': {'sectionId': 'section-3-1', 'at': '2026-10-01T00:00:00.000Z'},
+          },
+        },
+      };
+      final body = (await EducationProgressSync.buildPushPayload(prefs,
+          scope: 'sp', serverModules: server))!;
+      final r = body['modules']['module3']['activityData']['__resume'] as Map;
+      expect(r['sectionId'], 'section-3-9');
+      expect(r['at'], '2026-10-02T00:00:00.000Z');
+    });
+
+    test('workshop decks sync their resume position', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await LearnResumeStore.save('sp', 'break-even', 'section-be-4');
+      final body = (await EducationProgressSync.buildPushPayload(prefs,
+          scope: 'sp', serverModules: const {}))!;
+      expect(body['modules']['break-even']['activityData']['__resume']['sectionId'],
+          'section-be-4');
+    });
+
+    test('corporate teams never push a resume position', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await LearnResumeStore.save('3', 'module1', 'section-1-4');
+      final body = await EducationProgressSync.buildPushPayload(prefs,
+          scope: '3', serverModules: const {});
+      expect(body, isNull);
+    });
+
+    test('nothing ahead of the server means no POST', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final body = await EducationProgressSync.buildPushPayload(prefs,
+          scope: 'sp',
+          serverModules: {
+            'module1': {
+              'moduleScore': 75,
+              'activityData': {'quiz': {'score': 75, 'completed': true}},
+            },
+          });
+      expect(body, isNull);
+    });
+
+    test('legacy per-tab ids from older app builds are dropped', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      await ModuleProgressStore.record(prefs, 'sp', 1, act(1, 'memoryMatch'), 50);
+      final body = (await EducationProgressSync.buildPushPayload(prefs, scope: 'sp', serverModules: {
+        'module1': {
+          'moduleScore': 50,
+          'activityData': {
+            'game': {'score': 50, 'maxScore': 0, 'completed': true},
+            'sim': {'score': 0, 'maxScore': 0, 'completed': false},
+          },
+        },
+      }))!;
+      final ad = body['modules']['module1']['activityData'] as Map;
+      expect(ad.containsKey('game'), isFalse);
+      expect(ad.containsKey('sim'), isFalse);
+      expect(ad['memoryMatch']['score'], 50);
+    });
+  });
+
+  group('server to local', () {
+    test('restores website activities, Learn and the newest resume', () async {
+      SharedPreferences.setMockInitialValues({});
+      await LearnResumeStore.save('sp', 'module4', 'section-4-2',
+          at: DateTime.utc(2026, 9, 1));
+      final changed = await EducationProgressSync.applyServerToLocal({
+        'module4': {
+          'moduleScore': 250,
+          'completed': true,
+          'activityData': {
+            'quiz': {'score': 50, 'maxScore': 50, 'completed': true},
+            'quiz3': {'score': 50, 'maxScore': 50, 'completed': true},
+            'memoryMatch': {'score': 50, 'maxScore': 50, 'completed': true},
+            'financialAnalysisSimulator': {'score': 100, 'maxScore': 100, 'completed': true},
+            '__meta': {'completed': true},
+            '__resume': {'sectionId': 'section-4-15', 'at': '2026-10-01T00:00:00.000Z'},
+          },
+        },
+      }, scope: 'sp');
+      expect(changed, isTrue);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('edu_module_sp_4_learn'), isTrue);
+      expect(prefs.getInt('edu_module_sp_4_act_quiz3_score'), 50);
+      expect(prefs.getBool('edu_module_sp_4_quiz'), isTrue); // both practice quizzes done
+      expect(prefs.getBool('edu_module_sp_4_game'), isFalse); // ratio game not played
+      expect(prefs.getInt('edu_progress_4'), 77); // 250 / 325
+      expect(prefs.getBool('edu_passed_4'), isTrue);
+      expect((await LearnResumeStore.get('sp', 'module4'))!.sectionId, 'section-4-15');
+    });
+
+    test('an older server resume never overwrites a newer local one', () async {
+      SharedPreferences.setMockInitialValues({});
+      await LearnResumeStore.save('sp', 'module1', 'section-1-9',
+          at: DateTime.utc(2026, 10, 3));
+      await EducationProgressSync.applyServerToLocal({
+        'module1': {
+          'moduleScore': 0,
+          'activityData': {
+            '__resume': {'sectionId': 'section-1-2', 'at': '2026-10-01T00:00:00.000Z'},
+          },
+        },
+      }, scope: 'sp');
+      expect((await LearnResumeStore.get('sp', 'module1'))!.sectionId, 'section-1-9');
+    });
+
+    test('legacy per-tab progress migrates onto website activities', () async {
+      SharedPreferences.setMockInitialValues({
+        'edu_module_sp_9_quiz': true,
+        'edu_module_sp_9_quizScore': 40,
+        'edu_module_sp_9_gamesDone': ['ordering'],
+        'edu_module_sp_9_gameScore_ordering': 50,
+        'edu_module_sp_9_sim': true,
+        'edu_module_sp_9_simScore': 80,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final m9 = educationModuleContents[9]!;
+      expect(await ModuleProgressStore.migrateLegacy(prefs, 'sp', m9), isTrue);
+      expect(prefs.getInt('edu_module_sp_9_act_quiz_score'), 40);
+      expect(prefs.getInt('edu_module_sp_9_act_complianceOrdering_score'), 25); // 50/50 of 25
+      expect(prefs.getInt('edu_module_sp_9_act_internalControlsSimulator_score'), 80);
+      // Runs once.
+      expect(await ModuleProgressStore.migrateLegacy(prefs, 'sp', m9), isFalse);
+    });
+  });
+
+  group('learn resume', () {
+    test('lastResume picks the most recent module or deck', () async {
+      SharedPreferences.setMockInitialValues({});
+      await LearnResumeStore.save('sp', 'module3', 'section-3-2', at: DateTime.utc(2026, 1, 1));
+      await LearnResumeStore.save('sp', 'capital-budgeting', 'section-cb-5',
+          at: DateTime.utc(2026, 2, 1));
+      await LearnResumeStore.save('2', 'module9', 'section-9-1', at: DateTime.utc(2026, 3, 1));
+      final r = (await LearnResumeStore.lastResume('sp'))!;
+      expect(r.moduleKey, 'capital-budgeting');
+      expect(r.catalogId, 12);
+      expect(r.sectionId, 'section-cb-5');
+    });
+
+    test('indexIn falls back to the first slide for a removed section', () {
+      expect(LearnResumeStore.indexIn(['a', 'b', 'c'], 'c'), 2);
+      expect(LearnResumeStore.indexIn(['a', 'b'], 'gone'), 0);
+      expect(LearnResumeStore.indexIn(['a'], null), 0);
+    });
+
+    test('module keys round-trip to catalog ids', () {
+      for (final id in [1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 14]) {
+        expect(LearnResumeStore.catalogIdFor(LearnResumeStore.moduleKeyFor(id)), id);
+      }
+    });
+  });
+
+  group('push identity (hub _progressIdentity rule)', () {
+    test('facilitators never push', () {
+      expect(
+          EducationProgressSync.progressIdentity(
+              isFacilitator: true, isSelfPaced: false, email: 'f@x.com', teamId: 3),
+          isNull);
+    });
+
+    test('a corporate device without a joined team never falls back to Team 1', () {
+      expect(
+          EducationProgressSync.progressIdentity(
+              isFacilitator: false, isSelfPaced: false, teamId: null),
+          isNull);
+      final id = EducationProgressSync.progressIdentity(
+          isFacilitator: false, isSelfPaced: false, teamId: 4)!;
+      expect(id.teamName, 'Team 4');
+      expect(id.scope, '4');
+    });
+
+    test('self-paced pushes as the email, never without one', () {
+      expect(
+          EducationProgressSync.progressIdentity(
+              isFacilitator: false, isSelfPaced: true, email: ''),
+          isNull);
+      final id = EducationProgressSync.progressIdentity(
+          isFacilitator: false, isSelfPaced: true, email: 'a@b.com', teamId: 2)!;
+      expect(id.teamName, 'a@b.com');
+      expect(id.scope, 'sp');
+    });
+  });
+
+  test('a local recompute never drops below the last server percentage', () async {
+    SharedPreferences.setMockInitialValues({});
+    // Server credits 260/325 (80%) on module 4 but only via a legacy record the
+    // app cannot attribute to activities.
+    await EducationProgressSync.applyServerToLocal({
+      'module4': {
+        'moduleScore': 260,
+        'activityData': {
+          'game': {'score': 160, 'maxScore': 0, 'completed': true},
+          'quiz': {'score': 50, 'maxScore': 50, 'completed': true},
+        },
+      },
+    }, scope: 'sp');
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt('edu_progress_4'), 80);
+    // Later local work (e.g. Learn completed offline) recomputes without a floor arg.
+    await ModuleProgressStore.recompute(prefs, 'sp', educationModuleContents[4]!);
+    expect(prefs.getInt('edu_progress_4'), 80);
+    expect(prefs.getBool('edu_passed_4'), isTrue);
+  });
+>>>>>>> Stashed changes
 }

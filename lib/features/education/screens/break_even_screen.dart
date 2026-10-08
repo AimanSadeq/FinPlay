@@ -8,25 +8,60 @@ import '../../../app/theme/app_colors.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../app/i18n/app_strings.dart';
+import '../../../core/services/learn_resume.dart';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Data models
 // ──────────────────────────────────────────────────────────────────────────────
 
-class _LearnSlide {
+/// One Learn slide, ported verbatim (EN + AR) from the website's
+/// break-even-slides-content.ts (BE.1-BE.15). [id] is the website section id: it is what
+/// the resume position stores, so it must stay identical to the web.
+class BreakEvenSlide {
+  final String id;
+  final String number;
   final String title;
-  final IconData icon;
-  final String description;
-  final List<String> formulas;
-  final Color color;
+  final String titleAr;
+  final List<String> content;
+  final List<String> contentAr;
+  final List<String> keyPoints;
+  final List<String> keyPointsAr;
+  final String? highlightType;
+  final String? highlight;
+  final String? highlightAr;
+  final String? examplesTitle;
+  final String? examplesTitleAr;
+  final List<String> examples;
+  final List<String> examplesAr;
 
-  const _LearnSlide({
+  const BreakEvenSlide({
+    required this.id,
+    required this.number,
     required this.title,
-    required this.icon,
-    required this.description,
-    this.formulas = const [],
-    required this.color,
+    required this.titleAr,
+    required this.content,
+    required this.contentAr,
+    this.keyPoints = const [],
+    this.keyPointsAr = const [],
+    this.highlightType,
+    this.highlight,
+    this.highlightAr,
+    this.examplesTitle,
+    this.examplesTitleAr,
+    this.examples = const [],
+    this.examplesAr = const [],
   });
+
+  static bool _has(String? v) => v != null && v.trim().isNotEmpty;
+  static bool _hasAll(List<String> v) => v.isNotEmpty && v.every(_has);
+
+  // Arabic when the UI is Arabic and a translation exists, else English.
+  String titleFor(bool ar) => ar && _has(titleAr) ? titleAr : title;
+  List<String> contentFor(bool ar) => ar && _hasAll(contentAr) ? contentAr : content;
+  List<String> keyPointsFor(bool ar) => ar && _hasAll(keyPointsAr) ? keyPointsAr : keyPoints;
+  String? highlightFor(bool ar) => ar && _has(highlightAr) ? highlightAr : highlight;
+  String? examplesTitleFor(bool ar) => ar && _has(examplesTitleAr) ? examplesTitleAr : examplesTitle;
+  List<String> examplesFor(bool ar) => ar && _hasAll(examplesAr) ? examplesAr : examples;
 }
 
 class _PracticeScenario {
@@ -87,118 +122,406 @@ class _ProductMix {
 // Static data
 // ──────────────────────────────────────────────────────────────────────────────
 
-List<_LearnSlide> _buildSlides(AppStrings s) => <_LearnSlide>[
-  _LearnSlide(
-    title: s.tr('What is Break-Even Analysis?', 'ما هو تحليل نقطة التعادل؟'),
-    icon: Icons.balance_rounded,
-    color: AppColors.primaryLight,
-    description: s.tr(
-        'The point where total revenue equals total costs. No profit, no loss. Essential for business planning and pricing decisions.',
-        'النقطة التي يتساوى عندها إجمالي الإيرادات مع إجمالي التكاليف. لا ربح ولا خسارة. أساسية لتخطيط الأعمال وقرارات التسعير.'),
-    formulas: const ['Revenue = Total Costs', 'Profit = 0'],
+// Ported from the website by a generator (tool/generators/gen_decks.ts + patch_decks.py); do not hand-edit.
+const List<BreakEvenSlide> breakEvenSlides = [
+  BreakEvenSlide(
+    id: 'section-be-overview',
+    number: 'BE.1',
+    title: 'Introduction to Break-Even Analysis',
+    titleAr: 'مقدمة في تحليل نقطة التعادل',
+    content: ['The break-even point is the sales level where total revenue equals total costs. At this point there is no profit or loss, and any sales above it generate profit.', 'Everything in this module follows from one formula: the break-even point in units equals fixed costs divided by the contribution each unit makes, which is its selling price less its variable cost.', 'That formula relates three quantities. Fixed costs stay constant as volume changes, variable costs move with each unit produced, and the break-even point is the volume at which the two lines meet.'],
+    contentAr: ['نقطة التعادل هي مستوى المبيعات الذي يتساوى فيه إجمالي الإيرادات مع إجمالي التكاليف. عند هذه النقطة لا ربح ولا خسارة، وأي مبيعات فوقها تولّد ربحاً.', 'كل ما في هذه الوحدة ينبع من معادلة واحدة: نقطة التعادل بالوحدات تساوي التكاليف الثابتة مقسومة على مساهمة كل وحدة، وهي سعر بيعها ناقص تكلفتها المتغيرة.', 'وتربط تلك المعادلة ثلاث كميات. فالتكاليف الثابتة تبقى ثابتة مع تغير الحجم، والتكاليف المتغيرة تتحرك مع كل وحدة منتجة، ونقطة التعادل هي الحجم الذي يلتقي عنده الخطان.'],
+    keyPoints: ['BEP (units) = Fixed Costs ÷ (Selling Price − Variable Cost per Unit)', 'Fixed costs are constant; variable costs change with volume', 'Above the break-even point every additional unit adds profit'],
+    keyPointsAr: ['نقطة التعادل (وحدات) = التكاليف الثابتة ÷ (سعر البيع − التكلفة المتغيرة للوحدة)', 'التكاليف الثابتة ثابتة؛ والتكاليف المتغيرة تتغير مع الحجم', 'فوق نقطة التعادل تضيف كل وحدة إضافية ربحاً'],
   ),
-  _LearnSlide(
-    title: s.tr('Understanding Fixed Costs', 'فهم التكاليف الثابتة'),
-    icon: Icons.lock_rounded,
-    color: const Color(0xFFEF4444),
-    description: s.tr(
-        'Costs that remain constant regardless of production: rent, salaries, insurance, depreciation. Must be paid whether you sell 0 or 10,000 units.',
-        'تكاليف تبقى ثابتة بغض النظر عن حجم الإنتاج: الإيجار والرواتب والتأمين والإهلاك. يجب دفعها سواء بعت صفر وحدة أو 10,000 وحدة.'),
-    formulas: const ['Examples: Rent, Salaries, Insurance', 'Fixed Costs stay the same at any volume'],
+  BreakEvenSlide(
+    id: 'section-be-1',
+    number: 'BE.2',
+    title: 'What is Break-Even Analysis?',
+    titleAr: 'ما هو تحليل التعادل؟',
+    content: ['Break-even analysis determines the point at which total revenue equals total costs, resulting in neither profit nor loss.', 'It is one of the most fundamental tools in managerial accounting and financial planning, helping businesses understand the minimum sales needed to cover all costs.', 'Beyond the break-even point, every additional unit sold contributes directly to profit. Below it, the business operates at a loss.', 'This analysis is essential for pricing decisions, cost control, and evaluating new product launches or business ventures.'],
+    contentAr: ['يحدد تحليل التعادل النقطة التي يتساوى فيها إجمالي الإيرادات مع إجمالي التكاليف، مما لا ينتج عنه ربح ولا خسارة.', 'إنه أحد أهم الأدوات الأساسية في المحاسبة الإدارية والتخطيط المالي، حيث يساعد الشركات على فهم الحد الأدنى من المبيعات اللازمة لتغطية جميع التكاليف.', 'بعد نقطة التعادل، تساهم كل وحدة إضافية مباعة مباشرة في الربح. قبلها، تعمل الشركة بخسارة.', 'هذا التحليل ضروري لقرارات التسعير والتحكم في التكاليف وتقييم إطلاق منتجات جديدة أو مشاريع تجارية.'],
+    keyPoints: ['Revenue = Total Costs at break-even', 'Essential for pricing and planning decisions', 'Sales above BEP generate profit'],
+    keyPointsAr: ['الإيرادات = إجمالي التكاليف عند التعادل', 'ضروري لقرارات التسعير والتخطيط', 'المبيعات فوق نقطة التعادل تولد ربحاً'],
   ),
-  _LearnSlide(
-    title: s.tr('Understanding Variable Costs', 'فهم التكاليف المتغيرة'),
-    icon: Icons.show_chart_rounded,
-    color: const Color(0xFFF59E0B),
-    description: s.tr(
-        'Costs that change proportionally with production: raw materials, direct labor, commissions, packaging. Increase as you produce more.',
-        'تكاليف تتغير بتناسب مع الإنتاج: المواد الخام والعمالة المباشرة والعمولات والتغليف. تزداد كلما أنتجت أكثر.'),
-    formulas: const ['Total VC = VC per Unit × Quantity', 'More production → Higher variable costs'],
+  BreakEvenSlide(
+    id: 'section-be-2',
+    number: 'BE.3',
+    title: 'Understanding Fixed Costs',
+    titleAr: 'فهم التكاليف الثابتة',
+    content: ['Fixed costs remain constant regardless of the number of units produced or sold. They must be paid whether the business sells one unit or one million.', 'Common examples include rent, insurance premiums, salaries of permanent staff, depreciation of equipment, and interest on loans.', 'Fixed costs create a baseline that the business must cover before any profit is generated. The higher the fixed costs, the higher the break-even point.', 'Understanding fixed costs helps managers evaluate the risk of new investments and the operating leverage of the business.'],
+    contentAr: ['التكاليف الثابتة تبقى ثابتة بغض النظر عن عدد الوحدات المنتجة أو المباعة. يجب دفعها سواء باعت الشركة وحدة واحدة أو مليون وحدة.', 'الأمثلة الشائعة تشمل الإيجار وأقساط التأمين ورواتب الموظفين الدائمين واستهلاك المعدات وفوائد القروض.', 'التكاليف الثابتة تنشئ خط أساس يجب على الشركة تغطيته قبل تحقيق أي ربح. كلما ارتفعت التكاليف الثابتة، ارتفعت نقطة التعادل.', 'فهم التكاليف الثابتة يساعد المديرين على تقييم مخاطر الاستثمارات الجديدة والرافعة التشغيلية للشركة.'],
+    keyPoints: ['Do not change with production volume', 'Examples: rent, insurance, salaries', 'Higher fixed costs = higher break-even point'],
+    keyPointsAr: ['لا تتغير مع حجم الإنتاج', 'أمثلة: الإيجار، التأمين، الرواتب', 'تكاليف ثابتة أعلى = نقطة تعادل أعلى'],
   ),
-  _LearnSlide(
-    title: s.tr('Contribution Margin', 'هامش المساهمة'),
-    icon: Icons.pie_chart_rounded,
-    color: AppColors.secondaryLight,
-    description: s.tr(
-        'The amount each unit sale contributes toward covering fixed costs. A higher CM means each sale gets you closer to break-even faster.',
-        'المبلغ الذي تساهم به كل وحدة مباعة في تغطية التكاليف الثابتة. كلما ارتفع هامش المساهمة اقتربت كل عملية بيع من نقطة التعادل أسرع.'),
-    formulas: const [
-      'CM = Selling Price − Variable Cost per Unit',
-      'CM Ratio = CM / Price',
-    ],
+  BreakEvenSlide(
+    id: 'section-be-3',
+    number: 'BE.4',
+    title: 'Understanding Variable Costs',
+    titleAr: 'فهم التكاليف المتغيرة',
+    content: ['Variable costs change in direct proportion to the number of units produced or sold. If production doubles, variable costs double.', 'Common examples include raw materials, direct labor (hourly wages), sales commissions, shipping costs, and packaging.', 'The variable cost per unit typically remains constant, but total variable costs increase with volume.', 'Businesses with lower variable costs relative to selling price have a higher contribution margin and reach break-even faster.'],
+    contentAr: ['التكاليف المتغيرة تتغير بتناسب مباشر مع عدد الوحدات المنتجة أو المباعة. إذا تضاعف الإنتاج، تتضاعف التكاليف المتغيرة.', 'الأمثلة الشائعة تشمل المواد الخام والعمالة المباشرة (الأجور بالساعة) وعمولات المبيعات وتكاليف الشحن والتعبئة.', 'التكلفة المتغيرة لكل وحدة تبقى ثابتة عادة، لكن إجمالي التكاليف المتغيرة يزداد مع الحجم.', 'الشركات ذات التكاليف المتغيرة المنخفضة نسبة إلى سعر البيع لديها هامش مساهمة أعلى وتصل إلى التعادل بشكل أسرع.'],
+    keyPoints: ['Change proportionally with production', 'Per-unit cost stays constant', 'Lower variable costs = faster break-even'],
+    keyPointsAr: ['تتغير بشكل متناسب مع الإنتاج', 'التكلفة لكل وحدة تبقى ثابتة', 'تكاليف متغيرة أقل = تعادل أسرع'],
   ),
-  _LearnSlide(
-    title: s.tr('Calculating Break-Even Point', 'حساب نقطة التعادل'),
-    icon: Icons.calculate_rounded,
-    color: const Color(0xFF8B5CF6),
-    description: s.tr(
-        'The core formulas for determining exactly how many units you need to sell, or how much revenue you need, to cover all costs.',
-        'المعادلات الأساسية لتحديد عدد الوحدات التي تحتاج لبيعها بالضبط، أو حجم الإيراد المطلوب، لتغطية جميع التكاليف.'),
-    formulas: const [
-      'BEP (units) = Fixed Costs / CM',
-      'BEP (revenue) = Fixed Costs / CM Ratio',
-      'Target Profit: (FC + Target) / CM',
-    ],
+  BreakEvenSlide(
+    id: 'section-be-4',
+    number: 'BE.5',
+    title: 'Contribution Margin',
+    titleAr: 'هامش المساهمة',
+    content: ['The contribution margin is the amount each unit sold contributes toward covering fixed costs and generating profit. It equals selling price minus variable cost per unit.', 'The contribution margin ratio (CM%) expresses this as a percentage of the selling price: CM% = Contribution Margin / Selling Price.', 'A higher contribution margin means each sale contributes more toward fixed costs, resulting in a lower break-even point.', 'This concept is critical for pricing decisions: if you lower prices, you must sell more units to cover the same fixed costs.'],
+    contentAr: ['هامش المساهمة هو المبلغ الذي تساهم به كل وحدة مباعة في تغطية التكاليف الثابتة وتحقيق الربح. يساوي سعر البيع ناقص التكلفة المتغيرة لكل وحدة.', 'نسبة هامش المساهمة تعبر عن ذلك كنسبة من سعر البيع: نسبة هامش المساهمة = هامش المساهمة / سعر البيع.', 'هامش مساهمة أعلى يعني أن كل عملية بيع تساهم أكثر في التكاليف الثابتة، مما يؤدي إلى نقطة تعادل أقل.', 'هذا المفهوم حاسم لقرارات التسعير: إذا خفضت الأسعار، يجب بيع وحدات أكثر لتغطية نفس التكاليف الثابتة.'],
+    keyPoints: ['CM = Selling Price - Variable Cost per Unit', 'CM Ratio = CM / Selling Price', 'Higher CM = Lower break-even point'],
+    keyPointsAr: ['هامش المساهمة = سعر البيع - التكلفة المتغيرة لكل وحدة', 'نسبة هامش المساهمة = هامش المساهمة / سعر البيع', 'هامش أعلى = نقطة تعادل أقل'],
+    highlightType: 'formula',
+    highlight: 'Contribution Margin = Selling Price - Variable Cost per Unit',
+    highlightAr: 'هامش المساهمة = سعر البيع - التكلفة المتغيرة لكل وحدة',
   ),
-  _LearnSlide(
-    title: s.tr('The Break-Even Chart', 'مخطط نقطة التعادل'),
-    icon: Icons.auto_graph_rounded,
-    color: const Color(0xFF06B6D4),
-    description: s.tr(
-        'Visual CVP diagram showing revenue line, total cost line, and fixed cost line. The intersection is your break-even point. Area above = profit zone, below = loss zone.',
-        'مخطط بياني للعلاقة بين التكلفة والحجم والربح يُظهر خط الإيرادات وخط إجمالي التكاليف وخط التكاليف الثابتة. نقطة التقاطع هي نقطة التعادل. المنطقة فوقها = منطقة ربح، وتحتها = منطقة خسارة.'),
-    formulas: const ['Revenue Line: y = Price × x', 'Total Cost Line: y = FC + (VC × x)'],
+  BreakEvenSlide(
+    id: 'section-be-5',
+    number: 'BE.6',
+    title: 'Calculating the Break-Even Point',
+    titleAr: 'حساب نقطة التعادل',
+    content: ['The break-even point in units is calculated by dividing total fixed costs by the contribution margin per unit: BEP = Fixed Costs / CM per Unit.', 'The break-even point in revenue (dollars) is: BEP (\$) = Fixed Costs / CM Ratio.', 'For example, with \$50,000 fixed costs, a \$20 selling price, and \$12 variable cost: CM = \$8, BEP = 50,000 / 8 = 6,250 units.', 'To find the target profit volume, add the desired profit to fixed costs: Units = (Fixed Costs + Target Profit) / CM per Unit.'],
+    contentAr: ['نقطة التعادل بالوحدات تُحسب بقسمة إجمالي التكاليف الثابتة على هامش المساهمة لكل وحدة: نقطة التعادل = التكاليف الثابتة / هامش المساهمة لكل وحدة.', 'نقطة التعادل بالإيرادات: نقطة التعادل (بالدولار) = التكاليف الثابتة / نسبة هامش المساهمة.', 'مثال: مع 50,000 دولار تكاليف ثابتة، سعر بيع 20 دولار، وتكلفة متغيرة 12 دولار: هامش المساهمة = 8 دولار، نقطة التعادل = 50,000 / 8 = 6,250 وحدة.', 'لإيجاد حجم الربح المستهدف، أضف الربح المطلوب إلى التكاليف الثابتة: الوحدات = (التكاليف الثابتة + الربح المستهدف) / هامش المساهمة لكل وحدة.'],
+    keyPoints: ['BEP (units) = Fixed Costs / CM per Unit', 'BEP (\$) = Fixed Costs / CM Ratio', 'Add target profit to find required volume'],
+    keyPointsAr: ['نقطة التعادل (وحدات) = التكاليف الثابتة / هامش المساهمة', 'نقطة التعادل (دولار) = التكاليف الثابتة / نسبة الهامش', 'أضف الربح المستهدف لإيجاد الحجم المطلوب'],
+    highlightType: 'formula',
+    highlight: 'BEP (units) = Fixed Costs / (Selling Price - Variable Cost per Unit)',
+    highlightAr: 'نقطة التعادل = التكاليف الثابتة / (سعر البيع - التكلفة المتغيرة لكل وحدة)',
   ),
-  _LearnSlide(
-    title: s.tr('Margin of Safety', 'هامش الأمان'),
-    icon: Icons.shield_rounded,
-    color: const Color(0xFF10B981),
-    description: s.tr(
-        'Shows how much sales can decline before reaching break-even. A higher margin of safety means lower risk for the business.',
-        'يوضح مقدار الانخفاض الممكن في المبيعات قبل الوصول إلى نقطة التعادل. كلما ارتفع هامش الأمان انخفضت مخاطر المنشأة.'),
-    formulas: const [
-      'MOS = (Actual − BEP) / Actual × 100%',
-      'Higher MOS = Lower Risk',
-    ],
+  BreakEvenSlide(
+    id: 'section-be-6',
+    number: 'BE.7',
+    title: 'The Break-Even Chart',
+    titleAr: 'مخطط التعادل',
+    content: ['A break-even chart (or CVP chart) is a visual representation that shows total revenue and total costs at different production levels.', 'The horizontal axis shows quantity (units), while the vertical axis shows monetary values (revenue and costs).', 'The total cost line starts at the fixed cost level (when zero units are sold) and slopes upward. The revenue line starts at zero and slopes upward at the selling price rate.', 'The point where the two lines cross is the break-even point. The area between revenue and cost lines shows profit (above BEP) or loss (below BEP).'],
+    contentAr: ['مخطط التعادل (أو مخطط التكلفة-الحجم-الربح) هو تمثيل بصري يُظهر إجمالي الإيرادات وإجمالي التكاليف عند مستويات إنتاج مختلفة.', 'المحور الأفقي يُظهر الكمية (الوحدات)، بينما المحور الرأسي يُظهر القيم النقدية (الإيرادات والتكاليف).', 'خط التكلفة الإجمالية يبدأ عند مستوى التكلفة الثابتة (عند بيع صفر وحدة) وينحدر صعوداً. خط الإيرادات يبدأ من الصفر وينحدر صعوداً بمعدل سعر البيع.', 'النقطة التي يتقاطع فيها الخطان هي نقطة التعادل. المنطقة بين خطي الإيرادات والتكاليف تُظهر الربح (فوق نقطة التعادل) أو الخسارة (تحتها).'],
+    keyPoints: ['Visual representation of CVP relationships', 'Lines cross at the break-even point', 'Shows profit and loss zones clearly'],
+    keyPointsAr: ['تمثيل بصري لعلاقات التكلفة-الحجم-الربح', 'الخطوط تتقاطع عند نقطة التعادل', 'تُظهر مناطق الربح والخسارة بوضوح'],
   ),
-  _LearnSlide(
-    title: s.tr('Multi-Product Break-Even', 'نقطة التعادل متعددة المنتجات'),
-    icon: Icons.category_rounded,
-    color: const Color(0xFFEC4899),
-    description: s.tr(
-        'When selling multiple products, calculate a weighted average contribution margin using each product\'s sales mix percentage.',
-        'عند بيع منتجات متعددة، احسب متوسطًا مرجحًا لهامش المساهمة باستخدام نسبة مزيج مبيعات كل منتج.'),
-    formulas: const [
-      'Weighted CM = Σ(CM × Sales Mix %)',
-      'BEP = Fixed Costs / Weighted Avg CM',
-    ],
+  BreakEvenSlide(
+    id: 'section-be-7',
+    number: 'BE.8',
+    title: 'Margin of Safety',
+    titleAr: 'هامش الأمان',
+    content: ['The margin of safety measures how far above the break-even point a business is currently operating. It represents the cushion before the business starts losing money.', 'Margin of Safety = Actual Sales - Break-Even Sales. It can be expressed in units, revenue, or as a percentage.', 'MoS% = (Actual Sales - BEP Sales) / Actual Sales x 100. A higher percentage means greater protection against sales declines.', 'Managers use this metric to assess risk: a low margin of safety indicates vulnerability to market downturns, while a high margin provides confidence.'],
+    contentAr: ['يقيس هامش الأمان مدى بُعد الشركة فوق نقطة التعادل في عملياتها الحالية. يمثل الوسادة قبل أن تبدأ الشركة في خسارة المال.', 'هامش الأمان = المبيعات الفعلية - مبيعات التعادل. يمكن التعبير عنه بالوحدات أو الإيرادات أو كنسبة مئوية.', 'نسبة هامش الأمان = (المبيعات الفعلية - مبيعات التعادل) / المبيعات الفعلية × 100. نسبة أعلى تعني حماية أكبر ضد انخفاض المبيعات.', 'يستخدم المديرون هذا المقياس لتقييم المخاطر: هامش أمان منخفض يشير إلى الضعف أمام تراجع السوق، بينما هامش مرتفع يوفر الثقة.'],
+    keyPoints: ['MoS = Actual Sales - Break-Even Sales', 'Higher MoS% = Less risk', 'Key metric for risk assessment'],
+    keyPointsAr: ['هامش الأمان = المبيعات الفعلية - مبيعات التعادل', 'نسبة أعلى = مخاطر أقل', 'مقياس رئيسي لتقييم المخاطر'],
+    highlightType: 'formula',
+    highlight: 'Margin of Safety % = (Actual Sales - BEP Sales) / Actual Sales x 100',
+    highlightAr: 'نسبة هامش الأمان = (المبيعات الفعلية - مبيعات التعادل) / المبيعات الفعلية × 100',
   ),
-  _LearnSlide(
-    title: s.tr('Sensitivity Analysis', 'تحليل الحساسية'),
-    icon: Icons.tune_rounded,
-    color: const Color(0xFFF97316),
-    description: s.tr(
-        'What-if scenarios: How does BEP change with ±10% price change? ±20% fixed cost change? Helps identify which variables have the most impact on profitability.',
-        'سيناريوهات افتراضية: كيف تتغير نقطة التعادل مع تغير السعر بنسبة ±10%؟ أو تغير التكاليف الثابتة بنسبة ±20%؟ يساعد على تحديد المتغيرات الأكثر تأثيرًا على الربحية.'),
-    formulas: const [
-      'Test: Price ±10%, FC ±20%, VC ±15%',
-      'Identify most sensitive variable',
-    ],
+  BreakEvenSlide(
+    id: 'section-be-8',
+    number: 'BE.9',
+    title: 'Multi-Product Break-Even',
+    titleAr: 'تعادل المنتجات المتعددة',
+    content: ['Most businesses sell more than one product. Multi-product break-even analysis accounts for the sales mix - the proportion each product represents of total sales.', 'The weighted average contribution margin (WACM) is calculated by weighting each product\'s CM by its share of total sales.', 'BEP (units) = Total Fixed Costs / WACM. This gives the total units needed; individual product quantities are then derived from the sales mix.', 'Changes in sales mix affect the break-even point: shifting toward higher-margin products lowers BEP, while shifting toward lower-margin products raises it.'],
+    contentAr: ['معظم الشركات تبيع أكثر من منتج واحد. تحليل التعادل متعدد المنتجات يراعي مزيج المبيعات - النسبة التي يمثلها كل منتج من إجمالي المبيعات.', 'المتوسط المرجح لهامش المساهمة يُحسب بترجيح هامش مساهمة كل منتج بحصته من إجمالي المبيعات.', 'نقطة التعادل (وحدات) = إجمالي التكاليف الثابتة / المتوسط المرجح لهامش المساهمة. هذا يعطي إجمالي الوحدات المطلوبة؛ ثم تُشتق كميات المنتجات الفردية من مزيج المبيعات.', 'التغييرات في مزيج المبيعات تؤثر على نقطة التعادل: التحول نحو المنتجات ذات الهامش الأعلى يخفض نقطة التعادل، والتحول نحو المنتجات ذات الهامش الأقل يرفعها.'],
+    keyPoints: ['Uses weighted average contribution margin', 'Sales mix affects the break-even point', 'Higher-margin products lower BEP'],
+    keyPointsAr: ['يستخدم المتوسط المرجح لهامش المساهمة', 'مزيج المبيعات يؤثر على نقطة التعادل', 'المنتجات ذات الهامش الأعلى تخفض نقطة التعادل'],
   ),
-  _LearnSlide(
-    title: s.tr('Key Takeaways', 'أبرز النقاط'),
-    icon: Icons.emoji_events_rounded,
-    color: const Color(0xFFD97706),
-    description: s.tr(
-        'BEP is a critical planning tool. Lower fixed costs or raise contribution margin to lower BEP. Monitor margin of safety. Use sensitivity analysis for risk assessment.',
-        'نقطة التعادل أداة تخطيط أساسية. خفّض التكاليف الثابتة أو ارفع هامش المساهمة لخفض نقطة التعادل. راقب هامش الأمان. استخدم تحليل الحساسية لتقييم المخاطر.'),
-    formulas: const [
-      '↓ Fixed Costs → ↓ BEP',
-      '↑ CM → ↓ BEP',
-      'Always monitor Margin of Safety',
-    ],
+  BreakEvenSlide(
+    id: 'section-be-9',
+    number: 'BE.10',
+    title: 'Sensitivity Analysis',
+    titleAr: 'تحليل الحساسية',
+    content: ['Sensitivity analysis examines how changes in key variables (selling price, variable costs, fixed costs) affect the break-even point.', 'A small price increase can significantly lower BEP, while a price decrease raises it. This helps managers understand pricing power.', 'What-if scenarios test different combinations: What if rent increases 10%? What if raw material costs drop 5%? What if we raise prices 8%?', 'This analysis helps identify which variables have the greatest impact on profitability, guiding management attention to the most critical factors.'],
+    contentAr: ['يفحص تحليل الحساسية كيف تؤثر التغييرات في المتغيرات الرئيسية (سعر البيع، التكاليف المتغيرة، التكاليف الثابتة) على نقطة التعادل.', 'زيادة صغيرة في السعر يمكن أن تخفض نقطة التعادل بشكل كبير، بينما انخفاض السعر يرفعها. هذا يساعد المديرين على فهم قوة التسعير.', 'سيناريوهات ماذا لو تختبر مجموعات مختلفة: ماذا لو ارتفع الإيجار 10%؟ ماذا لو انخفضت تكاليف المواد الخام 5%؟ ماذا لو رفعنا الأسعار 8%؟', 'يساعد هذا التحليل في تحديد المتغيرات ذات التأثير الأكبر على الربحية، مما يوجه انتباه الإدارة إلى العوامل الأكثر أهمية.'],
+    keyPoints: ['Tests impact of changing key variables', 'Price changes have outsized impact on BEP', 'Identifies most critical profit drivers'],
+    keyPointsAr: ['يختبر تأثير تغيير المتغيرات الرئيسية', 'تغييرات الأسعار لها تأثير كبير على نقطة التعادل', 'يحدد أهم محركات الربح'],
+  ),
+  BreakEvenSlide(
+    id: 'section-be-assumptions',
+    number: 'BE.11',
+    title: 'Operating Leverage',
+    titleAr: 'الرافعة التشغيلية',
+    content: ['Operating leverage measures how sensitive operating income is to changes in sales volume. It is driven by cost structure: the higher the proportion of fixed costs, the higher the operating leverage. The degree of operating leverage (DOL) at a given sales level equals Contribution Margin / Operating Income.', 'A firm with high operating leverage earns more from each additional sale once fixed costs are covered, but suffers larger losses when sales fall. A DOL of 4 means a 10% increase in sales raises operating income by roughly 40% - and a 10% decline cuts it by roughly 40%.'],
+    contentAr: ['تقيس الرافعة التشغيلية مدى حساسية الدخل التشغيلي للتغيرات في حجم المبيعات. وهي مدفوعة بهيكل التكاليف: فكلما ارتفعت نسبة التكاليف الثابتة، ارتفعت الرافعة التشغيلية. ودرجة الرافعة التشغيلية عند مستوى مبيعات معين تساوي هامش المساهمة / الدخل التشغيلي.', 'الشركة ذات الرافعة التشغيلية المرتفعة تكسب أكثر من كل عملية بيع إضافية بعد تغطية التكاليف الثابتة، لكنها تتكبد خسائر أكبر عند انخفاض المبيعات. درجة رافعة تساوي 4 تعني أن زيادة المبيعات بنسبة 10% ترفع الدخل التشغيلي بنحو 40% - وأن انخفاضها بنسبة 10% يخفضه بنحو 40%.'],
+    keyPoints: ['DOL = Contribution Margin / Operating Income', 'Higher fixed costs = higher operating leverage = higher risk'],
+    keyPointsAr: ['درجة الرافعة التشغيلية = هامش المساهمة / الدخل التشغيلي', 'تكاليف ثابتة أعلى = رافعة تشغيلية أعلى = مخاطر أعلى'],
+    highlightType: 'tip',
+    highlight: 'Operating leverage cuts both ways: the cost structure that magnifies profit on the way up magnifies loss on the way down.',
+    highlightAr: 'الرافعة التشغيلية سيف ذو حدين: فهيكل التكاليف الذي يضخّم الربح صعوداً يضخّم الخسارة هبوطاً.',
+  ),
+  BreakEvenSlide(
+    id: 'section-be-cvp-assumptions',
+    number: 'BE.12',
+    title: 'CVP Assumptions and the Relevant Range',
+    titleAr: 'افتراضات تحليل التكلفة-الحجم-الربح والمدى الملائم',
+    content: ['Break-even analysis is only valid within the five standard cost-volume-profit (CVP) assumptions listed below.', 'Outside the relevant range, these assumptions break down: bulk discounts change variable cost per unit, capacity expansions step up fixed costs, and price cuts may be needed to sell more volume. Treat the break-even point as a planning estimate that must be re-computed whenever the underlying assumptions change.'],
+    contentAr: ['تحليل التعادل صالح فقط ضمن الافتراضات الخمسة القياسية لتحليل التكلفة-الحجم-الربح المدرجة أدناه.', 'خارج المدى الملائم تنهار هذه الافتراضات: فخصومات الكميات تغير التكلفة المتغيرة للوحدة، وتوسعات الطاقة الإنتاجية ترفع التكاليف الثابتة درجة، وقد يلزم خفض الأسعار لبيع حجم أكبر. تعامل مع نقطة التعادل باعتبارها تقديراً تخطيطياً يجب إعادة حسابه كلما تغيرت الافتراضات الأساسية.'],
+    keyPoints: ['Total costs can be separated into fixed and variable components', 'Selling price, variable cost per unit and total fixed costs are constant, so revenue and total costs are linear in units sold', 'The analysis applies only within the relevant range, the band of activity for which those cost behaviors hold', 'For multi-product firms, the sales mix remains constant', 'Units produced equal units sold, so inventory levels do not change'],
+    keyPointsAr: ['يمكن فصل إجمالي التكاليف إلى مكونات ثابتة ومتغيرة', 'سعر البيع والتكلفة المتغيرة للوحدة وإجمالي التكاليف الثابتة ثابتة، فتكون الإيرادات وإجمالي التكاليف خطية بالنسبة للوحدات المباعة', 'يسري التحليل فقط ضمن المدى الملائم، وهو نطاق النشاط الذي يظل فيه سلوك التكاليف على حاله', 'في الشركات متعددة المنتجات يبقى مزيج المبيعات ثابتاً', 'الوحدات المنتجة تساوي الوحدات المباعة، فلا تتغير مستويات المخزون'],
+  ),
+  BreakEvenSlide(
+    id: 'section-be-10',
+    number: 'BE.13',
+    title: 'Summary of Break-Even Analysis',
+    titleAr: 'ملخص تحليل التعادل',
+    content: ['Break-even analysis is a powerful planning tool that connects costs, volume, and profit into a clear framework for decision-making.', 'Key formulas: BEP = Fixed Costs / CM per Unit. Margin of Safety = Actual Sales - BEP Sales. CM = Price - Variable Cost.', 'It supports pricing decisions, cost management, investment evaluation, and risk assessment across all types of businesses.', 'While the basic model assumes linear costs and constant prices, it provides an excellent starting point for more detailed financial planning.'],
+    contentAr: ['تحليل التعادل هو أداة تخطيط قوية تربط التكاليف والحجم والربح في إطار واضح لاتخاذ القرارات.', 'الصيغ الرئيسية: نقطة التعادل = التكاليف الثابتة / هامش المساهمة. هامش الأمان = المبيعات الفعلية - مبيعات التعادل. هامش المساهمة = السعر - التكلفة المتغيرة.', 'يدعم قرارات التسعير وإدارة التكاليف وتقييم الاستثمار وتقييم المخاطر عبر جميع أنواع الأعمال.', 'بينما يفترض النموذج الأساسي تكاليف خطية وأسعار ثابتة، فإنه يوفر نقطة انطلاق ممتازة للتخطيط المالي الأكثر تفصيلاً.'],
+    keyPoints: ['Connects costs, volume, and profit', 'Supports pricing, cost, and investment decisions', 'Foundation for detailed financial planning'],
+    keyPointsAr: ['يربط التكاليف والحجم والربح', 'يدعم قرارات التسعير والتكاليف والاستثمار', 'أساس للتخطيط المالي التفصيلي'],
+  ),
+  BreakEvenSlide(
+    id: 'section-be-frameworks',
+    number: 'BE.14',
+    title: 'Grounded in International Frameworks',
+    titleAr: 'مُؤسَّس على الأطر الدولية',
+    content: ['Everything in this module follows cost-volume-profit (CVP) analysis as canonized in managerial accounting. The contribution margin, break-even point in units and in revenue, target-profit volume, margin of safety, operating leverage, and the CVP assumptions presented here follow the standard treatment examined by the global professional accounting bodies.'],
+    contentAr: ['كل ما ورد في هذه الوحدة يتبع تحليل التكلفة-الحجم-الربح كما هو مُكرَّس في المحاسبة الإدارية. فهامش المساهمة، ونقطة التعادل بالوحدات وبالإيرادات، وحجم الربح المستهدف، وهامش الأمان، والرافعة التشغيلية، وافتراضات التحليل المعروضة هنا تتبع المعالجة القياسية التي تختبرها الهيئات المحاسبية المهنية العالمية.'],
+  ),
+  BreakEvenSlide(
+    id: 'section-be-framework-bodies',
+    number: 'BE.15',
+    title: 'The Professional Body Syllabi',
+    titleAr: 'مناهج الهيئات المهنية',
+    content: ['The primary anchors are the official curricula of three professional bodies, listed below.', 'In all three, CVP analysis - the model, its formulas, and the relevant-range assumptions exactly as taught in this module - is core examinable content of the management accounting curriculum used for short-term planning and decision-making.'],
+    contentAr: ['المراجع الأساسية هي المناهج الرسمية لثلاث هيئات مهنية، مدرجة أدناه.', 'وفي المناهج الثلاثة يُعد تحليل التكلفة-الحجم-الربح - بنموذجه وصيغه وافتراضات المدى الملائم تماماً كما تُدرَّس في هذه الوحدة - محتوى أساسياً قابلاً للاختبار في منهج المحاسبة الإدارية المستخدم للتخطيط واتخاذ القرارات قصيرة الأجل.'],
+    keyPoints: ['CIMA/CGMA Professional Qualification syllabus - CVP analysis as core management accounting content', 'IMA, CMA Content Specification Outlines - CVP in Part 1 planning and analytics', 'ACCA, Performance Management (PM) syllabus - CVP for short-term decision-making'],
+    keyPointsAr: ['منهج المؤهل المهني CIMA/CGMA - تحليل التكلفة-الحجم-الربح محتوى أساسي في المحاسبة الإدارية', 'معهد IMA، مخططات محتوى شهادة CMA - التحليل ضمن الجزء الأول (التخطيط والتحليلات)', 'جمعية ACCA، منهج «إدارة الأداء» (PM) - التحليل لأغراض القرارات قصيرة الأجل'],
+    highlightType: 'info',
+    highlight: 'This module is aligned with these managerial accounting frameworks to ensure objective, verifiable knowledge transfer.',
+    highlightAr: 'هذه الوحدة متوائمة مع أطر المحاسبة الإدارية هذه لضمان نقل معرفة موضوعية قابلة للتحقق.',
   ),
 ];
+
+/// Icon + accent color per slide (by website section id; unknown ids cycle).
+(IconData, Color) _beSlideStyle(String id, int index) {
+  const styles = <String, (IconData, Color)>{
+    'section-be-overview': (Icons.balance_rounded, AppColors.primaryLight),
+    'section-be-1': (Icons.help_outline_rounded, AppColors.primaryLight),
+    'section-be-2': (Icons.lock_rounded, Color(0xFFEF4444)),
+    'section-be-3': (Icons.show_chart_rounded, Color(0xFFF59E0B)),
+    'section-be-4': (Icons.pie_chart_rounded, AppColors.secondaryLight),
+    'section-be-5': (Icons.calculate_rounded, Color(0xFF8B5CF6)),
+    'section-be-6': (Icons.insert_chart_rounded, Color(0xFF06B6D4)),
+    'section-be-7': (Icons.shield_rounded, AppColors.secondaryLight),
+    'section-be-8': (Icons.category_rounded, Color(0xFFEC4899)),
+    'section-be-9': (Icons.tune_rounded, Color(0xFFF59E0B)),
+    'section-be-assumptions': (Icons.speed_rounded, Color(0xFFEF4444)),
+    'section-be-cvp-assumptions': (Icons.rule_rounded, Color(0xFF8B5CF6)),
+    'section-be-10': (Icons.emoji_events_rounded, Color(0xFFD97706)),
+    'section-be-frameworks': (Icons.public_rounded, AppColors.primaryLight),
+    'section-be-framework-bodies': (Icons.school_rounded, Color(0xFF06B6D4)),
+  };
+  const cycle = [AppColors.primaryLight, AppColors.secondaryLight, Color(0xFFF59E0B), Color(0xFF8B5CF6)];
+  return styles[id] ?? (Icons.menu_book_rounded, cycle[index % cycle.length]);
+}
+
+/// Renders one deck slide: number + title, paragraphs, key points, highlight
+/// and examples. Scrolls inside the page so long slides never overflow.
+Widget _buildBeSlideCard(BuildContext context, {
+  required BreakEvenSlide slide,
+  required int index,
+  required int total,
+  required bool ar,
+  required IconData icon,
+  required Color color,
+}) {
+  final dir = ar ? TextDirection.rtl : TextDirection.ltr;
+  final align = ar ? TextAlign.right : TextAlign.left;
+  final keyPoints = slide.keyPointsFor(ar);
+  final highlight = slide.highlightFor(ar);
+  final examples = slide.examplesFor(ar);
+  final hlIcon = switch (slide.highlightType) {
+    'formula' => Icons.functions_rounded,
+    'warning' => Icons.warning_amber_rounded,
+    'tip' => Icons.lightbulb_rounded,
+    _ => Icons.info_outline_rounded,
+  };
+  return GlassCard(
+    borderColor: color.withValues(alpha: 0.3),
+    padding: const EdgeInsets.all(20),
+    child: Directionality(
+      textDirection: dir,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color.withValues(alpha: 0.15),
+                        ),
+                        child: Icon(icon, color: color, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              slide.number,
+                              textDirection: TextDirection.ltr,
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 11,
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              slide.titleFor(ar),
+                              textAlign: align,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ...slide.contentFor(ar).map((p) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          p,
+                          textAlign: align,
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            height: 1.6,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                      )),
+                  if (keyPoints.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: color.withValues(alpha: 0.08),
+                        border: Border.all(color: color.withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.check_circle_outline_rounded, size: 16, color: color),
+                              const SizedBox(width: 6),
+                              Text(
+                                ar ? 'النقاط الرئيسية' : 'Key Points',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: color,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...keyPoints.map((k) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('•  ', style: TextStyle(color: color, height: 1.5)),
+                                    Expanded(
+                                      child: Text(
+                                        k,
+                                        textAlign: align,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          height: 1.5,
+                                          color: AppColors.textPrimary(context),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (examples.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      slide.examplesTitleFor(ar) ?? (ar ? 'أمثلة' : 'Examples'),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ...examples.map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text('•  $e',
+                              textAlign: align,
+                              style: TextStyle(
+                                  fontSize: 13, height: 1.5, color: AppColors.textSecondary(context))),
+                        )),
+                  ],
+                  if (highlight != null && highlight.trim().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: AppColors.accentLight.withValues(alpha: 0.08),
+                        border: Border.all(color: AppColors.accentLight.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(hlIcon, size: 18, color: AppColors.accentLight),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              highlight,
+                              textAlign: align,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                fontWeight: slide.highlightType == 'formula'
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: (index + 1) / total,
+              minHeight: 4,
+              backgroundColor: AppColors.borderColor(context),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
 List<_PracticeScenario> _buildPracticeScenarios(AppStrings s) => <_PracticeScenario>[
   _PracticeScenario(
@@ -394,7 +717,10 @@ class _BreakEvenScreenState extends ConsumerState<BreakEvenScreen>
 
   // Learn tab page
   int _currentSlide = 0;
-  final PageController _pageController = PageController();
+  PageController _pageController = PageController();
+  // Resume at the last slide viewed (website a2da32f, key 'break-even').
+  final LearnResumeRecorder _resume =
+      LearnResumeRecorder(LearnResumeStore.breakEvenKey);
 
   // Practice tab expanded states
   final Set<int> _expandedScenarios = {};
@@ -412,6 +738,32 @@ class _BreakEvenScreenState extends ConsumerState<BreakEvenScreen>
       }
     });
     _loadScenarios();
+    _restoreSlide();
+  }
+
+  /// Reopen the deck at the slide the learner last had on screen.
+  Future<void> _restoreSlide() async {
+    final saved = await _resume.restore(ref);
+    if (!mounted) return;
+    final i = LearnResumeStore.indexIn(
+        breakEvenSlides.map((sl) => sl.id).toList(), saved);
+    if (i != _currentSlide) {
+      setState(() {
+        _currentSlide = i;
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(i);
+        } else {
+          _pageController.dispose();
+          _pageController = PageController(initialPage: i);
+        }
+      });
+    }
+    _resume.record(ref, breakEvenSlides[i].id);
+  }
+
+  void _onSlideChanged(int i) {
+    setState(() => _currentSlide = i);
+    _resume.record(ref, breakEvenSlides[i].id);
   }
 
   Future<void> _loadScenarios() async {
@@ -435,6 +787,7 @@ class _BreakEvenScreenState extends ConsumerState<BreakEvenScreen>
   void dispose() {
     _tabController.dispose();
     _pageController.dispose();
+    _resume.dispose();
     super.dispose();
   }
 
@@ -613,7 +966,7 @@ class _BreakEvenScreenState extends ConsumerState<BreakEvenScreen>
 
   Widget _buildLearnTab() {
     final s = ref.watch(stringsProvider);
-    final slides = _buildSlides(s);
+    const slides = breakEvenSlides;
     return Column(
       children: [
         // Page counter
@@ -642,8 +995,23 @@ class _BreakEvenScreenState extends ConsumerState<BreakEvenScreen>
           child: PageView.builder(
             controller: _pageController,
             itemCount: slides.length,
-            onPageChanged: (i) => setState(() => _currentSlide = i),
-            itemBuilder: (context, i) => _buildSlideCard(slides[i], i),
+            onPageChanged: _onSlideChanged,
+            itemBuilder: (context, i) {
+              final st = _beSlideStyle(slides[i].id, i);
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: _buildBeSlideCard(context,
+                        slide: slides[i],
+                        index: i,
+                        total: slides.length,
+                        ar: s.ar,
+                        icon: st.$1,
+                        color: st.$2)
+                    .animate()
+                    .fadeIn(duration: 400.ms)
+                    .slideX(begin: 0.05),
+              );
+            },
           ),
         ),
 
@@ -681,7 +1049,7 @@ class _BreakEvenScreenState extends ConsumerState<BreakEvenScreen>
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(4),
                             color: active
-                                ? slides[_currentSlide].color
+                                ? _beSlideStyle(slides[_currentSlide].id, _currentSlide).$2
                                 : AppColors.borderColor(context),
                           ),
                         );
@@ -706,130 +1074,6 @@ class _BreakEvenScreenState extends ConsumerState<BreakEvenScreen>
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSlideCard(_LearnSlide slide, int index) {
-    final s = ref.watch(stringsProvider);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: GlassCard(
-        borderColor: slide.color.withValues(alpha: 0.3),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon + slide number
-            Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: slide.color.withValues(alpha: 0.15),
-                  ),
-                  child: Icon(slide.icon, color: slide.color, size: 26),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${s.tr('Section', 'القسم')} ${index + 1}',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 11,
-                          color: slide.color,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        slide.title,
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Description
-            Text(
-              slide.description,
-              style: TextStyle(
-                fontSize: 15,
-                height: 1.6,
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-
-            if (slide.formulas.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              // Formula box
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: slide.color.withValues(alpha: 0.08),
-                  border: Border.all(color: slide.color.withValues(alpha: 0.2)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.functions_rounded, size: 16, color: slide.color),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Key Formulas',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: slide.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    ...slide.formulas.map((f) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(
-                            f,
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 13,
-                              color: AppColors.textPrimary(context),
-                              height: 1.5,
-                            ),
-                          ),
-                        )),
-                  ],
-                ),
-              ),
-            ],
-
-            const Spacer(),
-
-            // Progress bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: (index + 1) / _buildSlides(s).length,
-                minHeight: 4,
-                backgroundColor: AppColors.borderColor(context),
-                valueColor: AlwaysStoppedAnimation(slide.color),
-              ),
-            ),
-          ],
-        ),
-      ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.05),
     );
   }
 

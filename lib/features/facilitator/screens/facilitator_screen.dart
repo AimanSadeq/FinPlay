@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/utils/constants.dart';
 import '../../../data/education_catalog.dart';
@@ -22,6 +21,15 @@ import '../../../providers/game_state_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../earnings_call/widgets/earnings_call_facilitator_card.dart';
+import '../widgets/admin_panels.dart';
+import '../widgets/cohorts_panel.dart';
+import '../widgets/controls_cards.dart';
+import '../widgets/downloads_cards.dart';
+import '../widgets/delivery_checklist.dart';
+import '../widgets/insights_panel.dart';
+import '../widgets/market_forecasts_card.dart';
+import '../widgets/master_voucher_card.dart';
+import 'setup_wizard_screen.dart';
 import '../../../app/i18n/app_strings.dart';
 
 class FacilitatorScreen extends ConsumerStatefulWidget {
@@ -43,6 +51,7 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
   @override
   void initState() {
     super.initState();
+<<<<<<< Updated upstream
     _tabController = TabController(length: 19, vsync: this);
     // A facilitator who authenticated in the home "Admin Access" dialog already
     // holds a session (authProvider.isFacilitator, password header attached):
@@ -59,6 +68,9 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
     ref.read(teamProvider.notifier).fetchTeams();
     ref.read(gameStateProvider.notifier).fetchGameState();
     _loadShocks();
+=======
+    _tabController = TabController(length: 23, vsync: this);
+>>>>>>> Stashed changes
   }
 
   @override
@@ -95,14 +107,16 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
     } catch (_) {}
   }
 
-  Future<void> _triggerShock(String shockId) async {
+  Future<void> _triggerShock(String shockId, int round) async {
+    final s = ref.read(stringsProvider);
     try {
       final repo = ref.read(facilitatorRepositoryProvider);
-      await repo.triggerShock(shockId);
+      final gs = ref.read(gameStateProvider).valueOrNull;
+      final res = await repo.triggerShock(shockId, round: round, module: gs?.currentModule);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ref.read(stringsProvider).tr('Shock triggered!', 'تم تفعيل الصدمة!')),
+            content: Text(res['message']?.toString() ?? s.tr('Shock triggered!', 'تم تفعيل الصدمة!')),
             backgroundColor: AppColors.danger,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -110,9 +124,16 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
         );
       }
     } catch (e) {
+      // 409 (already active for this round) and 400 (round outside 1-3) carry a
+      // readable server message; show it as-is.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text(e is FacilitatorActionException
+                ? e.message
+                : s.tr('Could not trigger the shock', 'تعذّر تفعيل الصدمة')),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     }
@@ -145,23 +166,22 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
-    try {
-      final repo = ref.read(facilitatorRepositoryProvider);
-      await repo.advanceRound();
-      ref.read(gameStateProvider.notifier).fetchGameState();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.tr('Round advanced!', 'تم تقديم الجولة!')), backgroundColor: AppColors.secondary),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
-        );
-      }
+    final currentRound = ref.read(gameStateProvider).valueOrNull?.currentRound ?? 1;
+    if (currentRound >= AppConstants.maxRounds) return;
+    final repo = ref.read(facilitatorRepositoryProvider);
+    final moved = await _forceRoundWithGapCheck(context, s, (force) => repo.advanceRound(currentRound, force: force));
+    if (!moved) return;
+    ref.read(gameStateProvider.notifier).fetchGameState();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.tr('All teams moved to Round ${currentRound + 1} Financing',
+              'تم نقل جميع الفرق إلى تمويل الجولة ${currentRound + 1}')),
+          backgroundColor: AppColors.secondary,
+        ),
+      );
     }
   }
 
@@ -259,6 +279,11 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                     Text(s.tr('Facilitator Panel', 'لوحة الميسّر'), style: Theme.of(context).textTheme.headlineMedium),
                     const Spacer(),
                     IconButton(
+                      tooltip: s.tr('Session Setup Wizard', 'معالج إعداد الجلسة'),
+                      icon: const Icon(Icons.flag_rounded, color: AppColors.purple),
+                      onPressed: () => SetupWizardScreen.open(context),
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.logout_rounded, color: AppColors.dangerLight),
                       onPressed: () {
                         ref.read(authProvider.notifier).logoutFacilitator();
@@ -277,10 +302,12 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                 tabs: [
                   Tab(text: s.tr('Controls', 'التحكّم')),
                   Tab(text: s.tr('Cohorts', 'المجموعات')),
+                  Tab(text: s.tr('Checklist', 'قائمة التقديم')),
                   Tab(text: s.tr('Leaderboard', 'لوحة المتصدّرين')),
                   Tab(text: s.tr('Teams', 'الفرق')),
                   Tab(text: s.tr('Sign-In', 'تسجيل الدخول')),
                   Tab(text: s.tr('Shocks', 'الصدمات')),
+                  Tab(text: s.tr('Insights', 'الملاحظات')),
                   Tab(text: s.tr('Timer', 'المؤقّت')),
                   Tab(text: s.tr('Education', 'التعليم')),
                   Tab(text: s.tr('Realism', 'الواقعية')),
@@ -289,10 +316,12 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                   Tab(text: s.tr('QR Code', 'رمز QR')),
                   Tab(text: s.tr('Rounds', 'الجولات')),
                   Tab(text: s.tr('Round Details', 'تفاصيل الجولة')),
+                  Tab(text: s.tr('Sim Control', 'التحكّم بالمحاكاة')),
                   Tab(text: s.tr('Answer Key', 'مفتاح الإجابات')),
-                  Tab(text: s.tr('Excel', 'إكسل')),
                   Tab(text: s.tr('Downloads', 'التنزيلات')),
                   Tab(text: s.tr('Game Checks', 'فحوصات اللعبة')),
+                  Tab(text: s.tr('Members', 'الأعضاء')),
+                  Tab(text: s.tr('Activity', 'النشاط')),
                   Tab(text: s.tr('Settings', 'الإعدادات')),
                 ],
               ),
@@ -306,7 +335,11 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                       repo: ref.read(facilitatorRepositoryProvider),
                       onRefreshState: () => ref.read(gameStateProvider.notifier).fetchGameState(),
                     ),
-                    _CohortsTab(repo: ref.read(facilitatorRepositoryProvider)),
+                    CohortsPanel(repo: ref.read(facilitatorRepositoryProvider)),
+                    DeliveryChecklist(
+                      repo: ref.read(facilitatorRepositoryProvider),
+                      onOpenWizard: () => SetupWizardScreen.open(context),
+                    ),
                     _LeaderboardTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _TeamsTab(teams: teamState.teams),
                     _TeamSignInTab(repo: ref.read(facilitatorRepositoryProvider)),
@@ -314,32 +347,54 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
                       shocks: _shocks,
                       onTrigger: _triggerShock,
                       repo: ref.read(facilitatorRepositoryProvider),
+                      currentRound: gameState.valueOrNull?.currentRound ?? 1,
+                      currentModule: gameState.valueOrNull?.currentModule,
+                    ),
+                    InsightsPanel(
+                      repo: ref.read(facilitatorRepositoryProvider),
+                      currentRound: gameState.valueOrNull?.currentRound,
                     ),
                     _TimerTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _EducationTab(gameState: gameState),
                     _RealismTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _VouchersTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _AssessmentsTab(repo: ref.read(facilitatorRepositoryProvider)),
-                    _QrCodeTab(repo: ref.read(facilitatorRepositoryProvider)),
+                    _QrCodeTab(repo: ref.read(facilitatorRepositoryProvider), gameState: gameState),
                     _RoundsTab(gameState: gameState, onAdvance: _advanceRound),
                     _RoundDetailsTab(repo: ref.read(facilitatorRepositoryProvider)),
+                    SimControlPanel(repo: ref.read(facilitatorRepositoryProvider)),
                     const _AnswerKeyTab(),
-                    _ExcelViewerTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _DownloadsTab(repo: ref.read(facilitatorRepositoryProvider)),
                     _GameChecksTab(repo: ref.read(facilitatorRepositoryProvider)),
+                    SelfPacedMembersPanel(repo: ref.read(facilitatorRepositoryProvider)),
+                    ActivityLogPanel(repo: ref.read(facilitatorRepositoryProvider)),
                     _SettingsTab(
                       gameState: gameState,
                       repo: ref.read(facilitatorRepositoryProvider),
                       onToggleLock: _toggleModuleLock,
                       onClearCache: () async {
                         try {
+                          // Local response cache, then the server's data cache (POST
+                          // /cache/clear with the facilitator password).
                           await ref.read(gameRepositoryProvider).clearCache();
+                          await ref.read(facilitatorRepositoryProvider).clearServerCache();
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(s.tr('Cache cleared', 'تم مسح ذاكرة التخزين المؤقت')), backgroundColor: AppColors.secondary),
                             );
                           }
-                        } catch (_) {}
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(e is FacilitatorActionException
+                                    ? e.message
+                                    : s.tr('Could not clear the cache', 'تعذّر مسح ذاكرة التخزين المؤقت')),
+                                backgroundColor: AppColors.danger,
+                              ),
+                            );
+                          }
+                        }
                       },
                     ),
                   ],
@@ -351,6 +406,94 @@ class _FacilitatorScreenState extends ConsumerState<FacilitatorScreen>
       ),
     );
   }
+}
+
+String _moduleLabel(AppStrings s, String module) => switch (module) {
+      'financing' => s.tr('financing', 'التمويل'),
+      'investing' => s.tr('investing', 'الاستثمار'),
+      'operating' => s.tr('operating', 'التشغيل'),
+      _ => module,
+    };
+
+/// Runs a force-round call. When the server refuses the forward move because the round
+/// before is incomplete (400 ROUND_INCOMPLETE), lists the teams and missing modules and
+/// offers "Move anyway", which resends with `force: true` — the website's standing rule.
+/// Returns true when the teams were moved.
+Future<bool> _forceRoundWithGapCheck(
+  BuildContext context,
+  AppStrings s,
+  Future<void> Function(bool force) send,
+) async {
+  try {
+    await send(false);
+    return true;
+  } on RoundIncompleteException catch (e) {
+    if (!context.mounted) return false;
+    final moveAnyway = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.tr('Round ${e.round - 1} is not complete', 'الجولة ${e.round - 1} غير مكتملة')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(s.tr(
+                'Every team must confirm at least one financing, one investing and one operating decision before Round ${e.round} opens. Still missing:',
+                'يجب على كل فريق تأكيد قرار واحد على الأقل في التمويل والاستثمار والتشغيل قبل فتح الجولة ${e.round}. ما زال ناقصًا:',
+              )),
+              const SizedBox(height: 10),
+              if (e.gaps.isEmpty)
+                Text(e.message)
+              else
+                ...e.gaps.map((g) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.accentLight),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '${g.teamName.replaceAll(RegExp(r'\s*\(Team\s+\d+\)'), '')}: '
+                            '${g.missing.map((m) => _moduleLabel(s, m)).join(s.tr(', ', '، '))}',
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ]),
+                    )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.tr('Cancel', 'إلغاء'))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+            child: Text(s.tr('Move anyway', 'النقل على أي حال')),
+          ),
+        ],
+      ),
+    );
+    if (moveAnyway != true) return false;
+    try {
+      await send(true);
+      return true;
+    } catch (err) {
+      if (context.mounted) _showActionError(context, s, err);
+      return false;
+    }
+  } catch (err) {
+    if (context.mounted) _showActionError(context, s, err);
+    return false;
+  }
+}
+
+void _showActionError(BuildContext context, AppStrings s, Object err) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+    content: Text(err is FacilitatorActionException
+        ? err.message
+        : s.tr('Something went wrong. Please try again.', 'حدث خطأ ما. يرجى المحاولة مرة أخرى.')),
+    backgroundColor: AppColors.danger,
+  ));
 }
 
 // ---- Controls Tab ----
@@ -366,6 +509,12 @@ class _ControlsTab extends StatefulWidget {
 
 class _ControlsTabState extends State<_ControlsTab> {
   bool _corporateModeEnabled = false;
+  // Corporate FinPlay game gate: the simulation tile stays dimmed for delegates until
+  // they finish the learning modules OR the facilitator opens the game here.
+  bool _simulationOpen = false;
+  bool _simulationAccessLoaded = false;
+  // Whether teams may move on to the next decision module (toggle-next-decisions).
+  bool _nextDecisionsUnlocked = false;
   // Cohort access code minted when corporate mode is turned on — shared with the
   // room and required for team sign-in. Empty when corporate mode is off.
   String _corporateAccessCode = '';
@@ -381,10 +530,31 @@ class _ControlsTabState extends State<_ControlsTab> {
   final _minCoverageC = TextEditingController(text: '1.5');
   bool _savingCovenant = false;
 
+<<<<<<< Updated upstream
+=======
+  // Budget constraints
+  // Case-study constraint overrides per module (website "Constraints" card).
+  static const _constraintModules = ['financing', 'investing', 'operating'];
+  final Map<String, TextEditingController> _maxBudgetC = {
+    for (final m in _constraintModules) m: TextEditingController(),
+  };
+  final Map<String, TextEditingController> _maxSelectionsC = {
+    for (final m in _constraintModules) m: TextEditingController(),
+  };
+  bool _caseStudyActive = false;
+  bool _savingConstraint = false;
+
+>>>>>>> Stashed changes
   @override
   void dispose() {
     _maxLeverageC.dispose();
     _minCoverageC.dispose();
+<<<<<<< Updated upstream
+=======
+    for (final c in [..._maxBudgetC.values, ..._maxSelectionsC.values]) {
+      c.dispose();
+    }
+>>>>>>> Stashed changes
     super.dispose();
   }
 
@@ -412,6 +582,88 @@ class _ControlsTabState extends State<_ControlsTab> {
     }
   }
 
+<<<<<<< Updated upstream
+=======
+  Future<void> _loadCaseStudyConstraints() async {
+    try {
+      final cs = await widget.repo.fetchActiveCaseStudy();
+      if (!mounted) return;
+      setState(() {
+        _caseStudyActive = cs != null;
+        final constraints = cs?['constraints'];
+        if (constraints is Map) {
+          for (final m in _constraintModules) {
+            final c = constraints[m];
+            if (c is! Map) continue;
+            _maxBudgetC[m]!.text = c['maxBudget'] != null ? '${c['maxBudget']}' : '';
+            _maxSelectionsC[m]!.text = c['maxSelections'] != null ? '${c['maxSelections']}' : '';
+          }
+        }
+      });
+    } catch (_) {/* offline */}
+  }
+
+  Future<void> _saveConstraint(AppStrings s) async {
+    final overrides = <String, Map<String, num>>{};
+    for (final m in _constraintModules) {
+      final entry = <String, num>{};
+      final b = num.tryParse(_maxBudgetC[m]!.text.trim());
+      final n = int.tryParse(_maxSelectionsC[m]!.text.trim());
+      if (b != null) entry['maxBudget'] = b;
+      if (n != null) entry['maxSelections'] = n;
+      overrides[m] = entry;
+    }
+    setState(() => _savingConstraint = true);
+    try {
+      await widget.repo.saveCaseStudyOverrides(overrides);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(s.tr('Constraints saved', 'تم حفظ القيود')),
+          backgroundColor: AppColors.secondary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      }
+    } catch (e) {
+      if (mounted) _showActionError(context, s, e);
+    } finally {
+      if (mounted) setState(() => _savingConstraint = false);
+    }
+  }
+
+>>>>>>> Stashed changes
+  @override
+  void initState() {
+    super.initState();
+    _loadSimulationAccess();
+    _loadFacilitatorStatus();
+    _loadLobbyStatus();
+    _loadCaseStudyConstraints();
+  }
+
+  /// The lobby opens when a facilitator signs in and closes on a game reset; there is no
+  /// switch for it on the server, so the panel only reports it (as the website does).
+  Future<void> _loadLobbyStatus() async {
+    try {
+      final open = await widget.repo.fetchLobbyOpen();
+      if (mounted) setState(() => _lobbyOpen = open);
+    } catch (_) {}
+  }
+
+  /// Corporate mode and its access code come from GET /facilitator/status: the public
+  /// round state never carries the code.
+  Future<void> _loadFacilitatorStatus() async {
+    try {
+      final st = await widget.repo.getState();
+      if (!mounted) return;
+      setState(() {
+        _corporateModeEnabled = st['corporateModeEnabled'] == true;
+        _nextDecisionsUnlocked = st['nextDecisionsUnlocked'] == true;
+        _corporateAccessCode = (st['corporateAccessCode'] ?? '').toString();
+      });
+    } catch (_) {/* keep what we have */}
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -421,9 +673,45 @@ class _ControlsTabState extends State<_ControlsTab> {
   @override
   void didUpdateWidget(covariant _ControlsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
+<<<<<<< Updated upstream
     // The parent rebuilds this tab with a fresh AsyncValue after every
     // fetchGameState(); didChangeDependencies does not fire for that.
     if (!identical(oldWidget.gameState, widget.gameState)) _syncFromGameState();
+=======
+    if (oldWidget.gameState != widget.gameState) _syncFromGameState();
+  }
+
+  Future<void> _loadSimulationAccess() async {
+    try {
+      final open = await widget.repo.fetchSimulationAccess();
+      if (mounted) setState(() { _simulationOpen = open; _simulationAccessLoaded = true; });
+    } catch (_) {
+      if (mounted) setState(() => _simulationAccessLoaded = true);
+    }
+  }
+
+  Future<void> _toggleSimulationAccess(AppStrings s, bool open) async {
+    setState(() => _loading = true);
+    try {
+      final now = await widget.repo.setSimulationAccess(open);
+      if (!mounted) return;
+      setState(() => _simulationOpen = now);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(now
+            ? s.tr('FinPlay game opened: delegates can now enter the simulation from the home screen.',
+                'تم فتح لعبة FinPlay: يمكن للمشاركين الآن دخول المحاكاة من الشاشة الرئيسية.')
+            : s.tr('FinPlay game closed: the game tile is dimmed until delegates finish the modules or you open it.',
+                'تم إغلاق لعبة FinPlay: تبقى بطاقة اللعبة باهتة حتى يُكمل المشاركون الوحدات أو تفتحها أنت.')),
+        backgroundColor: now ? AppColors.secondary : AppColors.accent,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+    } catch (e) {
+      if (mounted) _showActionError(context, s, e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+>>>>>>> Stashed changes
   }
 
   void _syncFromGameState() {
@@ -431,10 +719,14 @@ class _ControlsTabState extends State<_ControlsTab> {
     gs.whenData((data) {
       if (mounted) {
         setState(() {
+<<<<<<< Updated upstream
           // GET /facilitator/status: corporateAccessCode is the live cohort code
           // while corporate mode is on and null once it is off.
           _corporateModeEnabled = data.corporateModeEnabled;
           _corporateAccessCode = data.corporateAccessCode ?? '';
+=======
+          _nextDecisionsUnlocked = data.nextDecisionsUnlocked;
+>>>>>>> Stashed changes
           _gameStatus = data.isActive ? 'playing' : 'stopped';
           _nextDecisionsUnlocked = data.nextDecisionsUnlocked;
         });
@@ -456,11 +748,7 @@ class _ControlsTabState extends State<_ControlsTab> {
       });
       widget.onRefreshState();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
-        );
-      }
+      if (mounted) _showActionError(context, ProviderScope.containerOf(context).read(stringsProvider), e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -470,6 +758,29 @@ class _ControlsTabState extends State<_ControlsTab> {
   /// pause-game, continue-game and reset-game routes. The status label only
   /// changes once the server confirmed the action.
   Future<void> _gameControl(String action) async {
+    if (action == 'reset') {
+      // Reset wipes every team's decisions and closes the lobby and the game gate; the
+      // website guards it with a confirm dialog, so this does too.
+      final s = ProviderScope.containerOf(context).read(stringsProvider);
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(s.tr('Reset the game?', 'إعادة تعيين اللعبة؟')),
+          content: Text(s.tr(
+              'This clears every team\'s decisions and progress and closes the lobby and the game. It cannot be undone.',
+              'يمسح هذا قرارات جميع الفرق وتقدّمها ويغلق الردهة واللعبة. لا يمكن التراجع عن هذا الإجراء.')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.tr('Cancel', 'إلغاء'))),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+              child: Text(s.tr('Reset', 'إعادة تعيين')),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
     setState(() => _loading = true);
     try {
       final r = widget.repo;
@@ -494,28 +805,7 @@ class _ControlsTabState extends State<_ControlsTab> {
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _toggleLobby(bool open) async {
-    setState(() => _loading = true);
-    try {
-      await widget.repo.toggleLobby(open);
-      setState(() => _lobbyOpen = open);
-      widget.onRefreshState();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger),
-        );
-      }
+      if (mounted) _showActionError(context, ProviderScope.containerOf(context).read(stringsProvider), e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -528,10 +818,13 @@ class _ControlsTabState extends State<_ControlsTab> {
       return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+<<<<<<< Updated upstream
         // There is no site-access password on the website (the old switch posted
         // to a route that never existed). The website's entry gate is the
         // corporate game gate; see ApiEndpoints.facilitatorSimulationAccess.
         // TODO(owner): decide whether to add a /facilitator/simulation-access switch here.
+=======
+>>>>>>> Stashed changes
         // Corporate Mode Toggle
         GlassCard(
           padding: const EdgeInsets.all(16),
@@ -596,6 +889,33 @@ class _ControlsTabState extends State<_ControlsTab> {
                     SnackBar(content: Text(s.tr('Code copied', 'تم نسخ الرمز'))));
                 },
               ),
+            ]),
+          ),
+        ],
+        // One QR per team: scanning carries the cohort code and the team (website TeamJoinCodes).
+        if (_corporateModeEnabled) ...[
+          const SizedBox(height: 8),
+          TeamJoinCodesCard(repo: widget.repo, accessCode: _corporateAccessCode),
+        ],
+        // Corporate mode on with no code stored is not a cosmetic gap: sign-in is only
+        // gated when a code exists, so the cohort is open to anyone with the link.
+        if (_corporateModeEnabled && _corporateAccessCode.isEmpty) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.danger.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.dangerLight.withValues(alpha: 0.6), width: 1.5),
+            ),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Icon(Icons.warning_amber_rounded, color: AppColors.dangerLight, size: 18),
+              const SizedBox(width: 8),
+              Expanded(child: Text(
+                s.tr('No access code - anyone with the link can join. Corporate mode is on but this cohort has no code stored, and sign-in is only gated when a code exists. Turn Corporate Mode off, then on again: the code is generated on that switch and will appear here.',
+                    'لا يوجد رمز دخول - يمكن لأي شخص لديه الرابط الانضمام. وضع الشركات مفعّل لكن لا يوجد رمز محفوظ لهذه المجموعة، ولا يُقيَّد تسجيل الدخول إلا عند وجود رمز. أوقف وضع الشركات ثم فعّله مجددًا: يُنشأ الرمز عند هذا التبديل وسيظهر هنا.'),
+                style: const TextStyle(fontSize: 12, color: AppColors.dangerLight),
+              )),
             ]),
           ),
         ],
@@ -677,6 +997,45 @@ class _ControlsTabState extends State<_ControlsTab> {
         ),
         const SizedBox(height: 12),
 
+        // FinPlay game gate (website "FinPlay Game Open/Close")
+        GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(
+                color: (_simulationOpen ? AppColors.secondary : AppColors.cardColor(context)).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                _simulationOpen ? Icons.sports_esports_rounded : Icons.lock_rounded,
+                color: _simulationOpen ? AppColors.secondaryLight : AppColors.textTertiary(context),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.tr('FinPlay Game', 'لعبة FinPlay'), style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  _simulationOpen
+                      ? s.tr('Open - delegates can enter the simulation', 'مفتوحة - يمكن للمشاركين دخول المحاكاة')
+                      : s.tr('Closed - opens when delegates finish the modules, or when you open it',
+                          'مغلقة - تُفتح عندما يُكمل المشاركون الوحدات، أو عندما تفتحها أنت'),
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
+                ),
+              ],
+            )),
+            Switch(
+              value: _simulationOpen,
+              onChanged: (_loading || !_simulationAccessLoaded) ? null : (v) => _toggleSimulationAccess(s, v),
+              activeTrackColor: AppColors.secondaryLight,
+            ),
+          ]),
+        ),
+        const SizedBox(height: 12),
+
         // Lobby Controls
         GlassCard(
           padding: const EdgeInsets.all(16),
@@ -699,15 +1058,19 @@ class _ControlsTabState extends State<_ControlsTab> {
               children: [
                 Text(s.tr('Lobby', 'الردهة'), style: Theme.of(context).textTheme.titleMedium),
                 Text(
-                  _lobbyOpen ? s.tr('Lobby is open for players', 'الردهة مفتوحة للاعبين') : s.tr('Lobby is closed', 'الردهة مغلقة'),
+                  _lobbyOpen
+                      ? s.tr('Lobby is open for players. It closes when the game is reset.',
+                          'الردهة مفتوحة للاعبين. تُغلق عند إعادة تعيين اللعبة.')
+                      : s.tr('Lobby is closed. Signing in to this panel opens it.',
+                          'الردهة مغلقة. يفتحها تسجيل الدخول إلى هذه اللوحة.'),
                   style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
                 ),
               ],
             )),
-            Switch(
-              value: _lobbyOpen,
-              onChanged: _loading ? null : _toggleLobby,
-              activeTrackColor: AppColors.secondaryLight,
+            IconButton(
+              tooltip: s.tr('Refresh', 'تحديث'),
+              onPressed: _loadLobbyStatus,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
             ),
           ]),
         ),
@@ -761,21 +1124,52 @@ class _ControlsTabState extends State<_ControlsTab> {
                   ],
                 ),
               )),
+              const SizedBox(height: 4),
+              // Park every team on a round's results dashboard (decisions of that round locked).
+              Row(children: [
+                const SizedBox(width: 40),
+                ...List.generate(3, (r) => Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: SizedBox(
+                      height: 36,
+                      child: OutlinedButton(
+                        onPressed: _loading ? null : () => _sendTeamsToResults(s, r + 1),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.purple,
+                          side: BorderSide(color: AppColors.purple.withValues(alpha: 0.5)),
+                          padding: EdgeInsets.zero,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text(s.tr('Teams to R${r + 1} results', 'الفرق إلى نتائج ج${r + 1}'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
+                )),
+              ]),
             ],
           ),
         ),
         const SizedBox(height: 12),
 
+<<<<<<< Updated upstream
         // Next Decisions (website "Unlock / Lock" next-decisions control):
         // POST /facilitator/toggle-next-decisions. The label and the button
         // follow the server's nextDecisionsUnlocked, so the facilitator sees
         // whether teams can currently "Move to Next Decisions".
+=======
+        // Next decisions gate (website "Unlock Decisions Control"): teams can only move on
+        // to the next decision module while this is unlocked.
+>>>>>>> Stashed changes
         GlassCard(
           padding: const EdgeInsets.all(16),
-          child: Row(children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Container(
-              width: 44, height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
+<<<<<<< Updated upstream
                 color: (_nextDecisionsUnlocked ? AppColors.secondary : AppColors.danger).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -808,7 +1202,38 @@ class _ControlsTabState extends State<_ControlsTab> {
                 _nextDecisionsUnlocked ? s.tr('Lock', 'قفل') : s.tr('Unlock', 'فتح'),
                 style: const TextStyle(fontSize: 12),
               ),
+=======
+                color: (_nextDecisionsUnlocked ? AppColors.secondary : AppColors.danger).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: (_nextDecisionsUnlocked ? AppColors.secondaryLight : AppColors.dangerLight).withValues(alpha: 0.5)),
+              ),
+              child: Text(
+                _nextDecisionsUnlocked
+                    ? s.tr('🔓 Teams CAN advance to next module', '🔓 يمكن للفرق الانتقال إلى الوحدة التالية')
+                    : s.tr('🔒 Teams CANNOT advance (waiting for unlock)', '🔒 لا يمكن للفرق الانتقال (بانتظار الفتح)'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _nextDecisionsUnlocked ? AppColors.secondaryLight : AppColors.dangerLight),
+              ),
+>>>>>>> Stashed changes
             ),
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(child: ElevatedButton(
+                onPressed: (_loading || _nextDecisionsUnlocked) ? null : () => _toggleNextDecisions(s, true),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
+                child: Text(s.tr('🔓 Unlock', '🔓 فتح'), style: const TextStyle(fontSize: 12)),
+              )),
+              const SizedBox(width: 8),
+              Expanded(child: ElevatedButton(
+                onPressed: (_loading || !_nextDecisionsUnlocked) ? null : () => _toggleNextDecisions(s, false),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.danger),
+                child: Text(s.tr('🔒 Lock', '🔒 قفل'), style: const TextStyle(fontSize: 12)),
+              )),
+            ]),
           ]),
         ),
         const SizedBox(height: 12),
@@ -918,11 +1343,73 @@ class _ControlsTabState extends State<_ControlsTab> {
         ),
         const SizedBox(height: 12),
 
+<<<<<<< Updated upstream
         // (The "Budget constraints" card was removed: the server has no
         // per-level budget route. Constraints on the website are case-study
         // driven: /facilitator/set-case-study and set-case-study-overrides.)
+=======
+        // ── Case-study template (GET /case-study/templates, POST /facilitator/set-case-study) ──
+        CaseStudyPickerCard(repo: widget.repo, onChanged: _loadCaseStudyConstraints),
+        const SizedBox(height: 12),
 
-        // Force Excel Cache Refresh
+        // ── Rules: case-study constraints (POST /facilitator/set-case-study-overrides) ──
+        GlassCard(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                const Icon(Icons.account_balance_wallet_rounded, color: AppColors.primaryLight, size: 20),
+                const SizedBox(width: 8),
+                Text(s.tr('Constraints', 'القيود'), style: Theme.of(context).textTheme.titleMedium),
+              ]),
+              const SizedBox(height: 4),
+              Text(
+                  _caseStudyActive
+                      ? s.tr('Override the active case study\'s budget and selection limits per module. Leave a field empty to keep the case study\'s value.',
+                          'تجاوز حدود الميزانية وعدد الاختيارات لدراسة الحالة النشطة لكل وحدة. اترك الحقل فارغًا للإبقاء على قيمة دراسة الحالة.')
+                      : s.tr('No case study is active, so there are no constraints to override.',
+                          'لا توجد دراسة حالة نشطة، لذا لا توجد قيود لتجاوزها.'),
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+              if (_caseStudyActive) ...[
+                const SizedBox(height: 12),
+                for (final m in _constraintModules)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(children: [
+                      SizedBox(width: 78, child: Text(_moduleLabel(s, m),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600))),
+                      Expanded(child: TextField(
+                        controller: _maxBudgetC[m],
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: s.tr('Max budget', 'أقصى ميزانية'), isDense: true, border: const OutlineInputBorder()),
+                      )),
+                      const SizedBox(width: 8),
+                      Expanded(child: TextField(
+                        controller: _maxSelectionsC[m],
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: s.tr('Max selections', 'أقصى عدد اختيارات'), isDense: true, border: const OutlineInputBorder()),
+                      )),
+                    ]),
+                  ),
+                SizedBox(width: double.infinity, child: ElevatedButton.icon(
+                  onPressed: _savingConstraint ? null : () => _saveConstraint(s),
+                  icon: _savingConstraint
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.save_rounded, size: 18),
+                  label: Text(s.tr('Save Constraints', 'حفظ القيود')),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                )),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+>>>>>>> Stashed changes
+
+        // Force server data-cache refresh (POST /cache/clear)
         GlassCard(
           padding: const EdgeInsets.all(16),
           child: Row(children: [
@@ -938,12 +1425,12 @@ class _ControlsTabState extends State<_ControlsTab> {
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(s.tr('Excel Cache', 'ذاكرة Excel المؤقتة'), style: Theme.of(context).textTheme.titleMedium),
-                Text(s.tr('Force refresh server Excel cache', 'فرض تحديث ذاكرة Excel على الخادم'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
+                Text(s.tr('Data Cache', 'ذاكرة البيانات المؤقتة'), style: Theme.of(context).textTheme.titleMedium),
+                Text(s.tr('Clear the server data cache so dashboards load the latest data', 'مسح ذاكرة البيانات المؤقتة على الخادم لتعرض اللوحات أحدث البيانات'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
               ],
             )),
             ElevatedButton(
-              onPressed: _loading ? null : _refreshExcelCache,
+              onPressed: _loading ? null : () => _clearServerCache(s),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
               child: Text(s.tr('Refresh', 'تحديث'), style: const TextStyle(fontSize: 12)),
             ),
@@ -951,7 +1438,7 @@ class _ControlsTabState extends State<_ControlsTab> {
         ),
         const SizedBox(height: 12),
 
-        // Research (DBA) mode toggle — gates the learner-facing research flow.
+        // DBA study site toggle — suppresses the commercial assessments in this cohort.
         const _ResearchModeCard(),
         const SizedBox(height: 12),
 
@@ -962,16 +1449,32 @@ class _ControlsTabState extends State<_ControlsTab> {
     });
   }
 
+  /// The website's grid sends POST /facilitator/force-module {round, module} for every cell
+  /// (financing included) after a confirm: one call, no round-completeness check. The gap
+  /// check applies only to the Rounds tab's "Advance to Next Round" (force-round).
   Future<void> _forcePosition(int round, String module) async {
+    final s = ProviderScope.containerOf(context).read(stringsProvider);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: Text(s.tr('Move all teams to Round $round ${_moduleLabel(s, module)}?',
+            'نقل جميع الفرق إلى ${_moduleLabel(s, module)} الجولة $round؟')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.tr('Cancel', 'إلغاء'))),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(s.tr('Move', 'نقل'))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
     setState(() => _loading = true);
     try {
-      await widget.repo.forceRound(round);
-      await widget.repo.forceModule(module);
+      await widget.repo.forceModule(module, round: round);
       widget.onRefreshState();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Moved to Round $round - ${module[0].toUpperCase()}${module.substring(1)}'),
+            content: Text(s.tr('All teams moved to Round $round ${_moduleLabel(s, module)}',
+                'تم نقل جميع الفرق إلى ${_moduleLabel(s, module)} الجولة $round')),
             backgroundColor: AppColors.secondary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -979,9 +1482,48 @@ class _ControlsTabState extends State<_ControlsTab> {
         );
       }
     } catch (e) {
+      if (mounted) _showActionError(context, s, e);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  /// POST /facilitator/force-module {round, module: 'dashboard'}: every team parked on the
+  /// round's results screen with that round's decisions locked (website 5fcc4ee).
+  Future<void> _sendTeamsToResults(AppStrings s, int round) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(s.tr('Teams to Round $round results', 'الفرق إلى نتائج الجولة $round')),
+        content: Text(s.tr(
+            'Send ALL teams to the Round $round results dashboard? Their Round $round decisions will be locked.',
+            'إرسال جميع الفرق إلى لوحة نتائج الجولة $round؟ سيتم قفل قرارات الجولة $round الخاصة بهم.')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.tr('Cancel', 'إلغاء'))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.purple),
+            child: Text(s.tr('Send', 'إرسال')),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      await widget.repo.forceModule('dashboard', round: round);
+      widget.onRefreshState();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(s.tr('All teams sent to the Round $round results dashboard',
+              'تم إرسال جميع الفرق إلى لوحة نتائج الجولة $round')),
+          backgroundColor: AppColors.secondary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
       }
+    } catch (e) {
+      if (mounted) _showActionError(context, s, e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1009,6 +1551,7 @@ class _ControlsTabState extends State<_ControlsTab> {
     }
   }
 
+<<<<<<< Updated upstream
   /// Unlock or lock "Move to Next Decisions" for every team. The state shown
   /// afterwards is the one the server confirmed; a failed call (401 from a
   /// stale password, 400, dead route) is reported and nothing changes.
@@ -1032,10 +1575,25 @@ class _ControlsTabState extends State<_ControlsTab> {
           ),
         );
       }
+=======
+  Future<void> _toggleNextDecisions(AppStrings s, bool unlock) async {
+    setState(() => _loading = true);
+    try {
+      final now = await widget.repo.toggleNextDecisions(unlock);
+      widget.onRefreshState();
+      if (!mounted) return;
+      setState(() => _nextDecisionsUnlocked = now);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(now
+            ? s.tr('Next decisions unlocked: teams can now move to the next module',
+                'تم فتح القرارات التالية: يمكن للفرق الآن الانتقال إلى الوحدة التالية')
+            : s.tr('Next decisions locked: teams can no longer move to the next module',
+                'تم قفل القرارات التالية: لم يعد بإمكان الفرق الانتقال إلى الوحدة التالية')),
+        backgroundColor: now ? AppColors.secondary : AppColors.accent,
+      ));
+>>>>>>> Stashed changes
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger));
-      }
+      if (mounted) _showActionError(context, s, e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1060,20 +1618,22 @@ class _ControlsTabState extends State<_ControlsTab> {
     }
   }
 
-  Future<void> _refreshExcelCache() async {
+  Future<void> _clearServerCache(AppStrings s) async {
     setState(() => _loading = true);
     try {
-      await widget.repo.refreshExcelCache();
+      await widget.repo.clearServerCache();
       widget.onRefreshState();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Excel cache refreshed'), backgroundColor: AppColors.secondary),
+          SnackBar(
+            content: Text(s.tr('Data cache cleared - dashboards will load the latest data',
+                'تم مسح ذاكرة البيانات المؤقتة - ستعرض اللوحات أحدث البيانات')),
+            backgroundColor: AppColors.secondary,
+          ),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.danger));
-      }
+      if (mounted) _showActionError(context, s, e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1301,6 +1861,7 @@ class _LeaderboardTabState extends State<_LeaderboardTab> {
   }
 }
 
+<<<<<<< Updated upstream
 // ---- Excel Worksheet Viewer Tab ----
 class _ExcelViewerTab extends StatefulWidget {
   final FacilitatorRepository repo;
@@ -1524,6 +2085,8 @@ class _ExcelSheetCardState extends State<_ExcelSheetCard> {
   }
 }
 
+=======
+>>>>>>> Stashed changes
 // ---- Teams Tab ----
 class _TeamsTab extends StatelessWidget {
   final List teams;
@@ -1601,7 +2164,7 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
   List<Map<String, dynamic>> _teams = [];
   bool _isLoading = true;
   String? _error;
-  // teamId (number string) -> current leader name.
+  // teamId ("Team N") -> current leader name.
   final Map<String, String?> _leaders = {};
 
   @override
@@ -1614,12 +2177,13 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
 
   Future<void> _fetchLeaders() async {
     final results = await Future.wait([
-      for (var i = 1; i <= AppConstants.maxTeams; i++) widget.repo.fetchTeamLeader('$i'),
+      // Leaders are keyed by the real team id ("Team 1"...), as the website stores them.
+      for (var i = 1; i <= AppConstants.maxTeams; i++) widget.repo.fetchTeamLeader('Team $i'),
     ]);
     if (!mounted) return;
     setState(() {
       for (var i = 0; i < results.length; i++) {
-        _leaders['${i + 1}'] = results[i];
+        _leaders['Team ${i + 1}'] = results[i];
       }
     });
   }
@@ -1775,7 +2339,7 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
                   const SizedBox(height: 8),
                   // Current team leader + remove (tap a member below to set).
                   Builder(builder: (context) {
-                    final teamId = '${index + 1}';
+                    final teamId = teamKey;
                     final leader = _leaders[teamId];
                     if (leader == null) {
                       return Text('No leader — tap a member to make leader',
@@ -1798,10 +2362,15 @@ class _TeamSignInTabState extends State<_TeamSignInTab> {
                     spacing: 6,
                     runSpacing: 6,
                     children: players.map<Widget>((p) {
+<<<<<<< Updated upstream
                       final name = p is String
                           ? p
                           : ((p as Map)['playerName'] ?? p['name'])?.toString() ?? 'Unknown';
                       final teamId = '${index + 1}';
+=======
+                      final name = p is String ? p : (p as Map<String, dynamic>)['name']?.toString() ?? 'Unknown';
+                      final teamId = teamKey;
+>>>>>>> Stashed changes
                       final isLeader = _leaders[teamId] == name;
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1870,9 +2439,17 @@ int? _overviewTeamNumber(Map<String, dynamic> t) {
 // ---- Shocks Tab ----
 class _ShocksTab extends StatefulWidget {
   final List<Shock> shocks;
-  final Future<void> Function(String) onTrigger;
+  final Future<void> Function(String shockId, int round) onTrigger;
   final FacilitatorRepository repo;
-  const _ShocksTab({required this.shocks, required this.onTrigger, required this.repo});
+  final int currentRound;
+  final String? currentModule;
+  const _ShocksTab({
+    required this.shocks,
+    required this.onTrigger,
+    required this.repo,
+    required this.currentRound,
+    this.currentModule,
+  });
 
   @override
   State<_ShocksTab> createState() => _ShocksTabState();
@@ -1881,16 +2458,23 @@ class _ShocksTab extends StatefulWidget {
 class _ShocksTabState extends State<_ShocksTab> {
   final _nameC = TextEditingController();
   final _descC = TextEditingController();
-  final _hintC = TextEditingController();
-  final _durationC = TextEditingController(text: '30');
+  final _responseC = TextEditingController();
   String _category = 'economic';
   String _severity = 'medium';
   bool _sending = false;
+  // Which game year the shock is stamped with. Defaults to the current round; a shock
+  // stamped with an earlier round rewrites results teams have already seen.
+  late int _round = widget.currentRound.clamp(1, 3);
+  bool _roundPicked = false;
 
   List<Map<String, dynamic>> _active = [];
   List<Map<String, dynamic>> _history = [];
 
-  static const _categories = ['economic', 'regulatory', 'competitive', 'operational'];
+  // The server's ShockCategory values.
+  static const _categories = [
+    'economic', 'market', 'regulatory', 'operational',
+    'financial', 'competitive', 'environmental', 'political',
+  ];
   static const _severities = ['low', 'medium', 'high', 'critical'];
 
   @override
@@ -1900,11 +2484,19 @@ class _ShocksTabState extends State<_ShocksTab> {
   }
 
   @override
+  void didUpdateWidget(covariant _ShocksTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Follow the game's round until the facilitator picks one deliberately.
+    if (!_roundPicked && oldWidget.currentRound != widget.currentRound) {
+      _round = widget.currentRound.clamp(1, 3);
+    }
+  }
+
+  @override
   void dispose() {
     _nameC.dispose();
     _descC.dispose();
-    _hintC.dispose();
-    _durationC.dispose();
+    _responseC.dispose();
     super.dispose();
   }
 
@@ -1918,55 +2510,76 @@ class _ShocksTabState extends State<_ShocksTab> {
     } catch (_) {/* offline */}
   }
 
-  Future<void> _triggerCustom() async {
+  /// Active/history rows are ActiveShock objects: the name lives under `definition`.
+  String _shockName(Map<String, dynamic> s) {
+    final def = s['definition'];
+    return ((def is Map ? def['name'] : null) ?? s['name'] ?? s['shockId'] ?? 'Shock').toString();
+  }
+
+  String? _shockDescription(Map<String, dynamic> s) {
+    final def = s['definition'];
+    return ((def is Map ? def['description'] : null) ?? s['description'])?.toString();
+  }
+
+  String _shockSeverity(Map<String, dynamic> s) {
+    final def = s['definition'];
+    return ((def is Map ? def['severity'] : null) ?? s['severity'] ?? 'medium').toString();
+  }
+
+  void _snack(String msg, {bool error = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: error ? AppColors.danger : null,
+    ));
+  }
+
+  Future<void> _triggerCustom(AppStrings s) async {
     if (_nameC.text.trim().isEmpty || _descC.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name and description are required')));
+      _snack(s.tr('Name and description are required', 'الاسم والوصف مطلوبان'));
       return;
     }
     setState(() => _sending = true);
     try {
-      await widget.repo.triggerCustomShock(
+      final res = await widget.repo.triggerCustomShock(
         name: _nameC.text.trim(),
         description: _descC.text.trim(),
         category: _category,
         severity: _severity,
-        durationMinutes: int.tryParse(_durationC.text.trim()),
-        hint: _hintC.text.trim().isEmpty ? null : _hintC.text.trim(),
+        round: _round,
+        module: widget.currentModule,
+        suggestedResponse: _responseC.text.trim().isEmpty ? null : _responseC.text.trim(),
       );
-      _nameC.clear(); _descC.clear(); _hintC.clear();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Custom shock triggered!')));
-      }
+      _nameC.clear(); _descC.clear(); _responseC.clear();
+      _snack(res['message']?.toString() ?? s.tr('Custom shock triggered!', 'تم تفعيل الصدمة المخصّصة!'));
       await _refresh();
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not trigger custom shock')));
-      }
+    } catch (e) {
+      _snack(
+        e is FacilitatorActionException
+            ? e.message
+            : s.tr('Could not trigger custom shock', 'تعذّر تفعيل الصدمة المخصّصة'),
+        error: true,
+      );
     } finally {
       if (mounted) setState(() => _sending = false);
     }
   }
 
-  Future<void> _clearAll() async {
+  Future<void> _clearAll(AppStrings s) async {
     final ok = await widget.repo.clearAllShocks();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'All shocks cleared' : 'Clear not supported by server')));
-    }
+    _snack(ok
+        ? s.tr('All shocks cleared', 'تم مسح جميع الصدمات')
+        : s.tr('Could not clear shocks', 'تعذّر مسح الصدمات'), error: !ok);
     await _refresh();
   }
 
-  Future<void> _dismissOne(Map<String, dynamic> shock) async {
+  Future<void> _dismissOne(AppStrings s, Map<String, dynamic> shock) async {
     final id = (shock['id'] ?? shock['instanceId'] ?? shock['shockInstanceId'])?.toString();
     if (id == null || id.isEmpty) return;
     final ok = await widget.repo.dismissShock(id);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ok ? 'Shock dismissed' : 'Could not dismiss shock')));
-    }
+    _snack(ok
+        ? s.tr('Shock dismissed', 'تم إلغاء الصدمة')
+        : s.tr('Could not dismiss shock', 'تعذّر إلغاء الصدمة'), error: !ok);
     await _refresh();
   }
 
@@ -1979,118 +2592,161 @@ class _ShocksTabState extends State<_ShocksTab> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: _refresh,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // ── Custom shock builder ──
-          GlassCard(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(children: [
-                  const Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primaryLight),
-                  const SizedBox(width: 8),
-                  Text('Create Custom Shock', style: Theme.of(context).textTheme.titleMedium),
-                ]),
-                const SizedBox(height: 12),
-                TextField(controller: _nameC, decoration: const InputDecoration(
-                    labelText: 'Name', isDense: true, border: OutlineInputBorder())),
-                const SizedBox(height: 10),
-                TextField(controller: _descC, maxLines: 2, decoration: const InputDecoration(
-                    labelText: 'Describe the market event…', isDense: true, border: OutlineInputBorder())),
-                const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: DropdownButtonFormField<String>(
-                    initialValue: _category,
-                    isDense: true,
-                    decoration: const InputDecoration(labelText: 'Category', isDense: true, border: OutlineInputBorder()),
-                    items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: (v) => setState(() => _category = v ?? _category),
-                  )),
-                  const SizedBox(width: 10),
-                  Expanded(child: DropdownButtonFormField<String>(
-                    initialValue: _severity,
-                    isDense: true,
-                    decoration: const InputDecoration(labelText: 'Severity', isDense: true, border: OutlineInputBorder()),
-                    items: _severities.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                    onChanged: (v) => setState(() => _severity = v ?? _severity),
-                  )),
-                ]),
-                const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: TextField(controller: _durationC, keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Duration (min)', isDense: true, border: OutlineInputBorder()))),
-                  const SizedBox(width: 10),
-                  Expanded(flex: 2, child: TextField(controller: _hintC,
-                    decoration: const InputDecoration(labelText: 'Hint for teams (optional)', isDense: true, border: OutlineInputBorder()))),
-                ]),
-                const SizedBox(height: 12),
-                SizedBox(width: double.infinity, child: ElevatedButton.icon(
-                  onPressed: _sending ? null : _triggerCustom,
-                  icon: _sending
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.bolt_rounded, size: 18),
-                  label: const Text('Trigger Custom Shock'),
-                )),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Active shocks ──
-          Row(children: [
-            Text('Active Shocks', style: Theme.of(context).textTheme.titleMedium),
-            const Spacer(),
-            if (_active.isNotEmpty)
-              TextButton.icon(
-                onPressed: _clearAll,
-                icon: const Icon(Icons.clear_all_rounded, size: 16),
-                label: const Text('Clear all'),
-                style: TextButton.styleFrom(foregroundColor: AppColors.dangerLight),
+    return Consumer(builder: (context, ref, _) {
+      final s = ref.watch(stringsProvider);
+      return RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // ── Round the shock is stamped with ──
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.event_note_rounded, size: 18, color: AppColors.primaryLight),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(s.tr('Shock round', 'جولة الصدمة'),
+                        style: Theme.of(context).textTheme.titleMedium)),
+                    SegmentedButton<int>(
+                      segments: [
+                        for (final r in [1, 2, 3])
+                          ButtonSegment(value: r, label: Text(s.tr('R$r', 'ج$r'))),
+                      ],
+                      selected: {_round},
+                      onSelectionChanged: (sel) => setState(() { _round = sel.first; _roundPicked = true; }),
+                      showSelectedIcon: false,
+                    ),
+                  ]),
+                  if (_round < widget.currentRound) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      s.tr(
+                        'Round $_round is behind the game\'s current round (${widget.currentRound}). A shock stamped with an earlier year rewrites results teams have already seen, and its effect compounds into later years.',
+                        'الجولة $_round تسبق الجولة الحالية للعبة (${widget.currentRound}). الصدمة المسجّلة على سنة سابقة تعيد كتابة نتائج اطّلعت عليها الفرق، ويتراكم أثرها على السنوات اللاحقة.',
+                      ),
+                      style: const TextStyle(fontSize: 12, color: AppColors.accentLight),
+                    ),
+                  ],
+                ],
               ),
-          ]),
-          const SizedBox(height: 8),
-          if (_active.isEmpty)
-            Text('No active shocks', style: TextStyle(color: AppColors.textTertiary(context)))
-          else
-            ..._active.map((s) => _activeCard(s)),
+            ),
+            const SizedBox(height: 16),
 
-          const SizedBox(height: 20),
+            // ── Custom shock builder ──
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primaryLight),
+                    const SizedBox(width: 8),
+                    Text(s.tr('Create Custom Shock', 'إنشاء صدمة مخصّصة'), style: Theme.of(context).textTheme.titleMedium),
+                  ]),
+                  const SizedBox(height: 12),
+                  TextField(controller: _nameC, decoration: InputDecoration(
+                      labelText: s.tr('Name', 'الاسم'), isDense: true, border: const OutlineInputBorder())),
+                  const SizedBox(height: 10),
+                  TextField(controller: _descC, maxLines: 2, decoration: InputDecoration(
+                      labelText: s.tr('Describe the market event…', 'صف حدث السوق…'), isDense: true, border: const OutlineInputBorder())),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: DropdownButtonFormField<String>(
+                      initialValue: _category,
+                      isDense: true,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: s.tr('Category', 'الفئة'), isDense: true, border: const OutlineInputBorder()),
+                      items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                      onChanged: (v) => setState(() => _category = v ?? _category),
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: DropdownButtonFormField<String>(
+                      initialValue: _severity,
+                      isDense: true,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: s.tr('Severity', 'الشدّة'), isDense: true, border: const OutlineInputBorder()),
+                      items: _severities.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                      onChanged: (v) => setState(() => _severity = v ?? _severity),
+                    )),
+                  ]),
+                  const SizedBox(height: 10),
+                  TextField(controller: _responseC, decoration: InputDecoration(
+                      labelText: s.tr('Suggested response (optional)', 'الاستجابة المقترحة (اختياري)'),
+                      isDense: true, border: const OutlineInputBorder())),
+                  const SizedBox(height: 12),
+                  SizedBox(width: double.infinity, child: ElevatedButton.icon(
+                    onPressed: _sending ? null : () => _triggerCustom(s),
+                    icon: _sending
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.bolt_rounded, size: 18),
+                    label: Text(s.tr('Trigger Custom Shock (Round $_round)', 'تفعيل الصدمة المخصّصة (الجولة $_round)')),
+                  )),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
 
-          // ── Predefined shocks ──
-          Text('Predefined Shocks', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          if (widget.shocks.isEmpty)
-            Text('Loading shocks…', style: TextStyle(color: AppColors.textTertiary(context)))
-          else
-            ...widget.shocks.map(_predefinedCard),
-
-          // ── History ──
-          if (_history.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Text('Shock History', style: Theme.of(context).textTheme.titleMedium),
+            // ── Active shocks ──
+            Row(children: [
+              Text(s.tr('Active Shocks', 'الصدمات النشطة'), style: Theme.of(context).textTheme.titleMedium),
+              const Spacer(),
+              if (_active.isNotEmpty)
+                TextButton.icon(
+                  onPressed: () => _clearAll(s),
+                  icon: const Icon(Icons.clear_all_rounded, size: 16),
+                  label: Text(s.tr('Clear all', 'مسح الكل')),
+                  style: TextButton.styleFrom(foregroundColor: AppColors.dangerLight),
+                ),
+            ]),
             const SizedBox(height: 8),
-            ..._history.take(20).map((s) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(children: [
-                const Icon(Icons.history_rounded, size: 14),
-                const SizedBox(width: 8),
-                Expanded(child: Text((s['name'] ?? s['shockId'] ?? 'Shock').toString(),
-                    style: Theme.of(context).textTheme.bodySmall)),
-              ]),
-            )),
+            if (_active.isEmpty)
+              Text(s.tr('No active shocks', 'لا توجد صدمات نشطة'), style: TextStyle(color: AppColors.textTertiary(context)))
+            else
+              ..._active.map((a) => _activeCard(s, a)),
+
+            const SizedBox(height: 20),
+
+            // ── Market forecasts + shock insurance ──
+            MarketForecastsCard(repo: widget.repo, currentRound: widget.currentRound),
+            const SizedBox(height: 20),
+
+            // ── Predefined shocks ──
+            Text(s.tr('Predefined Shocks', 'الصدمات المعدّة مسبقًا'), style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (widget.shocks.isEmpty)
+              Text(s.tr('Loading shocks…', 'جارٍ تحميل الصدمات…'), style: TextStyle(color: AppColors.textTertiary(context)))
+            else
+              ...widget.shocks.map((sh) => _predefinedCard(s, sh)),
+
+            // ── History ──
+            if (_history.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text(s.tr('Shock History', 'سجل الصدمات'), style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              ..._history.take(20).map((h) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(children: [
+                  const Icon(Icons.history_rounded, size: 14),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(
+                      '${_shockName(h)}${h['round'] != null ? ' · ${s.tr('Round', 'الجولة')} ${h['round']}' : ''}',
+                      style: Theme.of(context).textTheme.bodySmall)),
+                ]),
+              )),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
+    });
   }
 
-  Widget _activeCard(Map<String, dynamic> s) {
-    final sev = (s['severity'] ?? 'medium').toString();
+  Widget _activeCard(AppStrings s, Map<String, dynamic> shock) {
+    final sev = _shockSeverity(shock);
     final c = _sevColor(sev);
+    final desc = _shockDescription(shock);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: GlassCard(
@@ -2099,9 +2755,12 @@ class _ShocksTabState extends State<_ShocksTab> {
           Icon(Icons.flash_on_rounded, color: c, size: 20),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text((s['name'] ?? 'Shock').toString(), style: Theme.of(context).textTheme.titleSmall),
-            if (s['description'] != null)
-              Text(s['description'].toString(),
+            Text(_shockName(shock), style: Theme.of(context).textTheme.titleSmall),
+            if (shock['round'] != null)
+              Text('${s.tr('Round', 'الجولة')} ${shock['round']} · ${shock['target'] == 'all' || shock['target'] == null ? s.tr('All teams', 'جميع الفرق') : shock['target']}',
+                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context))),
+            if (desc != null)
+              Text(desc,
                   maxLines: 2, overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall),
           ])),
@@ -2110,12 +2769,12 @@ class _ShocksTabState extends State<_ShocksTab> {
             decoration: BoxDecoration(color: c.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
             child: Text(sev.toUpperCase(), style: TextStyle(fontSize: 10, color: c, fontWeight: FontWeight.w600)),
           ),
-          // Dismiss this single shock (reverts its Excel impact)
+          // Dismiss this single shock (reverts its model impact)
           IconButton(
-            onPressed: () => _dismissOne(s),
+            onPressed: () => _dismissOne(s, shock),
             icon: const Icon(Icons.close_rounded, size: 18),
             color: AppColors.dangerLight,
-            tooltip: 'Dismiss',
+            tooltip: s.tr('Dismiss', 'إلغاء'),
             visualDensity: VisualDensity.compact,
             constraints: const BoxConstraints(),
             padding: const EdgeInsets.only(left: 8),
@@ -2125,7 +2784,7 @@ class _ShocksTabState extends State<_ShocksTab> {
     );
   }
 
-  Widget _predefinedCard(Shock shock) {
+  Widget _predefinedCard(AppStrings s, Shock shock) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: GlassCard(
@@ -2161,13 +2820,13 @@ class _ShocksTabState extends State<_ShocksTab> {
               ],
             )),
             ElevatedButton(
-              onPressed: () async { await widget.onTrigger(shock.id); await _refresh(); },
+              onPressed: () async { await widget.onTrigger(shock.id, _round); await _refresh(); },
               style: ElevatedButton.styleFrom(
                 backgroundColor: shock.severityColor,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 minimumSize: Size.zero,
               ),
-              child: const Text('Trigger', style: TextStyle(fontSize: 12)),
+              child: Text(s.tr('Trigger', 'تفعيل'), style: const TextStyle(fontSize: 12)),
             ),
           ],
         ),
@@ -2187,6 +2846,87 @@ class _TimerTab extends StatefulWidget {
 class _TimerTabState extends State<_TimerTab> {
   int _minutes = 15;
 
+  // Per-activity timer presets (website 2e7c9a3): how long each activity type gets;
+  // a row's play button starts the session timer with that duration.
+  static const _activities = <(String, String, String)>[
+    ('financing', 'Financing decisions', 'قرارات التمويل'),
+    ('investing', 'Investing decisions', 'قرارات الاستثمار'),
+    ('operating', 'Operating decisions', 'قرارات التشغيل'),
+    ('shock', 'Market shock response', 'الاستجابة لصدمة السوق'),
+    ('education', 'Education module block', 'فترة الوحدات التعليمية'),
+    ('debrief', 'Debrief / discussion', 'المراجعة / النقاش'),
+  ];
+  final Map<String, TextEditingController> _presetC = {
+    for (final a in _activities) a.$1: TextEditingController(),
+  };
+  bool _presetsLoaded = false;
+  bool _savingPresets = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPresets();
+  }
+
+  @override
+  void dispose() {
+    for (final c in _presetC.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _loadPresets() async {
+    try {
+      final presets = await widget.repo.fetchTimerPresets();
+      for (final e in presets.entries) {
+        _presetC[e.key]?.text = '${e.value}';
+      }
+    } catch (_) {/* offline: fields stay empty */}
+    if (mounted) setState(() => _presetsLoaded = true);
+  }
+
+  int? _presetMinutes(String key) {
+    final n = int.tryParse(_presetC[key]?.text.trim() ?? '');
+    return (n != null && n >= 1 && n <= 120) ? n : null;
+  }
+
+  Future<void> _savePresets(AppStrings s) async {
+    final presets = <String, int>{
+      for (final a in _activities)
+        if (_presetMinutes(a.$1) != null) a.$1: _presetMinutes(a.$1)!,
+    };
+    setState(() => _savingPresets = true);
+    try {
+      final saved = await widget.repo.saveTimerPresets(presets);
+      for (final e in saved.entries) {
+        _presetC[e.key]?.text = '${e.value}';
+      }
+      _snack(s.tr('Activity times saved', 'تم حفظ أوقات الأنشطة'));
+    } catch (e) {
+      _snack(e is FacilitatorActionException
+          ? e.message
+          : s.tr('Could not save timer presets', 'تعذّر حفظ أوقات الأنشطة'), color: AppColors.danger);
+    } finally {
+      if (mounted) setState(() => _savingPresets = false);
+    }
+  }
+
+  Future<void> _startPreset(AppStrings s, String key) async {
+    final m = _presetMinutes(key);
+    if (m == null) {
+      _snack(s.tr('Enter 1-120 minutes', 'أدخل من 1 إلى 120 دقيقة'), color: AppColors.danger);
+      return;
+    }
+    setState(() => _minutes = m);
+    final res = await widget.repo.startTimerMinutes(m);
+    final ok = res['success'] != false;
+    _snack(ok
+        ? s.tr('$m minute session timer is now active', 'مؤقّت الجلسة لمدة $m دقيقة يعمل الآن')
+        : (res['message'] ?? res['error'] ?? s.tr('Could not start timer', 'تعذّر بدء المؤقّت')).toString(),
+        color: ok ? null : AppColors.danger);
+  }
+
   void _snack(String msg, {Color? color}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -2198,6 +2938,7 @@ class _TimerTabState extends State<_TimerTab> {
   }
 
   Future<void> _overlay(bool show, AppStrings s) async {
+<<<<<<< Updated upstream
     final ok = show ? await widget.repo.showTimerOverlay() : await widget.repo.hideTimerOverlay();
     if (!ok) {
       _snack(s.tr('Could not update the timer overlay', 'تعذّر تحديث عرض المؤقّت'),
@@ -2207,6 +2948,20 @@ class _TimerTabState extends State<_TimerTab> {
     _snack(show
         ? s.tr('Timer overlay shown on participant screens', 'تم عرض المؤقّت على شاشات المشاركين')
         : s.tr('Timer overlay hidden', 'تم إخفاء المؤقّت'));
+=======
+    try {
+      show
+          ? await widget.repo.showTimerOverlay(durationSeconds: _minutes * 60)
+          : await widget.repo.hideTimerOverlay();
+      _snack(show
+          ? s.tr('$_minutes-minute countdown overlay started', 'بدأ عرض العدّ التنازلي لمدة $_minutes دقيقة')
+          : s.tr('Timer overlay stopped', 'تم إيقاف عرض المؤقّت'));
+    } catch (e) {
+      _snack(e is FacilitatorActionException
+          ? e.message
+          : s.tr('Overlay control failed', 'تعذّر التحكم في العرض'), color: AppColors.danger);
+    }
+>>>>>>> Stashed changes
   }
 
   @override
@@ -2325,8 +3080,8 @@ class _TimerTabState extends State<_TimerTab> {
                           style: Theme.of(context).textTheme.titleMedium),
                     ]),
                     const SizedBox(height: 4),
-                    Text(s.tr('Show or hide the countdown on every participant screen.',
-                        'إظهار أو إخفاء العدّ التنازلي على شاشات جميع المشاركين.'),
+                    Text(s.tr('Start or stop the projected countdown overlay, using the minutes set above.',
+                        'ابدأ أو أوقف عرض العدّ التنازلي المعروض على الشاشة، بالدقائق المحدّدة أعلاه.'),
                         style: Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height: 12),
                     Row(children: [
@@ -2346,6 +3101,64 @@ class _TimerTabState extends State<_TimerTab> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            // Per-activity timer presets.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: GlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      const Icon(Icons.timelapse_rounded, size: 18, color: AppColors.primaryLight),
+                      const SizedBox(width: 8),
+                      Text(s.tr('Activity Timers', 'مؤقّتات الأنشطة'),
+                          style: Theme.of(context).textTheme.titleMedium),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text(s.tr('Set how long each activity gets; play starts the session timer with that time.',
+                        'حدّد مدة كل نشاط؛ زر التشغيل يبدأ مؤقّت الجلسة بهذه المدة.'),
+                        style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 12),
+                    if (!_presetsLoaded)
+                      const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()))
+                    else ...[
+                      ..._activities.map((a) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(children: [
+                          Expanded(child: Text(s.tr(a.$2, a.$3), style: const TextStyle(fontSize: 13))),
+                          SizedBox(
+                            width: 72,
+                            child: TextField(
+                              controller: _presetC[a.$1],
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              decoration: InputDecoration(
+                                  suffixText: s.tr('m', 'د'), isDense: true, border: const OutlineInputBorder()),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: s.tr('Start timer', 'بدء المؤقّت'),
+                            onPressed: () => _startPreset(s, a.$1),
+                            icon: const Icon(Icons.play_circle_rounded, color: AppColors.secondaryLight),
+                          ),
+                        ]),
+                      )),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _savingPresets ? null : () => _savePresets(s),
+                          icon: const Icon(Icons.save_rounded, size: 16),
+                          label: Text(s.tr('Save activity times', 'حفظ أوقات الأنشطة')),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       );
@@ -2354,6 +3167,7 @@ class _TimerTabState extends State<_TimerTab> {
 }
 
 // ---- Education Tab ----
+<<<<<<< Updated upstream
 // Every module the facilitator can force open (permanent catalog id, title),
 // in hub order, straight from the catalog: the server validates the id against
 // the website's FORCE_UNLOCKABLE_MODULE_NUMS, which is every catalog entry
@@ -2363,6 +3177,14 @@ final List<(int, String, String)> _eduModules = [
   for (final m in educationCatalog)
     if (!m.isSimulation) (m.num, m.titleEn, m.titleAr),
 ];
+=======
+// Every module the facilitator can force open, in hub order, labelled by its
+// catalog title: the catalog minus the game, matching the website's
+// FORCE_UNLOCKABLE_MODULE_NUMS. The game card answers to the game gate, not
+// this list, and the server rejects id 13 here.
+final List<EducationCatalogEntry> _eduModules =
+    educationCatalog.where((m) => !m.isSimulation).toList();
+>>>>>>> Stashed changes
 
 /// Ids behind the per-module unlock switches. Exposed so a test can pin them to
 /// the catalog's non-simulation entries.
@@ -2444,7 +3266,7 @@ class _EducationTabState extends ConsumerState<_EducationTab> {
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.textSecondary(context))),
             const SizedBox(height: 8),
             ..._eduModules.map((m) {
-              final isOn = unlocked.contains(m.$1);
+              final isOn = unlocked.contains(m.num);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: GlassCard(
@@ -2453,10 +3275,10 @@ class _EducationTabState extends ConsumerState<_EducationTab> {
                     Icon(Icons.school_rounded, size: 20,
                         color: isOn ? AppColors.secondaryLight : AppColors.textTertiary(context)),
                     const SizedBox(width: 12),
-                    Expanded(child: Text(s.tr(m.$2, m.$3), style: Theme.of(context).textTheme.bodyLarge)),
+                    Expanded(child: Text(s.tr(m.titleEn, m.titleAr), style: Theme.of(context).textTheme.bodyLarge)),
                     Switch(
                       value: isOn,
-                      onChanged: _busy ? null : (v) => _run((r) => r.toggleEducationModule(m.$1, v)),
+                      onChanged: _busy ? null : (v) => _run((r) => r.toggleEducationModule(m.num, v)),
                       activeTrackColor: AppColors.secondaryLight,
                     ),
                   ]),
@@ -2491,160 +3313,11 @@ class _EducationTabState extends ConsumerState<_EducationTab> {
   }
 }
 
-// ---- Cohorts Tab ----
-class _CohortsTab extends ConsumerStatefulWidget {
-  final FacilitatorRepository repo;
-  const _CohortsTab({required this.repo});
-  @override
-  ConsumerState<_CohortsTab> createState() => _CohortsTabState();
-}
-
-class _CohortsTabState extends ConsumerState<_CohortsTab> {
-  List<Map<String, dynamic>> _cohorts = [];
-  bool _loading = true;
-  bool _busy = false;
-  final _subdomain = TextEditingController();
-  final _displayName = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void dispose() {
-    _subdomain.dispose();
-    _displayName.dispose();
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    final cohorts = await widget.repo.fetchCohorts();
-    if (mounted) setState(() { _cohorts = cohorts; _loading = false; });
-  }
-
-  Future<void> _create() async {
-    final sub = _subdomain.text.trim();
-    final name = _displayName.text.trim();
-    if (sub.isEmpty || name.isEmpty) return;
-    setState(() => _busy = true);
-    final res = await widget.repo.createCohort(sub, name);
-    _subdomain.clear();
-    _displayName.clear();
-    await _load();
-    if (mounted) {
-      setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(res['success'] == true ? 'Cohort created' : (res['error']?.toString() ?? 'Could not create'))));
-    }
-  }
-
-  Future<void> _switch(String url) async {
-    final api = ref.read(apiClientProvider);
-    api.setBaseHost(url);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('cohort_base_url', url);
-    // Refresh data against the newly selected cohort host.
-    ref.read(gameStateProvider.notifier).fetchGameState();
-    ref.read(teamProvider.notifier).fetchTeams();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Switched to $url')));
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final s = ref.watch(stringsProvider);
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    final currentHost = ref.read(apiClientProvider).baseUrl;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        GlassCard(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(children: [
-            const Icon(Icons.dns_rounded, size: 18, color: AppColors.primaryLight),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.tr('Current host', 'المضيف الحالي'),
-                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context))),
-              Text(currentHost, style: GoogleFonts.jetBrainsMono(fontSize: 12)),
-            ])),
-          ]),
-        ),
-        const SizedBox(height: 16),
-        Text(s.tr('Cohorts', 'المجموعات'), style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        if (_cohorts.isEmpty)
-          Text(s.tr('No cohorts yet', 'لا توجد مجموعات بعد'),
-              style: TextStyle(color: AppColors.textTertiary(context)))
-        else
-          ..._cohorts.map((c) {
-            final url = (c['url'] ?? '').toString();
-            final active = c['isActive'] != false;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: GlassCard(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                child: Row(children: [
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text((c['displayName'] ?? c['subdomain'] ?? '').toString(),
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                    Text(url, style: GoogleFonts.jetBrainsMono(fontSize: 11, color: AppColors.textTertiary(context))),
-                  ])),
-                  TextButton(
-                    onPressed: (_busy || url.isEmpty) ? null : () => _switch(url),
-                    child: Text(active ? s.tr('Switch', 'تبديل') : s.tr('Inactive', 'غير نشط')),
-                  ),
-                ]),
-              ),
-            );
-          }),
-        const SizedBox(height: 16),
-        Text(s.tr('Create cohort', 'إنشاء مجموعة'), style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
-        GlassCard(
-          padding: const EdgeInsets.all(14),
-          child: Column(children: [
-            TextField(
-              controller: _subdomain,
-              decoration: InputDecoration(
-                labelText: s.tr('Subdomain', 'النطاق الفرعي'),
-                hintText: 'groupa',
-                isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _displayName,
-              decoration: InputDecoration(
-                labelText: s.tr('Display name', 'الاسم المعروض'),
-                hintText: 'May Cohort',
-                isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _busy ? null : _create,
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: Text(s.tr('Create', 'إنشاء')),
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.secondary),
-              ),
-            ),
-          ]),
-        ),
-      ],
-    );
-  }
-}
+// ---- Cohorts Tab: see widgets/cohorts_panel.dart ----
 
 // ---- Realism Tab ----
-// The 12 finance-realism modules (flag → label) shown on team dashboards.
+// The 12 finance-realism modules shown on team dashboards, plus the member-recommendations
+// research flag (flag → label), matching the server's REALISM_FLAGS allow-list.
 const List<(String, String, String)> _realismFlags = [
   ('workingCapitalEnabled', 'Working Capital', 'رأس المال العامل'),
   ('duPontEnabled', 'DuPont Analysis', 'تحليل دوبونت'),
@@ -2658,6 +3331,9 @@ const List<(String, String, String)> _realismFlags = [
   ('ratiosProfitabilityEnabled', 'Profitability Ratios', 'نسب الربحية'),
   ('ratiosSolvencyEnabled', 'Solvency Ratios', 'نسب الملاءة'),
   ('ratiosMarketEnabled', 'Market Ratios', 'نسب السوق'),
+  // Research instrumentation (website REALISM_FLAGS / setup wizard): each member commits a
+  // recommended amount before the team leader decides.
+  ('memberRecommendationsEnabled', 'Member recommendations (research)', 'توصيات الأعضاء (بحث)'),
 ];
 
 class _RealismTab extends ConsumerStatefulWidget {
@@ -2732,6 +3408,43 @@ class _VouchersTab extends ConsumerStatefulWidget {
   ConsumerState<_VouchersTab> createState() => _VouchersTabState();
 }
 
+// Access period an account gets when it signs up with a code (website VouchersAdmin
+// ACCESS_OPTIONS). null = no grant: the standard trial.
+const List<(int?, String, String)> _voucherAccessOptions = [
+  (30, '30 days', '30 يومًا'),
+  (90, '3 months', '3 أشهر'),
+  (183, '6 months', '6 أشهر'),
+  (365, '1 year', 'سنة واحدة'),
+  (730, '2 years', 'سنتان'),
+  (null, 'None - standard trial', 'بدون - الفترة التجريبية العادية'),
+];
+
+String _voucherAccessLabel(AppStrings s, int? days) {
+  if (days == null || days <= 0) return s.tr('Trial only', 'تجربة فقط');
+  for (final o in _voucherAccessOptions) {
+    if (o.$1 == days) return s.tr(o.$2, o.$3);
+  }
+  return s.tr('$days days', '$days يومًا');
+}
+
+/// Dropdown for a voucher's access period; keeps a non-preset value selectable.
+Widget _voucherAccessDropdown(AppStrings s, int? value, ValueChanged<int?> onChanged) {
+  final options = [
+    if (value != null && !_voucherAccessOptions.any((o) => o.$1 == value))
+      (value, '$value days', '$value يومًا'),
+    ..._voucherAccessOptions,
+  ];
+  return DropdownButtonFormField<int?>(
+    initialValue: value,
+    isExpanded: true,
+    decoration: InputDecoration(isDense: true, labelText: s.tr('Access period', 'مدة الوصول')),
+    items: options
+        .map((o) => DropdownMenuItem<int?>(value: o.$1, child: Text(s.tr(o.$2, o.$3))))
+        .toList(),
+    onChanged: onChanged,
+  );
+}
+
 class _VouchersTabState extends ConsumerState<_VouchersTab> {
   List<Map<String, dynamic>> _vouchers = [];
   bool _gating = false;
@@ -2757,6 +3470,7 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
     final s = ref.read(stringsProvider);
     final countController = TextEditingController(text: '1');
     var shared = false;
+    int? accessDays = 365;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -2792,6 +3506,20 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
                       : s.tr('How many codes', 'عدد الرموز'),
                 ),
               ),
+              const SizedBox(height: 12),
+              _voucherAccessDropdown(s, accessDays, (v) => setLocal(() => accessDays = v)),
+              const SizedBox(height: 4),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  accessDays != null
+                      ? s.tr('Full access from sign-up, replacing the 7-day trial',
+                          'وصول كامل من التسجيل، بدلًا من التجربة لمدة 7 أيام')
+                      : s.tr('Learners get the standard 7-day trial',
+                          'يحصل المتعلّمون على التجربة العادية لمدة 7 أيام'),
+                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+                ),
+              ),
             ],
           ),
           actions: [
@@ -2810,8 +3538,8 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
     final n = (int.tryParse(countController.text.trim()) ?? 1).clamp(1, 500);
     setState(() => _busy = true);
     final created = shared
-        ? await widget.repo.createVouchers(count: 1, maxUses: n)
-        : await widget.repo.createVouchers(count: n, maxUses: 1);
+        ? await widget.repo.createVouchers(count: 1, maxUses: n, accessDays: accessDays)
+        : await widget.repo.createVouchers(count: n, maxUses: 1, accessDays: accessDays);
     await _load();
     if (mounted) {
       setState(() => _busy = false);
@@ -2843,6 +3571,47 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
     }
   }
 
+  /// Change the access period granted by a code. Applies to redemptions from now on;
+  /// accounts already created keep the access they were given.
+  Future<void> _editAccess(Map<String, dynamic> voucher) async {
+    final s = ref.read(stringsProvider);
+    int? days = (voucher['accessDays'] as num?)?.toInt();
+    final picked = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(s.tr('Access period', 'مدة الوصول')),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            _voucherAccessDropdown(s, days, (v) => setLocal(() => days = v)),
+            const SizedBox(height: 8),
+            Text(
+              s.tr('Applies to accounts created with this code from now on.',
+                  'ينطبق على الحسابات التي تُنشأ بهذا الرمز من الآن فصاعدًا.'),
+              style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.tr('Cancel', 'إلغاء'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(s.tr('Save', 'حفظ'))),
+          ],
+        ),
+      ),
+    );
+    if (picked != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await widget.repo.updateVoucher(voucher['id'].toString(), {'accessDays': days});
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(s.tr('Could not update the code', 'تعذّر تحديث الرمز')),
+            backgroundColor: AppColors.danger));
+      }
+    }
+    await _load();
+    if (mounted) setState(() => _busy = false);
+  }
+
   /// Extend or clear a code's expiry (website parity with the inline Edit action).
   Future<void> _editExpiry(Map<String, dynamic> voucher) async {
     final s = ref.read(stringsProvider);
@@ -2853,7 +3622,7 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
       initialDate: current ?? now.add(const Duration(days: 30)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 365 * 3)),
-      helpText: s.tr('Code expires on', 'ينتهي الرمز في'),
+      helpText: s.tr('Code valid until', 'الرمز صالح حتى'),
     );
     if (picked == null || !mounted) return;
     setState(() => _busy = true);
@@ -2908,6 +3677,8 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
           ]),
         ),
         const SizedBox(height: 12),
+        MasterVoucherCard(repo: widget.repo),
+        const SizedBox(height: 12),
         Row(children: [
           Text(s.tr('Codes', 'الرموز'), style: Theme.of(context).textTheme.titleMedium),
           const Spacer(),
@@ -2932,6 +3703,7 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
             final max = v['maxUses'] ?? 1;
             final active = v['isActive'] != false;
             final expires = DateTime.tryParse(v['expiresAt']?.toString() ?? '');
+            final accessDays = (v['accessDays'] as num?)?.toInt();
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: GlassCard(
@@ -2948,8 +3720,14 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
                       Text(
                         '${v['label'] ?? ''}  ·  $used/$max ${s.tr('used', 'مستخدم')}'
                         '${active ? '' : ' · ${s.tr('revoked', 'ملغى')}'}'
-                        '${expires == null ? '' : ' · ${s.tr('expires', 'ينتهي')} ${expires.toLocal().toString().split(' ').first}'}',
+                        '${expires == null ? '' : ' · ${s.tr('Code valid until', 'الرمز صالح حتى')} ${expires.toLocal().toString().split(' ').first}'}',
                         style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+                      ),
+                      Text(
+                        '${s.tr('Access', 'الوصول')}: ${_voucherAccessLabel(s, accessDays)}',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: accessDays != null ? AppColors.textSecondary(context) : AppColors.accentLight),
                       ),
                     ])),
                     IconButton(
@@ -2962,16 +3740,22 @@ class _VouchersTabState extends ConsumerState<_VouchersTab> {
                       visualDensity: VisualDensity.compact,
                     ),
                     IconButton(
+                      tooltip: s.tr('Change access period', 'تغيير مدة الوصول'),
+                      onPressed: _busy ? null : () => _editAccess(v),
+                      icon: const Icon(Icons.hourglass_bottom_rounded, size: 20),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
                       tooltip: expires == null
-                          ? s.tr('Set expiry', 'تحديد تاريخ الانتهاء')
-                          : s.tr('Change expiry', 'تغيير تاريخ الانتهاء'),
+                          ? s.tr('Set "code valid until"', 'تحديد تاريخ صلاحية الرمز')
+                          : s.tr('Change "code valid until"', 'تغيير تاريخ صلاحية الرمز'),
                       onPressed: _busy ? null : () => _editExpiry(v),
                       icon: const Icon(Icons.event_rounded, size: 20),
                       visualDensity: VisualDensity.compact,
                     ),
                     if (expires != null)
                       IconButton(
-                        tooltip: s.tr('Clear expiry', 'إزالة تاريخ الانتهاء'),
+                        tooltip: s.tr('Clear "code valid until"', 'إزالة تاريخ صلاحية الرمز'),
                         onPressed: _busy ? null : () => _clearExpiry(v),
                         icon: const Icon(Icons.event_busy_rounded, size: 20),
                         visualDensity: VisualDensity.compact,
@@ -3011,6 +3795,9 @@ class _AssessmentsTabState extends ConsumerState<_AssessmentsTab> {
   bool _loading = true;
   bool _preMandated = false;
   bool _postMandated = false;
+  // A DBA study cohort does not run the commercial assessments at all: the server
+  // refuses a mandate with 409, so the switches are disabled rather than left to fail.
+  bool _researchOn = false;
 
   @override
   void initState() {
@@ -3018,14 +3805,38 @@ class _AssessmentsTabState extends ConsumerState<_AssessmentsTab> {
     _load();
   }
 
+  Future<void> _setMandate(String kind, bool v) async {
+    final s = ref.read(stringsProvider);
+    final prevPre = _preMandated, prevPost = _postMandated;
+    setState(() => kind == 'pre' ? _preMandated = v : _postMandated = v);
+    try {
+      await widget.repo.setAssessmentMandate(kind, v);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _preMandated = prevPre; _postMandated = prevPost; });
+      _showActionError(context, s, e);
+    }
+  }
+
   Future<void> _load() async {
-    final attempts = await widget.repo.fetchAssessmentAttempts();
+    final results = await Future.wait<Object?>([
+      widget.repo.fetchAssessmentAttempts(),
+      widget.repo.fetchResearchEnabled(),
+      // The mandates live on the facilitator status (the public round state omits them).
+      widget.repo.getState().then<Map<String, dynamic>?>((v) => v).catchError((_) => null),
+    ]);
+    final attempts = results[0] as List<Map<String, dynamic>>;
+    final st = results[2] as Map<String, dynamic>?;
     final gs = ref.read(gameStateProvider).valueOrNull;
     if (mounted) {
       setState(() {
         _attempts = attempts;
+        _researchOn = results[1] as bool;
         _loading = false;
-        if (gs != null) {
+        if (st != null) {
+          _preMandated = st['preAssessmentMandated'] == true;
+          _postMandated = st['postAssessmentMandated'] == true;
+        } else if (gs != null) {
           _preMandated = gs.preAssessmentMandated;
           _postMandated = gs.postAssessmentMandated;
         }
@@ -3040,16 +3851,18 @@ class _AssessmentsTabState extends ConsumerState<_AssessmentsTab> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (_researchOn) ...[
+          _researchSuppressedNote(context, s,
+              s.tr('The pre-course assessment, post-course assessment and course-survey QR do not run here. The study collects its questionnaires anonymously on a separate platform, and running an attributed assessment alongside them would undo that. Turn off the DBA study switch (Controls tab) to run this cohort commercially.',
+                  'لا يُجرى هنا التقييم القبلي ولا التقييم البعدي ولا رمز QR لاستبيان الدورة. تجمع الدراسة استبياناتها دون الكشف عن الهوية على منصة منفصلة، وإجراء تقييم منسوب إلى المشاركين بالتوازي معها يُلغي ذلك. أوقف مفتاح دراسة الدكتوراه (تبويب التحكّم) لتشغيل هذه المجموعة تجاريًا.')),
+          const SizedBox(height: 10),
+        ],
         Row(children: [
-          Expanded(child: _mandateCard(context, s, s.tr('Mandate Pre', 'إلزام القبلي'), _preMandated, (v) async {
-            setState(() => _preMandated = v);
-            await widget.repo.setAssessmentMandate('pre', v);
-          })),
+          Expanded(child: _mandateCard(context, s, s.tr('Mandate Pre', 'إلزام القبلي'),
+              _preMandated && !_researchOn, _researchOn ? null : (v) => _setMandate('pre', v))),
           const SizedBox(width: 10),
-          Expanded(child: _mandateCard(context, s, s.tr('Mandate Post', 'إلزام البعدي'), _postMandated, (v) async {
-            setState(() => _postMandated = v);
-            await widget.repo.setAssessmentMandate('post', v);
-          })),
+          Expanded(child: _mandateCard(context, s, s.tr('Mandate Post', 'إلزام البعدي'),
+              _postMandated && !_researchOn, _researchOn ? null : (v) => _setMandate('post', v))),
         ]),
         const SizedBox(height: 16),
         Text('${s.tr('Attempts', 'المحاولات')} (${_attempts.length})',
@@ -3091,7 +3904,7 @@ class _AssessmentsTabState extends ConsumerState<_AssessmentsTab> {
     );
   }
 
-  Widget _mandateCard(BuildContext context, AppStrings s, String label, bool value, ValueChanged<bool> onChanged) {
+  Widget _mandateCard(BuildContext context, AppStrings s, String label, bool value, ValueChanged<bool>? onChanged) {
     return GlassCard(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(children: [
@@ -3100,6 +3913,24 @@ class _AssessmentsTabState extends ConsumerState<_AssessmentsTab> {
       ]),
     );
   }
+}
+
+/// Purple notice shown where a DBA study cohort suppresses the commercial assessments.
+Widget _researchSuppressedNote(BuildContext context, AppStrings s, String body) {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: AppColors.purple.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: AppColors.purple.withValues(alpha: 0.35)),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(s.tr('This cohort is enrolled in the DBA study.', 'هذه المجموعة مسجّلة في دراسة الدكتوراه (DBA).'),
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.purple)),
+      const SizedBox(height: 4),
+      Text(body, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+    ]),
+  );
 }
 
 // Editable QR placeholder destinations (the 6 fixed keys), matching the website.
@@ -3218,43 +4049,111 @@ class _QrPlaceholdersCardState extends ConsumerState<_QrPlaceholdersCard> {
   }
 }
 
-// ---- QR Code Tab ----
-class _QrCodeTab extends StatelessWidget {
-  final FacilitatorRepository repo;
-  const _QrCodeTab({required this.repo});
+// The overlays /facilitator/qr-show accepts. A DBA study cohort refuses the first three
+// (the commercial assessments and course survey), so the panel disables them.
+const List<(String, String, String, bool)> _qrOverlays = [
+  ('PRE_ASSESSMENT', 'Pre-Assessment', 'التقييم القبلي', true),
+  ('POST_ASSESSMENT', 'Post-Assessment', 'التقييم البعدي', true),
+  ('COURSE_SURVEY', 'Course Survey', 'استبيان الدورة', true),
+  ('LINKEDIN', 'LinkedIn', 'لينكدإن', false),
+  ('INFO_SHEET', 'Info Sheet', 'ورقة المعلومات', false),
+];
 
-  Future<void> _overlay(BuildContext context, bool show) async {
+// ---- QR Code Tab ----
+class _QrCodeTab extends ConsumerStatefulWidget {
+  final FacilitatorRepository repo;
+  final AsyncValue<GameState> gameState;
+  const _QrCodeTab({required this.repo, required this.gameState});
+
+  @override
+  ConsumerState<_QrCodeTab> createState() => _QrCodeTabState();
+}
+
+class _QrCodeTabState extends ConsumerState<_QrCodeTab> {
+  bool _researchOn = false;
+  // The cohort access code (facilitator-only, from /facilitator/status); the round state
+  // the rest of the app reads never carries it.
+  String? _accessCode;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.repo.fetchResearchEnabled().then((on) {
+      if (mounted) setState(() => _researchOn = on);
+    });
+    widget.repo.getState().then((st) {
+      final code = (st['corporateAccessCode'] ?? '').toString();
+      if (mounted) setState(() => _accessCode = code.isEmpty ? null : code);
+    }).catchError((_) {});
+  }
+
+  Future<void> _show(AppStrings s, String placeholder, String label) async {
     try {
-      show ? await repo.showQr() : await repo.hideQr();
-      if (context.mounted) {
+      await widget.repo.showQr(placeholder);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(show ? 'QR overlay shown on participant screens' : 'QR overlay removed from all screens'),
+          content: Text(s.tr('$label QR shown on participant screens', 'تم عرض رمز $label على شاشات المشاركين')),
+          backgroundColor: AppColors.secondary,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (mounted) _showActionError(context, s, e);
+    }
+  }
+
+  Future<void> _hide(AppStrings s) async {
+    try {
+      await widget.repo.hideQr();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(s.tr('QR overlay removed from all screens', 'تمت إزالة رمز QR من جميع الشاشات')),
           backgroundColor: AppColors.secondary,
           behavior: SnackBarBehavior.floating,
         ));
       }
     } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Overlay control failed'), backgroundColor: AppColors.danger));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(s.tr('Overlay control failed', 'تعذّر التحكم في العرض')),
+            backgroundColor: AppColors.danger));
       }
     }
   }
 
+  /// The cohort's own origin (the API host without /api): each cohort is its own subdomain.
+  String get _origin => ref
+      .read(apiClientProvider)
+      .baseUrl
+      .replaceFirst(RegExp('${RegExp.escape(AppConstants.apiPrefix)}/*\$'), '');
+
+  /// client/src/lib/team-join-link.ts: the lobby with the team preset and the cohort code,
+  /// so a delegate types only their name.
+  String _teamJoinUrl(String teamId, String? accessCode) => Uri.parse('$_origin/lobby').replace(
+        queryParameters: {
+          'team': teamId,
+          if (accessCode != null && accessCode.isNotEmpty) 'code': accessCode,
+        },
+      ).toString();
+
   @override
   Widget build(BuildContext context) {
-    final joinUrl = '${AppConstants.baseUrl}/join';
+    final s = ref.watch(stringsProvider);
+    final accessCode = _accessCode ?? widget.gameState.valueOrNull?.corporateAccessCode;
+    final joinUrl = Uri.parse('$_origin/lobby').replace(queryParameters: {
+      if (accessCode != null && accessCode.isNotEmpty) 'code': accessCode,
+    }).toString().replaceFirst(RegExp(r'\?$'), '');
 
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Text('Share Access', style: Theme.of(context).textTheme.titleLarge),
+            Text(s.tr('Share Access', 'مشاركة الوصول'), style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
-            Text('Scan to join the simulation', style: Theme.of(context).textTheme.bodySmall),
+            Text(s.tr('Scan to join the simulation', 'امسح للانضمام إلى المحاكاة'), style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 16),
-            // Live QR overlay broadcast controls (push the QR to participant screens).
+            // Live QR overlay broadcast controls (push a QR to participant screens).
             GlassCard(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -3263,31 +4162,42 @@ class _QrCodeTab extends StatelessWidget {
                   Row(children: [
                     const Icon(Icons.cast_rounded, size: 18, color: AppColors.primaryLight),
                     const SizedBox(width: 8),
-                    Text('Live QR Overlay', style: Theme.of(context).textTheme.titleMedium),
+                    Text(s.tr('Live QR Overlay', 'عرض رمز QR المباشر'), style: Theme.of(context).textTheme.titleMedium),
                   ]),
                   const SizedBox(height: 4),
-                  Text('Show or hide the join QR on every participant screen.',
+                  Text(s.tr('Show a QR on every participant screen, or hide it.',
+                      'اعرض رمز QR على شاشات جميع المشاركين، أو أخفِه.'),
                       style: Theme.of(context).textTheme.bodySmall),
+                  if (_researchOn) ...[
+                    const SizedBox(height: 10),
+                    _researchSuppressedNote(context, s,
+                        s.tr('Pre-Assessment, Post-Assessment and Course Survey cannot be shown here. The study collects its questionnaires anonymously on a separate platform, and broadcasting these would link participants to it. Info Sheet and LinkedIn still work.',
+                            'لا يمكن عرض التقييم القبلي والتقييم البعدي واستبيان الدورة هنا. تجمع الدراسة استبياناتها دون الكشف عن الهوية على منصة منفصلة، وبثّ هذه الرموز سيربط المشاركين بها. ورقة المعلومات ولينكدإن ما زالتا تعملان.')),
+                  ],
                   const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: ElevatedButton.icon(
-                      onPressed: () => _overlay(context, true),
-                      icon: const Icon(Icons.visibility_rounded, size: 16),
-                      label: const Text('Show overlay'),
-                    )),
-                    const SizedBox(width: 10),
-                    Expanded(child: OutlinedButton.icon(
-                      onPressed: () => _overlay(context, false),
-                      icon: const Icon(Icons.visibility_off_rounded, size: 16),
-                      label: const Text('Hide overlay'),
-                    )),
+                  Wrap(spacing: 8, runSpacing: 8, children: [
+                    for (final o in _qrOverlays)
+                      ElevatedButton.icon(
+                        onPressed: (o.$4 && _researchOn) ? null : () => _show(s, o.$1, s.tr(o.$2, o.$3)),
+                        icon: const Icon(Icons.visibility_rounded, size: 16),
+                        label: Text(s.tr(o.$2, o.$3), style: const TextStyle(fontSize: 12)),
+                      ),
                   ]),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _hide(s),
+                      icon: const Icon(Icons.visibility_off_rounded, size: 16),
+                      label: Text(s.tr('Hide overlay', 'إخفاء')),
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             // Manage the 6 placeholder QR destinations (assessment, survey, LinkedIn, info).
-            _QrPlaceholdersCard(repo: repo),
+            _QrPlaceholdersCard(repo: widget.repo),
             const SizedBox(height: 16),
             GlassCard(
               padding: const EdgeInsets.all(24),
@@ -3306,16 +4216,20 @@ class _QrCodeTab extends StatelessWidget {
               child: Row(children: [
                 const Icon(Icons.link_rounded, color: AppColors.primaryLight, size: 18),
                 const SizedBox(width: 8),
-                Expanded(child: Text(joinUrl, style: GoogleFonts.jetBrainsMono(fontSize: 12, color: AppColors.primaryLight))),
+                Expanded(child: SelectableText(joinUrl, style: GoogleFonts.jetBrainsMono(fontSize: 12, color: AppColors.primaryLight))),
               ]),
             ),
             const SizedBox(height: 24),
-            Text('Team QR Codes', style: Theme.of(context).textTheme.titleMedium),
+            Text(s.tr('Team QR Codes', 'رموز QR للفرق'), style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(s.tr('Each opens the lobby with the team and cohort code filled in.',
+                'يفتح كل رمز الردهة مع تعبئة الفريق ورمز المجموعة.'),
+                style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 12),
             Wrap(
               spacing: 12, runSpacing: 12,
               children: List.generate(AppConstants.maxTeams, (i) {
-                final teamUrl = '${AppConstants.baseUrl}/join?team=${i + 1}';
+                final teamUrl = _teamJoinUrl('Team ${i + 1}', accessCode);
                 final color = AppColors.teamColor(i);
                 return GlassCard(
                   borderColor: color.withValues(alpha: 0.3),
@@ -3326,7 +4240,7 @@ class _QrCodeTab extends StatelessWidget {
                       dataModuleStyle: QrDataModuleStyle(dataModuleShape: QrDataModuleShape.circle, color: color),
                       backgroundColor: Colors.transparent),
                     const SizedBox(height: 6),
-                    Text('Team ${i + 1}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+                    Text(s.tr('Team ${i + 1}', 'الفريق ${i + 1}'), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
                   ]),
                 );
               }),
@@ -3449,10 +4363,15 @@ class _RoundDetailsTab extends StatefulWidget {
 }
 
 class _RoundDetailsTabState extends State<_RoundDetailsTab> {
+<<<<<<< Updated upstream
   // GET /facilitator/team-overview (teams[] with round, module, decision status).
   Map<String, dynamic>? _overview;
   // GET /facilitator/all-decisions pivoted by team: team -> module -> round -> rows.
   Map<String, Map<String, Map<String, List<Map<String, dynamic>>>>>? _allDecisions;
+=======
+  Map<String, Map<String, dynamic>>? _teamsStatus;
+  Map<String, dynamic>? _allDecisions;
+>>>>>>> Stashed changes
   bool _isLoading = true;
   String? _error;
 
@@ -3465,14 +4384,24 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
   Future<void> _loadData() async {
     setState(() { _isLoading = true; _error = null; });
     try {
+<<<<<<< Updated upstream
       final results = await Future.wait([
         widget.repo.getTeamOverview(),
+=======
+      final results = await Future.wait<Object>([
+        widget.repo.getTeamPerformance(),
+>>>>>>> Stashed changes
         widget.repo.getAllDecisions(),
       ]);
       if (mounted) {
         setState(() {
+<<<<<<< Updated upstream
           _overview = results[0];
           _allDecisions = FacilitatorRepository.decisionsByTeam(results[1]);
+=======
+          _teamsStatus = results[0] as Map<String, Map<String, dynamic>>;
+          _allDecisions = results[1] as Map<String, dynamic>;
+>>>>>>> Stashed changes
           _isLoading = false;
         });
       }
@@ -3502,10 +4431,25 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
       ));
     }
 
+<<<<<<< Updated upstream
     final teams = ((_overview?['teams'] as List?) ?? const [])
         .map((t) => Map<String, dynamic>.from(t as Map))
         .toList();
     final decisionsData = _allDecisions ?? const {};
+=======
+    final Map<String, dynamic> teamsData = _teamsStatus ?? {};
+    // all-decisions is keyed module -> team -> round; the cards want team -> module -> round.
+    final decisionsData = <String, Map<String, dynamic>>{};
+    for (final module in const ['financing', 'investing', 'operating']) {
+      final byTeam = _allDecisions?[module];
+      if (byTeam is! Map) continue;
+      for (final e in byTeam.entries) {
+        if (e.value is Map && (e.value as Map).isNotEmpty) {
+          (decisionsData[e.key.toString()] ??= {})[module] = e.value;
+        }
+      }
+    }
+>>>>>>> Stashed changes
 
     return RefreshIndicator(
       onRefresh: _loadData,
@@ -3531,7 +4475,11 @@ class _RoundDetailsTabState extends State<_RoundDetailsTab> {
           ...List.generate(AppConstants.maxTeams, (i) {
             final teamKey = 'Team ${i + 1}';
             final color = AppColors.teamColor(i);
+<<<<<<< Updated upstream
             final teamDecisions = decisionsData[teamKey] ?? const {};
+=======
+            final teamDecisions = decisionsData[teamKey] ?? const <String, dynamic>{};
+>>>>>>> Stashed changes
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -3626,6 +4574,7 @@ class _ExpandableDecisionCard extends StatefulWidget {
 class _ExpandableDecisionCardState extends State<_ExpandableDecisionCard> {
   bool _expanded = false;
 
+<<<<<<< Updated upstream
   /// 1234567 -> "1,234,567"; -3000000 -> "-3,000,000".
   static String _formatAmount(Object? amount) {
     final n = amount is num ? amount : num.tryParse('$amount');
@@ -3637,6 +4586,54 @@ class _ExpandableDecisionCardState extends State<_ExpandableDecisionCard> {
       buf.write(digits[i]);
     }
     return '${n < 0 ? '-' : ''}$buf';
+=======
+  static String _fmtAmount(num v) {
+    final a = v.abs();
+    if (a >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (a >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
+    return v.toStringAsFixed(0);
+  }
+
+  /// One figure. `confirmed: false` is an amount the team typed but never confirmed: it is
+  /// not a decision and the model ignores it, so it is marked as a draft (website bdcb696).
+  Widget _decisionLine(BuildContext context, Map item) {
+    final draft = item['confirmed'] == false;
+    final amount = item['amount'];
+    final title = (item['title'] ?? 'Scenario ${item['scenarioId']}').toString();
+    final amountText = amount is num ? _fmtAmount(amount) : '${amount ?? ''}';
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, top: 2),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: Text(title,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: draft ? AppColors.textTertiary(context) : AppColors.textSecondary(context),
+                  fontStyle: draft ? FontStyle.italic : FontStyle.normal)),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
+          message: draft ? 'Typed but never confirmed. This is not a decision and the model ignores it.' : '',
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: (draft ? AppColors.accent : AppColors.secondary).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(4),
+              border: draft ? Border.all(color: AppColors.accentLight.withValues(alpha: 0.6)) : null,
+            ),
+            child: Text(
+              draft ? '$amountText · not confirmed' : amountText,
+              style: GoogleFonts.jetBrainsMono(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  fontStyle: draft ? FontStyle.italic : FontStyle.normal,
+                  color: draft ? AppColors.accentLight : AppColors.secondaryLight),
+            ),
+          ),
+        ),
+      ]),
+    );
+>>>>>>> Stashed changes
   }
 
   @override
@@ -3682,10 +4679,17 @@ class _ExpandableDecisionCardState extends State<_ExpandableDecisionCard> {
                     )
                   else
                     ...modules.map((module) {
+<<<<<<< Updated upstream
                       final moduleData = widget.decisions[module];
                       if (moduleData == null) return const SizedBox.shrink();
                       final rounds = moduleData.keys.toList()
                         ..sort((a, b) => (int.tryParse(a) ?? 0).compareTo(int.tryParse(b) ?? 0));
+=======
+                      // {round: [{scenarioId, title, amount, confirmed}]}
+                      final byRound = widget.decisions[module];
+                      if (byRound is! Map || byRound.isEmpty) return const SizedBox.shrink();
+                      final rounds = byRound.keys.map((k) => k.toString()).toList()..sort();
+>>>>>>> Stashed changes
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Column(
@@ -3696,6 +4700,7 @@ class _ExpandableDecisionCardState extends State<_ExpandableDecisionCard> {
                               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: widget.color),
                             ),
                             const SizedBox(height: 4),
+<<<<<<< Updated upstream
                             for (final round in rounds) ...[
                               Padding(
                                 padding: const EdgeInsets.only(left: 8, top: 2),
@@ -3711,6 +4716,17 @@ class _ExpandableDecisionCardState extends State<_ExpandableDecisionCard> {
                                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                                 ),
                               )),
+=======
+                            for (final r in rounds) ...[
+                              Padding(
+                                padding: const EdgeInsets.only(left: 8, top: 2),
+                                child: Text('Round $r',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textTertiary(context))),
+                              ),
+                              ...((byRound[r] ?? byRound[int.tryParse(r)]) as List<dynamic>? ?? const [])
+                                  .whereType<Map>()
+                                  .map((item) => _decisionLine(context, item)),
+>>>>>>> Stashed changes
                             ],
                           ],
                         ),
@@ -3932,15 +4948,15 @@ class _DownloadsTabState extends State<_DownloadsTab> {
     try {
       final data = await widget.repo.getLeaderboard();
       final buffer = StringBuffer();
-      buffer.writeln('Team,Score,Net Income,Total Assets,Cash Flow');
+      buffer.writeln('Team,Score,Revenue,Net Income,Total Assets');
       for (final entry in data) {
         if (entry is Map<String, dynamic>) {
           buffer.writeln(
-            '${entry['teamName'] ?? entry['teamId'] ?? ''},'
+            '"${entry['teamName'] ?? entry['teamId'] ?? ''}",'
             '${entry['score'] ?? ''},'
+            '${entry['revenue'] ?? ''},'
             '${entry['netIncome'] ?? ''},'
-            '${entry['totalAssets'] ?? ''},'
-            '${entry['cashFlow'] ?? ''}'
+            '${entry['totalAssets'] ?? ''}'
           );
         }
       }
@@ -3969,12 +4985,22 @@ class _DownloadsTabState extends State<_DownloadsTab> {
   Future<void> _exportTeamReport() async {
     setState(() => _loadingTeamReport = true);
     try {
+<<<<<<< Updated upstream
       final teams = await widget.repo.getTeamOverviewTeams();
+=======
+      // Team overview (round, module, per-module status, members) + live performance.
+      final teams = await widget.repo.getTeamOverview();
+      Map<String, Map<String, dynamic>> perf = {};
+      try {
+        perf = await widget.repo.getTeamPerformance();
+      } catch (_) {/* report without figures */}
+>>>>>>> Stashed changes
       final buffer = StringBuffer();
       buffer.writeln('=== TEAM REPORTS ===');
       buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
       buffer.writeln('');
 
+<<<<<<< Updated upstream
       for (int i = 0; i < AppConstants.maxTeams; i++) {
         final teamKey = 'Team ${i + 1}';
         final team = _overviewTeam(teams, i + 1);
@@ -3983,6 +5009,27 @@ class _DownloadsTabState extends State<_DownloadsTab> {
           buffer.writeln('  (not on the server)');
           buffer.writeln('');
           continue;
+=======
+      for (final t in teams) {
+        final id = (t['teamId'] ?? '').toString();
+        buffer.writeln('--- ${t['teamName'] ?? id} ---');
+        buffer.writeln('  Round: ${t['currentRound']}  Module: ${t['currentModule']}');
+        final status = t['moduleStatus'];
+        if (status is Map) {
+          for (final m in status.entries) {
+            final st = m.value is Map ? (m.value as Map)['status'] : m.value;
+            buffer.writeln('  ${m.key}: $st');
+          }
+        }
+        final members = (t['connectedMembers'] as List<dynamic>? ?? [])
+            .map((m) => m is Map ? m['playerName'] : m)
+            .join(', ');
+        buffer.writeln('  Members: ${members.isEmpty ? '-' : members}');
+        final p = perf[id];
+        if (p != null) {
+          buffer.writeln('  Score: ${p['score']}  Revenue: ${p['revenue']}  '
+              'Net Income: ${p['netIncome']}  Total Assets: ${p['totalAssets']}');
+>>>>>>> Stashed changes
         }
         buffer.writeln('  round: ${team['currentRound']}');
         buffer.writeln('  module: ${team['currentModule']}');
@@ -4027,23 +5074,27 @@ class _DownloadsTabState extends State<_DownloadsTab> {
 
   Future<void> _exportDecisions() async {
     try {
+<<<<<<< Updated upstream
       // module -> team -> round -> rows, as the server sends it.
+=======
+>>>>>>> Stashed changes
       final data = await widget.repo.getAllDecisions();
       final buffer = StringBuffer();
-      buffer.writeln('=== ALL DECISIONS ===');
-      buffer.writeln('Generated: ${DateTime.now().toIso8601String()}');
-      buffer.writeln('');
-
-      for (final entry in data.entries) {
-        buffer.writeln('--- ${entry.key} ---');
-        if (entry.value is Map) {
-          for (final sub in (entry.value as Map).entries) {
-            buffer.writeln('  ${sub.key}: ${sub.value}');
+      buffer.writeln('Module,Team,Round,Scenario,Amount,Confirmed');
+      // {module: {teamId: {round: [{scenarioId, title, amount, confirmed}]}}}
+      for (final module in const ['financing', 'investing', 'operating']) {
+        final byTeam = data[module];
+        if (byTeam is! Map) continue;
+        for (final t in byTeam.entries) {
+          if (t.value is! Map) continue;
+          for (final r in (t.value as Map).entries) {
+            for (final item in (r.value as List<dynamic>? ?? const []).whereType<Map>()) {
+              final title = (item['title'] ?? item['scenarioId']).toString().replaceAll('"', '""');
+              buffer.writeln('$module,"${t.key}",${r.key},"$title",${item['amount']},'
+                  '${item['confirmed'] == false ? 'no (draft)' : 'yes'}');
+            }
           }
-        } else {
-          buffer.writeln('  ${entry.value}');
         }
-        buffer.writeln('');
       }
 
       await Clipboard.setData(ClipboardData(text: buffer.toString()));
@@ -4095,17 +5146,16 @@ class _DownloadsTabState extends State<_DownloadsTab> {
       ),
     ];
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+        padding: const EdgeInsets.all(16),
         children: [
           Text('Export Data', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 4),
           Text('Data will be copied to clipboard', style: TextStyle(fontSize: 13, color: AppColors.textTertiary(context))),
           const SizedBox(height: 16),
-          Expanded(
-            child: GridView.count(
+          GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
@@ -4137,10 +5187,12 @@ class _DownloadsTabState extends State<_DownloadsTab> {
                   ],
                 ),
               )).toList(),
-            ),
           ),
+          const SizedBox(height: 16),
+          const CourseSlidesCard(),
+          const SizedBox(height: 16),
+          FinancialStatementsCard(repo: widget.repo),
         ],
-      ),
     );
   }
 }
@@ -4167,8 +5219,31 @@ class _SettingsTabState extends State<_SettingsTab> {
   bool _scenarioResultsVisible = false;
   bool _clearingProgress = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Visible when any capital-budgeting scenario's results are unlocked.
+    widget.repo.getState().then((st) {
+      final unlocked = st['capitalBudgetingResultsUnlocked'];
+      if (mounted) setState(() => _scenarioResultsVisible = unlocked is List && unlocked.isNotEmpty);
+    }).catchError((_) {});
+  }
+
   Future<void> _toggleScenarioResults(AppStrings s, bool val) async {
+<<<<<<< Updated upstream
     final ok = await widget.repo.setScenarioResultsVisible(val);
+=======
+    final prev = _scenarioResultsVisible;
+    setState(() => _scenarioResultsVisible = val);
+    try {
+      await widget.repo.setScenarioResultsVisible(val);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _scenarioResultsVisible = prev);
+      _showActionError(context, s, e);
+      return;
+    }
+>>>>>>> Stashed changes
     if (!mounted) return;
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -4196,8 +5271,8 @@ class _SettingsTabState extends State<_SettingsTab> {
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E293B) : Colors.white,
         title: Text(s.tr('Clear Education Progress', 'مسح تقدّم التعليم')),
-        content: Text(s.tr('Clear all education progress for all teams? This cannot be undone.',
-            'مسح كل تقدّم التعليم لجميع الفرق؟ لا يمكن التراجع عن هذا الإجراء.')),
+        content: Text(s.tr('Reset ALL teams\' education progress and scores and remove all team members? This cannot be undone.',
+            'إعادة تعيين تقدّم التعليم والنقاط لجميع الفرق وإزالة جميع أعضاء الفرق؟ لا يمكن التراجع عن هذا الإجراء.')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.tr('Cancel', 'إلغاء'))),
           ElevatedButton(
@@ -4241,6 +5316,8 @@ class _SettingsTabState extends State<_SettingsTab> {
                 _LockRow('Operating Module', gs.lockOperating, (v) => widget.onToggleLock('operating', v)),
               ]),
             ),
+            const SizedBox(height: 16),
+            ScenarioResultsCard(repo: widget.repo),
             const SizedBox(height: 16),
             GlassCard(
               padding: const EdgeInsets.all(16),
@@ -4302,8 +5379,8 @@ class _SettingsTabState extends State<_SettingsTab> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.tr('Danger Zone', 'منطقة الخطر'), style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text(s.tr('Permanently clears education progress for every team.',
-                    'يمسح نهائيًا تقدّم التعليم لكل فريق.'),
+                Text(s.tr('Permanently resets education progress and scores for every team and removes all team members.',
+                    'يعيد نهائيًا تعيين تقدّم التعليم والنقاط لكل فريق ويزيل جميع أعضاء الفرق.'),
                     style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
                 const SizedBox(height: 12),
                 SizedBox(
@@ -4319,6 +5396,8 @@ class _SettingsTabState extends State<_SettingsTab> {
                 ),
               ]),
             ),
+            const SizedBox(height: 16),
+            TestEmailCard(repo: widget.repo),
           ]);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -4368,12 +5447,20 @@ class _GameChecksTabState extends State<_GameChecksTab> {
     {'name': 'Round State', 'endpoint': '/round/state', 'icon': Icons.play_circle_rounded},
     {'name': 'Teams Data', 'endpoint': '/teams', 'icon': Icons.groups_rounded},
     {'name': 'Leaderboard', 'endpoint': '/leaderboard/day', 'icon': Icons.leaderboard_rounded},
+<<<<<<< Updated upstream
     {'name': 'Engine Connection', 'endpoint': ApiEndpoints.healthConnection, 'icon': Icons.table_chart_rounded},
+=======
+    // The website's system check: the Postgres-backed financial engine (mode 'online').
+    {'name': 'Financial Engine (Database)', 'endpoint': '/health/connection', 'icon': Icons.storage_rounded, 'engine': true},
+>>>>>>> Stashed changes
     {'name': 'Timer Status', 'endpoint': '/timer/status', 'icon': Icons.timer_rounded},
     {'name': 'Game State', 'endpoint': '/facilitator/status', 'icon': Icons.gamepad_rounded},
     {'name': 'Shocks', 'endpoint': '/shocks/predefined', 'icon': Icons.flash_on_rounded},
     {'name': 'Education', 'endpoint': '/education-modules/status', 'icon': Icons.school_rounded},
+<<<<<<< Updated upstream
     {'name': 'Game Gate', 'endpoint': ApiEndpoints.facilitatorSimulationAccess, 'icon': Icons.public_rounded},
+=======
+>>>>>>> Stashed changes
   ];
 
   Future<void> _runAllChecks() async {
@@ -4385,9 +5472,17 @@ class _GameChecksTabState extends State<_GameChecksTab> {
     for (int i = 0; i < _checks.length; i++) {
       final start = DateTime.now();
       try {
+<<<<<<< Updated upstream
         // runHealthCheck throws on a 4xx or success:false, so a dead route
         // shows as failed rather than passed-with-latency.
         await widget.repo.runHealthCheck(_checks[i]['endpoint'] as String);
+=======
+        if (_checks[i]['engine'] == true) {
+          if (!await widget.repo.checkEngineHealth()) throw const FacilitatorActionException('offline');
+        } else {
+          await widget.repo.runHealthCheck(_checks[i]['endpoint'] as String);
+        }
+>>>>>>> Stashed changes
         final elapsed = DateTime.now().difference(start).inMilliseconds;
         if (mounted) {
           setState(() {
@@ -4550,8 +5645,9 @@ class _CheckStat extends StatelessWidget {
   }
 }
 
-/// Facilitator toggle for RESEARCH_MODE (DBA study). Mirrors the website's
-/// ResearchModeToggle — when on, learners are offered the research flow.
+/// Facilitator switch marking this cohort as a DBA study site (POST /research/mode).
+/// FinPlay collects none of the study's data; the switch only suppresses the commercial
+/// pre/post assessments and course survey here, as the website's Cohorts panel does.
 class _ResearchModeCard extends ConsumerStatefulWidget {
   const _ResearchModeCard();
 
@@ -4562,8 +5658,8 @@ class _ResearchModeCard extends ConsumerStatefulWidget {
 class _ResearchModeCardState extends ConsumerState<_ResearchModeCard> {
   bool _enabled = false;
   bool _loading = true;
-  // Who the consent flow gates: 'corporate' (default) or 'all'. Research mode is
-  // scoped per-cohort server-side; this toggle applies to the cohort below.
+  // Whose assessments the study suppresses: 'corporate' (default) or 'all'. Scoped
+  // per-cohort server-side; this switch applies to the cohort below.
   String _audience = 'corporate';
   String? _cohortLabel; // which cohort this toggle applies to (null = main site)
 
@@ -4646,10 +5742,18 @@ class _ResearchModeCardState extends ConsumerState<_ResearchModeCard> {
             Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(s.tr('Research Mode (DBA)', 'وضع البحث'), style: Theme.of(context).textTheme.titleMedium),
+                Text(s.tr('Part of the DBA research study', 'جزء من دراسة الدكتوراه (DBA)'), style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  _enabled
+                      ? s.tr('On: a study site. The course\'s own pre and post assessments and course survey do not run here.',
+                          'مفعّل: موقع للدراسة. لا يُجرى هنا التقييمان القبلي والبعدي ولا استبيان الدورة.')
+                      : s.tr('Off: a normal commercial delivery with everything included.',
+                          'متوقّف: تقديم تجاري عادي يشمل كل شيء.'),
+                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
+                ),
                 Text(
                   s.tr('Applies to: $appliesTo', 'ينطبق على: $appliesTo'),
-                  style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
+                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
                 ),
               ],
             )),
@@ -4657,11 +5761,11 @@ class _ResearchModeCardState extends ConsumerState<_ResearchModeCard> {
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                 : Switch(value: _enabled, activeThumbColor: AppColors.purple, onChanged: _toggle),
           ]),
-          // Audience selector — who sees the consent flow when research is on.
+          // Audience selector — whose assessments are suppressed while this is on.
           if (_enabled && !_loading) ...[
             const SizedBox(height: 12),
             Text(
-              s.tr('Who is asked to participate', 'من يُطلب منه المشاركة'),
+              s.tr('Whose assessments are switched off', 'لمن تُوقَف التقييمات'),
               style: TextStyle(
                   fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textTertiary(context)),
             ),
@@ -4684,10 +5788,10 @@ class _ResearchModeCardState extends ConsumerState<_ResearchModeCard> {
             const SizedBox(height: 4),
             Text(
               _audience == 'corporate'
-                  ? s.tr('Self-paced learners are not asked.',
-                      'لا يُطلب من متعلمي التعلم الذاتي.')
-                  : s.tr('Corporate and self-paced learners are asked.',
-                      'يُطلب من متعلمي الشركات والتعلم الذاتي.'),
+                  ? s.tr('Self-paced learners keep their assessments.',
+                      'يحتفظ متعلّمو التعلّم الذاتي بتقييماتهم.')
+                  : s.tr('Corporate and self-paced learners both skip the assessments.',
+                      'يتخطّى متعلّمو الشركات والتعلّم الذاتي التقييمات معًا.'),
               style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
             ),
           ],

@@ -10,6 +10,74 @@ import '../../../shared/widgets/trend_line_chart.dart';
 import '../../../shared/widgets/ai_tooltip_button.dart';
 import '../../../app/i18n/app_strings.dart';
 
+/// Working-capital metrics as the website computes them (working-capital.tsx, 1fb94ba,
+/// 20c170e):
+///   DSO = AR / Revenue × 365     DIO = Inventory / COGS × 365     DPO = AP / COGS × 365
+///   CCC = DSO + DIO − DPO
+///   Working Capital Turnover = Sales / (Current Assets − Current Liabilities)
+///   Payables Turnover        = COGS / Accounts Payable  (DPO = 365 ÷ payables turnover)
+/// Turnovers are null where their denominator is zero.
+///
+/// In the simulation model the balance sheet derives AR from Receivables Days and AP from
+/// Payables Days, so DSO and DPO come back as those assumptions every round: they are fixed
+/// policy assumptions, not outcomes, and the cycle moves with inventory days.
+class WorkingCapitalMetrics {
+  final double revenue;
+  final double cogs;
+  final double receivables;
+  final double inventory;
+  final double payables;
+  final double currentAssets;
+  final double currentLiabilities;
+
+  const WorkingCapitalMetrics({
+    required this.revenue,
+    required this.cogs,
+    required this.receivables,
+    required this.inventory,
+    required this.payables,
+    required this.currentAssets,
+    required this.currentLiabilities,
+  });
+
+  /// The model's mechanics: AR and AP follow from the days assumptions.
+  factory WorkingCapitalMetrics.fromPolicy({
+    required double revenue,
+    required double cogs,
+    required double receivablesDays,
+    required double payablesDays,
+    required double inventory,
+    required double currentAssets,
+    required double currentLiabilities,
+  }) =>
+      WorkingCapitalMetrics(
+        revenue: revenue,
+        cogs: cogs,
+        receivables: revenue * receivablesDays / 365,
+        inventory: inventory,
+        payables: cogs * payablesDays / 365,
+        currentAssets: currentAssets,
+        currentLiabilities: currentLiabilities,
+      );
+
+  double get dso => revenue > 0 ? receivables / revenue * 365 : 0;
+  double get dio => cogs > 0 ? inventory / cogs * 365 : 0;
+  double get dpo => cogs > 0 ? payables / cogs * 365 : 0;
+  double get ccc => dso + dio - dpo;
+  double get workingCapital => currentAssets - currentLiabilities;
+  double get currentRatio => currentLiabilities > 0 ? currentAssets / currentLiabilities : 0;
+
+  double? get wcTurnover {
+    final wc = workingCapital;
+    return wc != 0 ? revenue / wc : null;
+  }
+
+  double? get payablesTurnover => payables != 0 ? cogs / payables : null;
+}
+
+/// `2.50×` / `—` (website working-capital.tsx turns).
+String wcTurns(double? n) => n == null ? '—' : '${n.toStringAsFixed(2)}×';
+
 /// Working Capital — DSO, DPO, DIO and the Cash Conversion Cycle.
 /// DSO = AR/Revenue×365 · DIO = Inv/COGS×365 · DPO = AP/COGS×365
 /// CCC = DSO + DIO − DPO
@@ -26,19 +94,30 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
 
   double _revenue = 1000000;
   double _cogs = 600000;
-  double _receivables = 120000;
+  // Receivables Days and Payables Days are policy assumptions in the model; AR and AP
+  // follow from them (website 20c170e).
+  double _receivablesDays = 45;
   double _inventory = 90000;
-  double _payables = 80000;
+  double _payablesDays = 50;
   double _currentAssets = 350000;
   double _currentLiabilities = 200000;
 
-  double get _dso => _revenue > 0 ? _receivables / _revenue * 365 : 0;
-  double get _dio => _cogs > 0 ? _inventory / _cogs * 365 : 0;
-  double get _dpo => _cogs > 0 ? _payables / _cogs * 365 : 0;
-  double get _ccc => _dso + _dio - _dpo;
-  double get _workingCapital => _currentAssets - _currentLiabilities;
-  double get _currentRatio =>
-      _currentLiabilities > 0 ? _currentAssets / _currentLiabilities : 0;
+  WorkingCapitalMetrics get _m => WorkingCapitalMetrics.fromPolicy(
+        revenue: _revenue,
+        cogs: _cogs,
+        receivablesDays: _receivablesDays,
+        payablesDays: _payablesDays,
+        inventory: _inventory,
+        currentAssets: _currentAssets,
+        currentLiabilities: _currentLiabilities,
+      );
+
+  double get _dso => _m.dso;
+  double get _dio => _m.dio;
+  double get _dpo => _m.dpo;
+  double get _ccc => _m.ccc;
+  double get _workingCapital => _m.workingCapital;
+  double get _currentRatio => _m.currentRatio;
 
   @override
   void initState() {
@@ -111,8 +190,10 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
           title: s.tr('DSO — Days Sales Outstanding', 'DSO — متوسط فترة التحصيل'),
           body: s.tr(
               'How long customers take to pay you. Lower is better — you collect '
-              'cash faster.',
-              'المدة التي يستغرقها العملاء للسداد. الأقل أفضل — تحصّل النقد بسرعة أكبر.'),
+              'cash faster. In this simulation it is a fixed policy assumption: '
+              'Receivables Days, set in the model.',
+              'المدة التي يستغرقها العملاء للسداد. الأقل أفضل — تحصّل النقد بسرعة أكبر. '
+              'في هذه المحاكاة هي افتراض سياسة ثابت: أيام التحصيل المحددة في النموذج.'),
           formula: 'DSO = Accounts Receivable / Revenue × 365',
           color: AppColors.primaryLight,
         ),
@@ -133,11 +214,27 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
           title: s.tr('DPO — Days Payable Outstanding', 'DPO — متوسط فترة السداد'),
           body: s.tr(
               'How long you take to pay suppliers. Higher is better — you preserve '
-              'cash longer (without damaging supplier relationships).',
+              'cash longer (without damaging supplier relationships). In this '
+              'simulation it is a fixed policy assumption: Payables Days, set in the model.',
               'المدة التي تستغرقها لسداد الموردين. الأعلى أفضل — تحتفظ بالنقد لفترة أطول '
-              '(دون الإضرار بعلاقات الموردين).'),
+              '(دون الإضرار بعلاقات الموردين). في هذه المحاكاة هي افتراض سياسة ثابت: '
+              'أيام السداد المحددة في النموذج.'),
           formula: 'DPO = Accounts Payable / COGS × 365',
           color: AppColors.purple,
+        ),
+        const SizedBox(height: 12),
+        ConceptCard(
+          icon: Icons.autorenew_rounded,
+          title: s.tr('Turnovers', 'معدلات الدوران'),
+          body: s.tr(
+              'Working Capital Turnover: how many riyals of sales each riyal of working capital '
+              'generates - higher means leaner funding of operations. Payables Turnover: how many '
+              'times a year payables are settled - the counterpart of DPO (DPO = 365 ÷ payables turnover).',
+              'معدل دوران رأس المال العامل: كم ريالًا من المبيعات يولّده كل ريال من رأس المال العامل - '
+              'الأعلى يعني تمويلًا أكثر كفاءة للعمليات. معدل دوران الذمم الدائنة: عدد مرات سداد الذمم '
+              'الدائنة في السنة - وهو مقابل متوسط فترة السداد (DPO = 365 ÷ معدل دوران الذمم الدائنة).'),
+          formula: 'WCT = Sales / (CA − CL)\nPT = COGS / AP',
+          color: AppColors.info,
         ),
         const SizedBox(height: 12),
         ConceptCard(
@@ -189,6 +286,15 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
             ),
           );
         }),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            s.tr(
+                'The DSO and DPO lines are flat by design: both are policy assumptions set in the model rather than results of your decisions. Watch DIO and the cash conversion cycle, which respond to what you do with inventory.',
+                'خطّا DSO وDPO ثابتان عمدًا: كلاهما افتراض سياسة محدد في النموذج وليس نتيجة لقراراتك. راقب DIO ودورة التحويل النقدي، فهما يستجيبان لما تفعله بالمخزون.'),
+            style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+          ),
+        ),
         // CCC hero
         GlassCard(
           borderColor: cccColor.withValues(alpha: 0.5),
@@ -220,6 +326,13 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
                         fontWeight: FontWeight.w600,
                         color: cccColor)),
               ),
+              const SizedBox(height: 8),
+              Text(
+                s.tr('DSO and DPO are fixed policy assumptions, so the cycle moves with inventory days.',
+                    'متوسطا فترتي التحصيل والسداد افتراضا سياسة ثابتان، لذا تتحرك الدورة مع أيام المخزون.'),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 11, color: AppColors.textSecondary(context)),
+              ),
             ],
           ),
         ).animate().fadeIn(delay: 200.ms),
@@ -231,7 +344,7 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
               child: MetricCard(
                 title: 'DSO',
                 value: '${_dso.toStringAsFixed(1)}d',
-                caption: s.tr('Collect — lower better', 'التحصيل — الأقل أفضل'),
+                caption: s.tr('Receivables Days, set in the model', 'أيام التحصيل، محددة في النموذج'),
                 icon: Icons.call_received_rounded,
                 color: AppColors.primaryLight,
               ),
@@ -251,13 +364,71 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
               child: MetricCard(
                 title: 'DPO',
                 value: '${_dpo.toStringAsFixed(1)}d',
-                caption: s.tr('Pay — higher better', 'السداد — الأعلى أفضل'),
+                caption: s.tr('Payables Days, set in the model', 'أيام السداد، محددة في النموذج'),
                 icon: Icons.call_made_rounded,
                 color: AppColors.purple,
               ),
             ),
           ],
         ).animate().fadeIn(delay: 250.ms),
+        const SizedBox(height: 6),
+        // DSO and DPO are policy assumptions, not outcomes (website 20c170e).
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary(context).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.textTertiary(context).withValues(alpha: 0.3)),
+              ),
+              child: Text(s.tr('Fixed policy assumption', 'افتراض سياسة ثابت'),
+                  style: TextStyle(
+                      fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary(context))),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                s.tr('DSO and DPO: set in the Model Editor, not driven by decisions.',
+                    'DSO وDPO: محددان في محرر النموذج، ولا تحركهما القرارات.'),
+                style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Turnovers (website 1fb94ba).
+        Row(
+          children: [
+            Expanded(
+              child: MetricCard(
+                title: s.tr('WCT — Working Capital Turnover', 'WCT — دوران رأس المال العامل'),
+                value: wcTurns(_m.wcTurnover),
+                caption: 'Sales / (CA − CL)',
+                icon: Icons.autorenew_rounded,
+                color: AppColors.info,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: MetricCard(
+                title: s.tr('PT — Payables Turnover', 'PT — دوران الذمم الدائنة'),
+                value: wcTurns(_m.payablesTurnover),
+                caption: 'COGS / AP',
+                icon: Icons.sync_alt_rounded,
+                color: AppColors.purpleLight,
+              ),
+            ),
+          ],
+        ).animate().fadeIn(delay: 275.ms),
+        const SizedBox(height: 4),
+        Text(
+          s.tr(
+              'WCT: how many riyals of sales each riyal of working capital generates - higher means leaner funding of operations. PT: how many times a year payables are settled - the counterpart of DPO (DPO = 365 ÷ payables turnover).',
+              'WCT: كم ريالًا من المبيعات يولّده كل ريال من رأس المال العامل - الأعلى يعني تمويلًا أكثر كفاءة للعمليات. PT: عدد مرات سداد الذمم الدائنة في السنة - مقابل DPO (DPO = 365 ÷ معدل دوران الذمم الدائنة).'),
+          style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
+        ),
         const SizedBox(height: 10),
 
         Row(
@@ -323,13 +494,13 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
                 onChanged: (v) => setState(() => _cogs = v),
               ),
               SliderRow(
-                label: s.tr('Accounts Receivable', 'الذمم المدينة'),
-                value: _receivables,
+                label: s.tr('Receivables Days (policy)', 'أيام التحصيل (سياسة)'),
+                value: _receivablesDays,
                 min: 0,
-                max: 600000,
-                prefix: 'SAR ',
-                divisions: 60,
-                onChanged: (v) => setState(() => _receivables = v),
+                max: 180,
+                suffix: ' d',
+                divisions: 36,
+                onChanged: (v) => setState(() => _receivablesDays = v),
               ),
               SliderRow(
                 label: s.tr('Inventory', 'المخزون'),
@@ -341,13 +512,13 @@ class _WorkingCapitalScreenState extends ConsumerState<WorkingCapitalScreen> {
                 onChanged: (v) => setState(() => _inventory = v),
               ),
               SliderRow(
-                label: s.tr('Accounts Payable', 'الذمم الدائنة'),
-                value: _payables,
+                label: s.tr('Payables Days (policy)', 'أيام السداد (سياسة)'),
+                value: _payablesDays,
                 min: 0,
-                max: 600000,
-                prefix: 'SAR ',
-                divisions: 60,
-                onChanged: (v) => setState(() => _payables = v),
+                max: 180,
+                suffix: ' d',
+                divisions: 36,
+                onChanged: (v) => setState(() => _payablesDays = v),
               ),
               const Divider(height: 28),
               SliderRow(

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:finplay/data/education_catalog.dart';
+<<<<<<< Updated upstream
 import 'package:finplay/features/education/screens/education_hub_screen.dart';
 
 /// Mirror of the website's tests/unit/catalog-title-mirrors.test.ts: every
@@ -62,5 +63,42 @@ void main() {
       expect(catalogEntry(14)!.titleAr,
           'خلق القيمة: العائد على رأس المال المستثمر والمتوسط المرجح لتكلفة رأس المال والربح الاقتصادي');
     });
+=======
+
+/// Mirrors the website's tests/unit/catalog-title-mirrors.test.ts: wherever a
+/// bilingual pair in the app carries a catalog English title, its Arabic must
+/// be the catalog Arabic too. Hand-copied titles drifted on both sides before
+/// (Value Creation, Financial Auditing & Review, Time Value of Money).
+void main() {
+  test('every bilingual catalog title in lib/ uses the catalog Arabic', () {
+    final arabic = RegExp(r"'([^'\n]*[؀-ۿ][^'\n]*)'");
+    final drift = <String>[];
+
+    final files = Directory('lib')
+        .listSync(recursive: true)
+        .whereType<File>()
+        .where((f) => f.path.endsWith('.dart') && !f.path.endsWith('education_catalog.dart'));
+
+    for (final file in files) {
+      final src = file.readAsStringSync();
+      for (final m in educationCatalog) {
+        final needle = "'${m.titleEn}'";
+        var at = src.indexOf(needle);
+        while (at >= 0) {
+          final end = at + needle.length;
+          // The Arabic half of a pair follows within the next couple of lines.
+          final window = src.substring(end, (end + 200).clamp(0, src.length));
+          final ar = arabic.firstMatch(window)?.group(1);
+          if (ar != null && ar != m.titleAr) {
+            final line = '\n'.allMatches(src.substring(0, at)).length + 1;
+            drift.add('${file.path}:$line id ${m.num}: "$ar" should be "${m.titleAr}"');
+          }
+          at = src.indexOf(needle, end);
+        }
+      }
+    }
+
+    expect(drift, isEmpty, reason: drift.join('\n'));
+>>>>>>> Stashed changes
   });
 }

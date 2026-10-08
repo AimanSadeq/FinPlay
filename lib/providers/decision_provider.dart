@@ -67,7 +67,7 @@ class DecisionNotifier extends StateNotifier<DecisionState> {
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
-      await _repo.confirmDecision(
+      final response = await _repo.confirmDecision(
         teamId: teamId,
         round: round,
         module: module,
@@ -75,6 +75,14 @@ class DecisionNotifier extends StateNotifier<DecisionState> {
         scenarioIds: scenarioIds,
         decisions: decisions,
       );
+      // A refused confirm (400 MODULE_EMPTY, the reserves/retained-earnings cap, 403 not
+      // the leader, ...) comes back as a body, not an exception: report the server's own
+      // message instead of a false "confirmed".
+      final failure = DecisionRepository.confirmFailureMessage(response);
+      if (failure != null) {
+        state = state.copyWith(isSubmitting: false, error: failure);
+        return false;
+      }
       state = state.copyWith(
         isSubmitting: false,
         successMessage: 'Decision confirmed successfully',

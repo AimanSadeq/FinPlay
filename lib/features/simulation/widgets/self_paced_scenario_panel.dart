@@ -5,6 +5,14 @@ import '../../../app/theme/app_colors.dart';
 import '../../../providers/self_paced_provider.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../data/self_paced_scenarios.dart';
+import '../../../data/repositories/self_paced_repository.dart'
+    show SubscriptionRequiredException;
+import '../../self_paced/widgets/entitlement_banner.dart' show AccessEndedView;
+import '../../../app/i18n/app_strings.dart';
+import '../impact/decision_impact_panel.dart';
+import '../impact/engine_row_map.dart';
+import '../sign_policy.dart';
+import 'pro_forma_preview.dart';
 
 /// Core interaction panel for self-paced mode.
 /// Matches website's SelfPacedScenarioPanel exactly:
@@ -12,6 +20,30 @@ import '../../../data/self_paced_scenarios.dart';
 /// - 2-column grid of scenario cards with blue dashed borders
 /// - Each card: title, $0 amount, description, "Add to Selection" button
 /// - Confirm button and completion alerts
+/// The self-paced confirm payload (website SelfPacedScenarioPanel.handleConfirmDecisions):
+/// every selected scenario at its tracked SIGNED amount, falling back to the scenario's own
+/// amount. Sign convention as on the website: + is cash in, − is cash out, so buying an
+/// asset or spending on operations is negative. The server stores the amount as sent
+/// (POST /self-paced/progress/decisions) and the engine books it with that sign.
+List<Map<String, dynamic>> selfPacedConfirmPayload(
+  Iterable<String> selectedIds,
+  Map<String, int> amounts,
+  List<Map<String, dynamic>> scenarios,
+) {
+  return [
+    for (final id in selectedIds)
+      {
+        'scenarioId': id,
+        'amount': amounts[id] ??
+            scenarios.firstWhere(
+              (s) => (s['scenarioId'] ?? s['id'] ?? '').toString() == id,
+              orElse: () => <String, dynamic>{},
+            )['amount'] ??
+            0,
+      },
+  ];
+}
+
 class SelfPacedScenarioPanel extends ConsumerStatefulWidget {
   final int round;
   final String module;
@@ -38,6 +70,8 @@ class _SelfPacedScenarioPanelState
   bool _isLoading = true;
   bool _isSaving = false;
   String? _error;
+  // 402 SUBSCRIPTION_REQUIRED from the scenarios route: the learner's access has lapsed.
+  bool _accessEnded = false;
 
   static const _moduleLabels = {
     'financing': 'Financing',
@@ -73,6 +107,7 @@ class _SelfPacedScenarioPanelState
     setState(() {
       _isLoading = true;
       _error = null;
+      _accessEnded = false;
       _isConfirmed = false;
       _selectedIds = {};
       _amounts = {};
@@ -107,11 +142,18 @@ class _SelfPacedScenarioPanelState
           .where((id) => id.isNotEmpty)
           .toSet();
 
-      // Build amounts map from scenarios
+      // Build amounts map from scenarios, then the learner's saved decisions (website parity:
+      // a confirmed module shows the amounts that were confirmed, signs included).
       final amountsMap = <String, int>{};
       for (final s in scenarios) {
         final id = _scenarioId(s);
         amountsMap[id] = (s['amount'] as num?)?.toInt() ?? 0;
+      }
+      for (final d in decisions) {
+        final id = d['scenarioId']?.toString() ?? '';
+        final data = d['decisionData'];
+        final amt = data is Map ? data['amount'] : d['amount'];
+        if (id.isNotEmpty && amt is num) amountsMap[id] = amt.toInt();
       }
 
       if (mounted) {
@@ -127,6 +169,15 @@ class _SelfPacedScenarioPanelState
           widget.module,
           decisions,
         );
+      }
+    } on SubscriptionRequiredException {
+      // Lapsed trial/subscription: never fall back to the offline scenarios, which would
+      // look playable but could not be saved. Show the access-ended notice instead.
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _accessEnded = true;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -178,17 +229,7 @@ class _SelfPacedScenarioPanelState
 
       // Step 1: Save all selected decisions in ONE batch request (website
       // parity, 82ee448 — replaces the per-scenario POST loop).
-      final batch = <Map<String, dynamic>>[];
-      for (final id in _selectedIds) {
-        final scenario = _scenarios.firstWhere(
-          (s) => _scenarioId(s) == id,
-          orElse: () => <String, dynamic>{},
-        );
-        batch.add({
-          'scenarioId': id,
-          'amount': _amounts[id] ?? scenario['amount'] ?? 0,
-        });
-      }
+      final batch = selfPacedConfirmPayload(_selectedIds, _amounts, _scenarios);
       await repo.saveDecisionsBulk(
         round: widget.round,
         module: widget.module,
@@ -261,18 +302,56 @@ class _SelfPacedScenarioPanelState
     }
   }
 
+  /// Pending set for the live pro-forma preview, as the website's SelfPacedScenarioPanel
+  /// builds it: every selected scenario at its tracked amount (the confirm payload).
+  Map<String, double> get _previewPending {
+    final map = <String, double>{};
+    for (final id in _selectedIds) {
+      final scenario = _scenarios.firstWhere(
+        (s) => _scenarioId(s) == id,
+        orElse: () => <String, dynamic>{},
+      );
+      final amount = _amounts[id] ?? (scenario['amount'] as num?) ?? 0;
+      map[id] = amount.toDouble();
+    }
+    return map;
+  }
+
+  /// Total budget across the selection, as the website sums it (absolute amounts).
   int get _totalSelectedAmount {
     int total = 0;
     for (final id in _selectedIds) {
-      total += _amounts[id] ?? 0;
+      total += (_amounts[id] ?? 0).abs();
     }
     return total;
   }
 
+  /// Website AmountDisplay save / "Do Not Use": store the amount, and select the card when
+  /// it is non-zero, deselect it at zero.
+  void _setAmount(String id, int value) {
+    if (_isConfirmed) return;
+    setState(() {
+      _amounts[id] = value;
+      if (value != 0) {
+        _selectedIds.add(id);
+      } else {
+        _selectedIds.remove(id);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final strings = ref.watch(stringsProvider);
     final label = _moduleLabels[widget.module] ?? widget.module;
     final icon = _moduleIcons[widget.module] ?? Icons.play_arrow_rounded;
+
+    if (_accessEnded) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: AccessEndedView(),
+      );
+    }
 
     if (_isLoading) {
       return Center(
@@ -442,6 +521,15 @@ class _SelfPacedScenarioPanelState
           ),
         ),
 
+        // ── Live pro-forma impact preview (website 9aa2613): updates as scenarios are
+        // toggled / amounts edited; posts to /preview/self-paced-impact with the bearer ──
+        ProFormaPreview(
+          selfPaced: true,
+          module: widget.module,
+          roundNum: widget.round,
+          pending: _previewPending,
+        ),
+
         // ── Selection info alert (shows when selecting, before confirm) ──
         if (!_isConfirmed && _selectedIds.isNotEmpty)
           _AlertBanner(
@@ -507,12 +595,22 @@ class _SelfPacedScenarioPanelState
                       title: title,
                       description: description,
                       amount: amount,
+                      module: widget.module,
+                      round: widget.round,
+                      // The self-paced route sends no engineRow: resolve it with the
+                      // server's own catalog -> engine-row rule (scenario-row-map.ts).
+                      engineRow: (scenario['engineRow'] as num?)?.toInt() ??
+                          (int.tryParse(id) == null
+                              ? null
+                              : engineRowFor(widget.module, widget.round, int.parse(id),
+                                  _scenarios.length)),
+                      strings: strings,
+                      direction: directionFor(widget.module, id, title,
+                          scenario['direction']?.toString()),
                       isSelected: isSelected,
                       isLocked: _isConfirmed,
                       onTap: () => _toggleScenario(id),
-                      onAmountChanged: (val) {
-                        setState(() => _amounts[id] = val);
-                      },
+                      onAmountChanged: (val) => _setAmount(id, val),
                     ),
                   );
                 }).toList(),
@@ -751,6 +849,11 @@ class _ScenarioCard extends StatelessWidget {
   final String title;
   final String description;
   final int amount;
+  final String module;
+  final int round;
+  final int? engineRow;
+  final AppStrings strings;
+  final AmountDirection direction;
   final bool isSelected;
   final bool isLocked;
   final VoidCallback onTap;
@@ -760,6 +863,11 @@ class _ScenarioCard extends StatelessWidget {
     required this.title,
     required this.description,
     required this.amount,
+    required this.module,
+    required this.round,
+    required this.engineRow,
+    required this.strings,
+    required this.direction,
     required this.isSelected,
     required this.isLocked,
     required this.onTap,
@@ -816,28 +924,27 @@ class _ScenarioCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  '\$${_formatAmt(amount)}',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: amount > 0
-                        ? const Color(0xFF10B981)
-                        : const Color(0xFFEF4444),
+                Flexible(
+                  child: Text(
+                    // Website formatDisplayAmount: -$1,000 / $0.
+                    '${amount < 0 ? '-' : ''}\$${_formatAmt(amount.abs())}',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: amount < 0
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF10B981),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Minus button
+                // "Do Not Use" (website MinusCircle): clears the amount and deselects.
                 _CircleIconBtn(
                   icon: Icons.remove_circle_outline_rounded,
                   color: const Color(0xFFEF4444),
                   size: 18,
-                  onTap: isLocked
-                      ? null
-                      : () {
-                          final newVal = (amount - 10000).clamp(0, 99999999);
-                          onAmountChanged(newVal);
-                        },
+                  onTap: isLocked || amount == 0 ? null : () => onAmountChanged(0),
                 ),
                 const SizedBox(width: 4),
                 // Edit button
@@ -848,6 +955,13 @@ class _ScenarioCard extends StatelessWidget {
                   onTap: isLocked ? null : () => _showAmountEditor(context),
                 ),
               ],
+            ),
+            // What this amount does (website DecisionImpactPanel); hidden at zero.
+            DecisionImpactPanel(
+              module: module,
+              engineRow: engineRow,
+              amount: amount.toDouble(),
+              round: round,
             ),
             const SizedBox(height: 10),
 
@@ -901,34 +1015,70 @@ class _ScenarioCard extends StatelessWidget {
   }
 
   void _showAmountEditor(BuildContext context) {
-    final controller = TextEditingController(text: amount.toString());
+    final s = strings;
+    final controller = TextEditingController(text: amount == 0 ? '' : amount.toString());
+    final (plusVerb, minusVerb) = moduleDirectionVerbs(s, module);
+    final legend = switch (direction) {
+      AmountDirection.positive =>
+        '${s.tr('Enter a positive amount:', 'أدخل مبلغًا موجبًا:')} + $plusVerb · ${s.tr('cash in', 'تدفق داخل')}',
+      AmountDirection.negative =>
+        '${s.tr('Enter a negative amount:', 'أدخل مبلغًا سالبًا:')} − $minusVerb · ${s.tr('cash out', 'تدفق خارج')}',
+      AmountDirection.both =>
+        '+ $plusVerb · ${s.tr('cash in', 'تدفق داخل')}   − $minusVerb · ${s.tr('cash out', 'تدفق خارج')}',
+    };
+    String? error;
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title, style: const TextStyle(fontSize: 14)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Amount (\$)',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final val = int.tryParse(controller.text) ?? 0;
-              onAmountChanged(val.clamp(0, 99999999));
-              Navigator.pop(ctx);
-            },
-            child: const Text('Set'),
-          ),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          void submit() {
+            final raw = controller.text.trim().replaceAll(',', '');
+            final val = raw.isEmpty ? 0 : (double.tryParse(raw) ?? 0).round();
+            final err = validateAmountDirection(s, direction, val.toDouble());
+            if (err != null) {
+              setDialogState(() => error = err);
+              return;
+            }
+            onAmountChanged(val.clamp(-99999999999, 99999999999));
+            Navigator.pop(ctx);
+          }
+
+          return AlertDialog(
+            title: Text(title, style: const TextStyle(fontSize: 14)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(legend, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: controller,
+                  keyboardType: TextInputType.numberWithOptions(
+                    signed: direction != AmountDirection.positive,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: s.tr('Amount (\$)', 'المبلغ (\$)'),
+                    hintText: direction == AmountDirection.negative ? '-250000' : '250000',
+                    errorText: error,
+                    border: const OutlineInputBorder(),
+                  ),
+                  autofocus: true,
+                  onSubmitted: (_) => submit(),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(s.tr('Cancel', 'إلغاء')),
+              ),
+              ElevatedButton(
+                onPressed: submit,
+                child: Text(s.tr('Set', 'تعيين')),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

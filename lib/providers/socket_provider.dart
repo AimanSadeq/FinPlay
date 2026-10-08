@@ -1,9 +1,45 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/network/socket_service.dart';
+import '../core/utils/constants.dart';
+import 'repository_providers.dart';
 import 'game_state_provider.dart';
 import 'simulation_access_provider.dart';
 import 'team_provider.dart';
+
+/// One `team:module_advanced` push: the team leader moved the team on, or the facilitator
+/// parked every team on a round's results (nextModule == 'dashboard'). Server payload:
+/// { teamId, previousModule, nextModule, roundNum } (team-progression.ts, facilitator.ts).
+class TeamModuleAdvance {
+  final String teamId;
+  final String? previousModule;
+  final String nextModule;
+  final int? roundNum;
+  final DateTime receivedAt;
+
+  TeamModuleAdvance({
+    required this.teamId,
+    this.previousModule,
+    required this.nextModule,
+    this.roundNum,
+    DateTime? receivedAt,
+  }) : receivedAt = receivedAt ?? DateTime.now();
+
+  /// 'dashboard' means the round is over for this team: it belongs on the results screen.
+  bool get toDashboard => nextModule == 'dashboard';
+
+  static TeamModuleAdvance? fromJson(dynamic data) {
+    if (data is! Map) return null;
+    final next = data['nextModule']?.toString();
+    if (next == null || next.isEmpty) return null;
+    return TeamModuleAdvance(
+      teamId: data['teamId']?.toString() ?? '',
+      previousModule: data['previousModule']?.toString(),
+      nextModule: next,
+      roundNum: (data['roundNum'] as num?)?.toInt(),
+    );
+  }
+}
 
 /// Manages Socket.IO connection lifecycle and event routing
 class SocketManager {
@@ -19,134 +55,112 @@ class SocketManager {
       sub.cancel();
     }
     _subscriptions.clear();
-    _socket.connect(teamId: teamId);
+    // Same host as the REST client: the server picks the cohort from the handshake Host,
+    // so a cohort subdomain selected at runtime must reach the socket too.
+    final apiBase = _ref.read(apiClientProvider).baseUrl;
+    final origin = apiBase.endsWith(AppConstants.apiPrefix)
+        ? apiBase.substring(0, apiBase.length - AppConstants.apiPrefix.length)
+        : apiBase;
+    _socket.connect(teamId: teamId, origin: origin);
     _setupListeners();
   }
 
+  static Map<String, dynamic>? _asMap(dynamic data) =>
+      data is Map ? Map<String, dynamic>.from(data) : null;
+
+  void _setMemberCount(dynamic data) {
+    final count = (_asMap(data)?['memberCount'] as num?)?.toInt();
+    if (count != null) _ref.read(teamMemberCountProvider.notifier).state = count;
+  }
+
+  void _listen(String event, void Function(dynamic data) handler) {
+    _subscriptions.add(_socket.on<dynamic>(event).listen(handler));
+  }
+
+  // Only events the server really emits are handled (see SocketService.serverEvents).
+  // Payloads are the route's object plus a `timestamp` added by broadcastToTeam/ToAll.
   void _setupListeners() {
-    // Game state updates from facilitator
-    _subscriptions.add(
-      _socket.on<dynamic>('game-state-update').listen((data) {
-        if (data is Map<String, dynamic>) {
-          _ref.read(gameStateProvider.notifier).updateFromSocket(data);
-        }
-      }),
-    );
+    // shock:triggered { shock } — to the cohort, or to one team's room. Market shocks are
+    // a corporate-mode mechanic: the server zeroes every shock row when it computes a
+    // self-paced learner's financials, so they are not surfaced there (website parity).
+    _listen('shock:triggered', (data) {
+      final shock = _asMap(_asMap(data)?['shock']);
+      if (shock == null || _ref.read(teamProvider).selectedTeam == null) return;
+      final id = (shock['id'] ?? shock['shockId'])?.toString();
+      final current = _ref.read(activeShocksProvider);
+      if (id != null &&
+          current.any((s) => (s['id'] ?? s['shockId'])?.toString() == id)) {
+        return;
+      }
+      _ref.read(activeShocksProvider.notifier).state = [...current, shock];
+    });
 
-    // Team updates
-    _subscriptions.add(
-      _socket.on<dynamic>('team-update').listen((data) {
-        if (data is Map<String, dynamic>) {
-          _ref.read(teamProvider.notifier).updateTeamFromSocket(data);
-        }
-      }),
-    );
+    // Presence: team:joined (to me), team:member_joined / team:member_left (to the room),
+    // each carrying { memberCount }.
+    _listen('team:joined', _setMemberCount);
+    _listen('team:member_joined', _setMemberCount);
+    _listen('team:member_left', _setMemberCount);
 
-    // Shock triggered notification. Market shocks are a corporate-mode mechanic:
-    // the server zeroes every shock row when it computes a self-paced learner's
-    // financials, so a shock alert there would announce an event that provably
-    // never touches their numbers (website parity — it skips the display too).
-    _subscriptions.add(
-      _socket.on<dynamic>('shock-triggered').listen((data) {
-        if (data is Map<String, dynamic> && _ref.read(teamProvider).selectedTeam != null) {
-          _ref.read(activeShocksProvider.notifier).state = [
-            ..._ref.read(activeShocksProvider),
-            data,
-          ];
-        }
-      }),
-    );
-
-    // Timer updates
-    _subscriptions.add(
-      _socket.on<dynamic>('timer-update').listen((data) {
-        if (data is Map<String, dynamic>) {
-          final seconds = data['seconds'] as int?;
-          if (seconds != null) {
-            _ref.read(timerSecondsProvider.notifier).state = seconds;
-          }
-        }
-      }),
-    );
-
-    // Module locked
-    _subscriptions.add(
-      _socket.on<dynamic>('module-locked').listen((data) {
+    // decision:updated is relayed for every teammate's amount edit as well as for the
+    // server's own confirm ({ decisions: { confirmed: true } }) and unlock
+    // ({ decisions: { unlocked: true } }) broadcasts. Only the latter two change anything
+    // the round state carries, so only they refetch it (no refetch per keystroke).
+    _listen('decision:updated', (data) {
+      final decisions = _asMap(_asMap(data)?['decisions']);
+      if (decisions == null) return;
+      if (decisions['confirmed'] == true || decisions['unlocked'] == true) {
         _ref.read(gameStateProvider.notifier).fetchGameState();
-      }),
-    );
+      }
+    });
 
-    // Round advanced
-    _subscriptions.add(
-      _socket.on<dynamic>('round-advanced').listen((data) {
-        _ref.read(gameStateProvider.notifier).fetchGameState();
-      }),
-    );
+    // Facilitator reset the game: refresh round state and teams, drop stale shocks.
+    _listen('facilitator:game_reset', (_) {
+      _ref.read(gameStateProvider.notifier).fetchGameState();
+      _ref.read(activeShocksProvider.notifier).state = [];
+      _ref.read(teamProvider.notifier).fetchTeams();
+    });
 
-    // Cache cleared - refresh data
-    _subscriptions.add(
-      _socket.on<dynamic>('cache-cleared').listen((data) {
-        _ref.read(gameStateProvider.notifier).fetchGameState();
-      }),
-    );
+    // facilitator:simulation_access { open } — the corporate simulation gate.
+    _listen('facilitator:simulation_access', (data) {
+      final open = _asMap(data)?['open'];
+      if (open is bool) _ref.read(simulationAccessProvider.notifier).state = open;
+    });
 
-    // Presence updates (team member count)
-    _subscriptions.add(
-      _socket.on<dynamic>('presence-update').listen((data) {
-        if (data is Map<String, dynamic>) {
-          final count = data['memberCount'] as int? ?? data['count'] as int?;
-          if (count != null) {
-            _ref.read(teamMemberCountProvider.notifier).state = count;
-          }
-        }
-      }),
-    );
-
-    // Team joined - get initial member count (like website's team:joined)
-    _subscriptions.add(
-      _socket.on<dynamic>('team:joined').listen((data) {
-        if (data is Map<String, dynamic>) {
-          final count = data['memberCount'] as int?;
-          if (count != null) {
-            _ref.read(teamMemberCountProvider.notifier).state = count;
-          }
-        }
-      }),
-    );
-
-    // Team member joined/left - update count
-    _subscriptions.add(
-      _socket.on<dynamic>('team:member_joined').listen((data) {
-        if (data is Map<String, dynamic>) {
-          final count = data['memberCount'] as int?;
-          if (count != null) {
-            _ref.read(teamMemberCountProvider.notifier).state = count;
-          }
-        }
-      }),
-    );
-
-    _subscriptions.add(
-      _socket.on<dynamic>('team:member_left').listen((data) {
-        if (data is Map<String, dynamic>) {
-          final count = data['memberCount'] as int?;
-          if (count != null) {
-            _ref.read(teamMemberCountProvider.notifier).state = count;
-          }
-        }
-      }),
-    );
-
-    // Decision updated (from unlock/lock actions)
-    _subscriptions.add(
-      _socket.on<dynamic>('decision:updated').listen((data) {
-        _ref.read(gameStateProvider.notifier).fetchGameState();
-      }),
-    );
-
-    // Team module advanced
+    // Team module advanced: follow the team to its next module (website 82b7b96), or to
+    // the results dashboard when nextModule is 'dashboard' (Operating confirmed by the
+    // leader, or the facilitator parked every team on results, website 5fcc4ee). The
+    // simulation screen listens to [teamModuleAdvanceProvider] and moves the tab/route.
     _subscriptions.add(
       _socket.on<dynamic>('team:module_advanced').listen((data) {
+        _ref.read(gameStateProvider.notifier).fetchGameState();
+        final advance = TeamModuleAdvance.fromJson(data);
+        if (advance == null) return;
+        final team = _ref.read(teamProvider).selectedTeam;
+        if (team == null) return;
+        if (advance.teamId.isNotEmpty && advance.teamId != team.id) return;
+        // Keep the cached team in step so screens reading team.currentModule agree.
+        // 'dashboard' is a destination, not a decision module: the cached module stays as
+        // it was (team.currentModule feeds the simulation's tab/progress index).
+        if (!advance.toDashboard) {
+          _ref.read(teamProvider.notifier).updateTeamFromSocket(team
+              .copyWith(
+                currentModule: advance.nextModule,
+                currentRound: advance.roundNum,
+              )
+              .toJson());
+        }
+        _ref.read(teamModuleAdvanceProvider.notifier).state = advance;
+      }),
+    );
+
+    // Facilitator moved/locked modules for everyone: refresh the round state.
+    _subscriptions.add(
+      _socket.on<dynamic>('facilitator:module_changed').listen((_) {
+        _ref.read(gameStateProvider.notifier).fetchGameState();
+      }),
+    );
+    _subscriptions.add(
+      _socket.on<dynamic>('round:updated').listen((_) {
         _ref.read(gameStateProvider.notifier).fetchGameState();
       }),
     );
@@ -165,7 +179,14 @@ class SocketManager {
     );
   }
 
-  void joinTeam(String teamId) => _socket.joinTeam(teamId);
+  void joinTeam(String teamId, {String? playerName}) =>
+      _socket.joinTeam(teamId, playerName: playerName);
+
+  /// Team room currently joined (or to be joined on connect), if any.
+  String? get joinedTeamId => _socket.teamId;
+
+  /// Whether a socket exists, connected or still handshaking/reconnecting.
+  bool get hasSocket => _socket.hasSocket;
   void leaveTeam(String teamId) => _socket.leaveTeam(teamId);
 
   /// Listen to a raw socket event by name
@@ -197,10 +218,19 @@ final socketManagerProvider = Provider<SocketManager>((ref) {
   return manager;
 });
 
+/// Corporate simulation gate as last pushed by `facilitator:simulation_access { open }`
+/// (null until a push arrives this session; the REST source of truth is
+/// GET ApiEndpoints.facilitatorSimulationAccess).
+final simulationAccessProvider = StateProvider<bool?>((ref) => null);
+
+/// Latest `team:module_advanced` push for the selected team (null until one arrives).
+final teamModuleAdvanceProvider = StateProvider<TeamModuleAdvance?>((ref) => null);
+
 // Active shocks list (pushed via socket)
 final activeShocksProvider = StateProvider<List<Map<String, dynamic>>>((ref) => []);
 
-// Timer seconds (updated via socket)
+// Game countdown seconds, driven by the /timer/status poller (timer_provider.dart); the
+// server never pushes the game timer over the socket.
 final timerSecondsProvider = StateProvider<int?>((ref) => null);
 
 // Connection status stream

@@ -1,13 +1,19 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/services/education_progress_sync.dart';
+import '../../../core/utils/constants.dart';
+import '../../../data/models/user.dart';
+import '../../../providers/self_paced_provider.dart';
 import '../../../shared/widgets/gradient_button.dart';
 
 class SelfPacedLoginScreen extends ConsumerStatefulWidget {
@@ -40,6 +46,9 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
   bool _voucherChecking = false;
   bool? _voucherValid; // null = unchecked, true = applied, false = invalid
   String? _voucherCheckedCode;
+  String? _voucherReason; // server's reason for an invalid code
+  int? _voucherAccessDays; // access period a valid code grants
+  bool _demoLoading = false;
   late AnimationController _bgController;
 
   // Blue theme matching website (bg-blue-600, from-blue-50, to-indigo-100)
@@ -75,18 +84,27 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
   Future<void> _validateVoucher(String raw) async {
     final code = raw.trim();
     if (code.length < 4) {
-      if (mounted) setState(() { _voucherValid = null; _voucherCheckedCode = null; });
+      if (mounted) {
+        setState(() {
+          _voucherValid = null;
+          _voucherCheckedCode = null;
+          _voucherReason = null;
+          _voucherAccessDays = null;
+        });
+      }
       return;
     }
     if (code == _voucherCheckedCode) return; // already checked this exact code
     setState(() { _voucherChecking = true; });
-    final res = await ref.read(facilitatorRepositoryProvider).validateVoucher(code);
+    final res = await ref.read(authRepositoryProvider).validateVoucher(code);
     if (!mounted) return;
     // Ignore a stale result if the user kept typing.
     if (_voucherController.text.trim() != code) return;
     setState(() {
       _voucherChecking = false;
       _voucherValid = res.valid;
+      _voucherReason = res.reason;
+      _voucherAccessDays = res.accessDays;
       _voucherCheckedCode = code;
     });
   }
@@ -133,7 +151,7 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
         verificationCode: _codeController.text.trim(),
         voucherCode: voucher.isEmpty ? null : voucher,
       );
-      if (success && mounted) context.go('/self-paced-progress');
+      if (success && mounted) _goOnward();
       return;
     }
 
@@ -141,7 +159,19 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
       _emailController.text.trim(),
       _passwordController.text,
     );
-    if (success && mounted) context.go('/self-paced-progress');
+    if (success && mounted) _goOnward();
+  }
+
+  /// Opened with ?return=1 (e.g. from an assessment whose session expired):
+  /// pop back so the caller's screen — and its unsaved answers — survive.
+  /// Otherwise land on the self-paced home.
+  void _goOnward() {
+    final returnHere = GoRouterState.of(context).uri.queryParameters['return'] == '1';
+    if (returnHere && context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/self-paced-progress');
+    }
   }
 
   /// Re-request a fresh verification code (server enforces a 60s cooldown and
@@ -150,6 +180,7 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
     await ref.read(authProvider.notifier).requestVerification(_emailController.text.trim());
   }
 
+<<<<<<< Updated upstream
   /// One-tap demo: POST /self-paced/demo-login, which provisions the demo
   /// learner server-side and signs it in (website parity). The demo account
   /// has no usable password, so a password login can never reach it.
@@ -160,13 +191,73 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
     final auth = ref.read(authProvider.notifier);
     final success = await auth.loginDemo();
     if (success && mounted) {
+=======
+  /// One-tap demo (website parity, f7c1901): the server owns the demo learner.
+  /// POST /self-paced/demo-login takes no body, provisions the account on
+  /// first use and signs it in; the session is then stored like a normal login.
+  /// (The old demo@viftraining.com / demo@2026 pair was a client-side-only gate
+  /// on the website, never a real account.)
+  Future<void> _tryDemo() async {
+    setState(() {
+      _isRegister = false;
+      _demoLoading = true;
+    });
+    ref.read(authProvider.notifier).clearError();
+    var ok = false;
+    try {
+      final res = await ref.read(authRepositoryProvider).demoLogin();
+      ok = await _storeDemoSession(res);
+    } catch (_) {
+      ok = false;
+    }
+    if (!mounted) return;
+    setState(() => _demoLoading = false);
+    if (ok) {
+>>>>>>> Stashed changes
       context.go('/self-paced-progress');
-    } else if (mounted) {
+    } else {
       final s = ref.read(stringsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(s.tr('Demo unavailable — please try again or register', 'العرض التجريبي غير متاح — يرجى المحاولة مرة أخرى أو التسجيل'))),
       );
     }
+  }
+
+  /// Adopt the demo session through AuthNotifier, then pull the learner's
+  /// saved progress like a login does.
+  Future<bool> _storeDemoSession(Map<String, dynamic> res) async {
+    final token = res['token'];
+    final userJson = res['user'];
+    if (res['success'] != true || token is! String || token.isEmpty || userJson is! Map) {
+      return false;
+    }
+    final user = SelfPacedUser.fromJson(Map<String, dynamic>.from(userJson));
+    await ref.read(authProvider.notifier).adoptSession(token, user);
+    // Entitlement + game progress from /me, and the education modules.
+    ref.read(selfPacedProvider.notifier).fetchProgress();
+    if (user.email.isNotEmpty) {
+      EducationProgressSync(ref.read(apiClientProvider))
+          .hydrate(teamName: user.email, scope: 'sp');
+    }
+    return true;
+  }
+
+  /// "includes 1 year(s) / 90 days of full access" (website wording).
+  String? _accessPeriodText(AppStrings s) {
+    final days = _voucherAccessDays;
+    if (days == null || days <= 0) return null;
+    if (days >= 365) {
+      final years = (days / 365).round();
+      return s.tr('includes $years year(s) of full access',
+          'يتضمن $years ${years == 1 ? 'سنة' : 'سنوات'} من الوصول الكامل');
+    }
+    return s.tr('includes $days days of full access',
+        'يتضمن $days يومًا من الوصول الكامل');
+  }
+
+  Future<void> _openLegal(String path) async {
+    await launchUrl(Uri.parse('${AppConstants.baseUrl}$path'),
+        mode: LaunchMode.externalApplication);
   }
 
   Future<void> _showRequestDemo() async {
@@ -401,9 +492,11 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                       key: _formKey,
                       child: Column(
                         children: [
-                          // Access Code — shown at the top in a styled box when
-                          // self-paced sign-up is gated (parity with the website).
-                          if (_isRegister && _voucherRequired) ...[
+                          // Access Code — always offered on sign-up (website
+                          // 6bdfb46): a code carries a client's prepaid access
+                          // period whether or not the facilitator made codes
+                          // mandatory. Required only when sign-up is gated.
+                          if (_isRegister) ...[
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
@@ -421,7 +514,10 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                                         fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 1.2),
                                     onChanged: _validateVoucher,
                                     decoration: InputDecoration(
-                                      labelText: s.tr('Access Code', 'رمز الدخول'),
+                                      labelText: _voucherRequired
+                                          ? s.tr('Access Code', 'رمز الدخول')
+                                          : s.tr('Access Code (if you have one)',
+                                              'رمز الدخول (إن وُجد)'),
                                       prefixIcon: const Icon(Icons.vpn_key_rounded, size: 20),
                                       suffixIcon: _voucherChecking
                                           ? const Padding(
@@ -442,19 +538,27 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                                       filled: true,
                                       fillColor: isDark ? AppColors.darkSurface : Colors.white,
                                     ),
-                                    validator: (v) => (v == null || v.trim().isEmpty)
+                                    validator: (v) => _voucherRequired &&
+                                            (v == null || v.trim().isEmpty)
                                         ? s.tr('Access code required', 'رمز الدخول مطلوب')
                                         : null,
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     _voucherValid == true
-                                        ? s.tr('✓ Access code applied.', '✓ تم تطبيق رمز الدخول.')
+                                        ? (_accessPeriodText(s) == null
+                                            ? s.tr('✓ Access code applied.', '✓ تم تطبيق رمز الدخول.')
+                                            : s.tr('✓ Access code applied - ${_accessPeriodText(s)}.',
+                                                '✓ تم تطبيق رمز الدخول - ${_accessPeriodText(s)}.'))
                                         : _voucherValid == false
-                                            ? s.tr('This access code is not valid.',
-                                                'رمز الدخول هذا غير صالح.')
-                                            : s.tr('A valid access code is required to create an account.',
-                                                'مطلوب رمز دخول صالح لإنشاء حساب.'),
+                                            ? s.tr(
+                                                "This access code isn't valid${_voucherReason != null ? ' ($_voucherReason)' : ''}. Please check with your facilitator.",
+                                                'رمز الدخول هذا غير صالح${_voucherReason != null ? ' ($_voucherReason)' : ''}. يرجى التحقق مع الميسّر.')
+                                            : _voucherRequired
+                                                ? s.tr('A valid access code is required to create an account.',
+                                                    'مطلوب رمز دخول صالح لإنشاء حساب.')
+                                                : s.tr('Enter the code from your training provider to unlock your access period.',
+                                                    'أدخل الرمز الذي زوّدك به مقدّم التدريب لتفعيل فترة وصولك.'),
                                     style: TextStyle(
                                         fontSize: 11,
                                         color: _voucherValid == true
@@ -695,12 +799,27 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
                             onPressed: _submit,
                           ),
 
+                          // Registration is the moment the agreement is formed, so
+                          // the terms are named here (website 1b9d367). Register
+                          // mode only: signing in again is not a fresh acceptance.
+                          if (_isRegister) ...[
+                            const SizedBox(height: 10),
+                            _buildTermsNotice(s),
+                          ],
+
                           const SizedBox(height: 12),
 
                           // Try Demo — one-tap login with the public demo account.
                           OutlinedButton.icon(
-                            onPressed: authState.status == AuthStatus.loading ? null : _tryDemo,
-                            icon: const Icon(Icons.sports_esports_rounded, size: 18),
+                            onPressed: authState.status == AuthStatus.loading || _demoLoading
+                                ? null
+                                : _tryDemo,
+                            icon: _demoLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.sports_esports_rounded, size: 18),
                             label: Text(s.tr('Try Demo', 'تجربة العرض التوضيحي')),
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size.fromHeight(48),
@@ -763,6 +882,28 @@ class _SelfPacedLoginScreenState extends ConsumerState<SelfPacedLoginScreen>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTermsNotice(AppStrings s) {
+    final base = TextStyle(fontSize: 11, height: 1.5, color: AppColors.textTertiary(context));
+    final link = base.copyWith(
+        decoration: TextDecoration.underline, color: AppColors.textSecondary(context));
+    Widget linkText(String label, String path) => GestureDetector(
+          onTap: () => _openLegal(path),
+          child: Text(label, style: link),
+        );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(s.tr('By creating an account you agree to our ', 'بإنشاء حساب فإنك توافق على '),
+            style: base),
+        linkText(s.tr('Terms of Service', 'شروط الخدمة'), '/terms'),
+        Text(s.tr(' and ', ' و'), style: base),
+        linkText(s.tr('Privacy Policy', 'سياسة الخصوصية'), '/privacy'),
+        Text('.', style: base),
+      ],
     );
   }
 

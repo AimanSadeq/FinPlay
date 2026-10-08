@@ -26,15 +26,20 @@ class _CovenantsScreenState extends ConsumerState<CovenantsScreen> {
   double _ebitda = 350000;
   double _interest = 90000;
 
-  // Facilitator-set thresholds (defaults match the website breach banner)
-  double _maxLeverage = 3.0;
-  double _minCoverage = 4.0;
+  // Facilitator-set thresholds. Defaults are the server's (covenants.ts / realism status):
+  // Debt/EBITDA at most 4.0x, interest coverage at least 2.0x.
+  double _maxLeverage = 4.0;
+  double _minCoverage = 2.0;
 
-  double get _leverage => _ebitda > 0 ? _debt / _ebitda : double.infinity;
-  double get _coverage => _interest > 0 ? _ebitda / _interest : double.infinity;
+  // Unbounded when there is debt but no EBITDA; zero when there is neither (covenants.ts).
+  double get _leverage =>
+      _ebitda > 0 ? _debt / _ebitda : (_debt > 0 ? double.infinity : 0);
+  double get _coverage =>
+      _interest > 0 ? _ebitda / _interest : (_ebitda > 0 ? double.infinity : 0);
 
   bool get _leverageBreached => _leverage > _maxLeverage;
-  bool get _coverageBreached => _coverage < _minCoverage;
+  bool get _coverageBreached =>
+      _coverage.isFinite ? _coverage < _minCoverage : (_interest > 0 && _ebitda <= 0);
   bool get _anyBreached => _leverageBreached || _coverageBreached;
 
   // Positive headroom = safe buffer (%)

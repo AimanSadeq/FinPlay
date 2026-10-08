@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
+import '../../roles/role_picker.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../core/network/api_endpoints.dart';
@@ -15,6 +16,10 @@ import '../../../providers/socket_provider.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
 import '../../../shared/widgets/connection_badge.dart';
+
+// SharedPreferences key: the team the stored team-member token belongs to (set beside
+// AppConstants.teamMemberTokenKey at sign-in). Used only by the returning-player check.
+const String _tokenTeamKey = 'team_member_token_team';
 
 class LobbyScreen extends ConsumerStatefulWidget {
   const LobbyScreen({super.key});
@@ -291,6 +296,16 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     final api = ref.read(apiClientProvider);
     final prefs = await SharedPreferences.getInstance();
 
+    // Whether this device already joined this team under this name (read before the
+    // values below are overwritten). One of the "returning player" signals for STEP 4.
+    // AppConstants.teamIdKey cannot be used for the team: it is written when a team card is
+    // tapped, before this join. [_tokenTeamKey] records the team the stored token was
+    // minted for, so a same-name player moving to another team is not "returning".
+    final sameDeviceReturn =
+        prefs.getString(AppConstants.playerNameKey)?.trim().toLowerCase() == name.toLowerCase() &&
+            prefs.getString(AppConstants.teamMemberTokenKey)?.isNotEmpty == true &&
+            prefs.getString(_tokenTeamKey) == team.id;
+
     // Persist the joined name so the team-leader gate can tell if "I" am leader.
     await prefs.setString(AppConstants.playerNameKey, name);
 
@@ -331,6 +346,7 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       final token = reg['token'];
       if (token is String && token.isNotEmpty) {
         await prefs.setString(AppConstants.teamMemberTokenKey, token);
+        await prefs.setString(_tokenTeamKey, team.id);
         api.setAuthToken(token); // carry as Bearer on subsequent decision writes
         // Honor a server-sanitized name if it changed ours.
         final sanitized = reg['playerName'];
@@ -357,11 +373,15 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
 
     // STEP 2: Reconnect socket with teamId and join team room
     ref.read(socketManagerProvider).connect(teamId: team.id);
-    ref.read(socketManagerProvider).joinTeam(team.id);
+    ref.read(socketManagerProvider).joinTeam(
+          team.id,
+          playerName: prefs.getString(AppConstants.playerNameKey) ?? name,
+        );
 
     // STEP 3: Fetch team progression for late joiner sync (like website)
     String targetModule = 'financing';
     int currentRound = 1;
+    bool teamHasConfirmed = false;
     try {
       final progressionRes = await api.get(
         '${ApiEndpoints.teamProgression}/${Uri.encodeComponent(team.id)}',
@@ -369,9 +389,28 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       if (progressionRes['currentModule'] != null) {
         targetModule = progressionRes['currentModule'] as String;
       }
+      teamHasConfirmed = progressionRes['hasConfirmedDecisions'] == true;
     } catch (_) {
       // Default to financing if API fails
     }
+
+    // RETURNING PLAYER (website 0acf27e): a role recorded under this name on this team
+    // (GET /api/roles/:teamId -> { roles: [{ playerName, role }] }) means they have been
+    // through the join flow before.
+    // The same lookup decides the role picker: the website asks for a role only when this
+    // name has none on this team yet.
+    final joinedName = prefs.getString(AppConstants.playerNameKey) ?? name;
+    bool hasRole = false;
+    try {
+      final rolesRes = await api.get('${ApiEndpoints.roles}/${Uri.encodeComponent(team.id)}');
+      final roles = rolesRes['roles'];
+      if (roles is List) {
+        hasRole = roles.any((r) =>
+            r is Map &&
+            r['playerName']?.toString().trim().toLowerCase() == joinedName.trim().toLowerCase());
+      }
+    } catch (_) {/* treat as a first-time join */}
+    final returningPlayer = sameDeviceReturn || hasRole;
 
     // Fetch current round from game state
     try {
@@ -383,24 +422,37 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
       // Default to round 1
     }
 
-    // Navigate to /home immediately (like website navigates to /home)
-    if (mounted) {
-      setState(() => _joining = false);
-      context.go('/home');
-    }
-
     // STEP 4: Background initialization (non-blocking, like website's setTimeout)
-    // Unlock decisions with correct module/round
-    api.post(ApiEndpoints.decisionsUnlock, data: {
-      'teamId': team.id,
-      'module': targetModule,
-      'round': currentRound,
-    }).catchError((_) => <String, dynamic>{});
+    // Fresh-entry unlock for the team's module/round. Skipped for a returning player
+    // (website 0acf27e): running it on every sign-in stripped the lock off decisions the
+    // team had already confirmed. Also skipped whenever the team's current module is
+    // already confirmed (whoever joins) and when the team is parked on results — an
+    // unlock there could only reopen a finished decision.
+    final skipUnlock = returningPlayer ||
+        teamHasConfirmed ||
+        !const ['financing', 'investing', 'operating'].contains(targetModule);
+    if (!skipUnlock) {
+      api.post(ApiEndpoints.decisionsUnlock, data: {
+        'teamId': team.id,
+        'module': targetModule,
+        'round': currentRound,
+      }).catchError((_) => <String, dynamic>{});
+    }
 
     // Start gamification
     api.post(ApiEndpoints.gamificationStart, data: {
       'teamId': team.id,
     }).catchError((_) => <String, dynamic>{});
+
+    // Navigate to /home (like website). A first-time joiner (no role on this team yet)
+    // picks a role first; picking or skipping continues to /home (website lobby 100edf7).
+    if (!mounted) return;
+    setState(() => _joining = false);
+    if (!hasRole) {
+      await showRolePickerDialog(context, teamId: team.id, playerName: joinedName);
+      if (!mounted) return;
+    }
+    context.go('/home');
   }
 
   @override
@@ -408,6 +460,10 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
     final s = ref.watch(stringsProvider);
     final teamState = ref.watch(teamProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Stable order (website c54e86b): the API returns rows in DB order, which shifts as
+    // team rows are updated — sort by team number so Team 1..7 never move.
+    final sortedTeams = [...teamState.teams]
+      ..sort((a, b) => a.teamNumber.compareTo(b.teamNumber));
 
     return Scaffold(
       body: Container(
@@ -529,9 +585,9 @@ class _LobbyScreenState extends ConsumerState<LobbyScreen> {
                                       crossAxisSpacing: 12,
                                       childAspectRatio: 0.95,
                                     ),
-                                    itemCount: teamState.teams.length,
+                                    itemCount: sortedTeams.length,
                                     itemBuilder: (context, index) {
-                                      final team = teamState.teams[index];
+                                      final team = sortedTeams[index];
                                       final isSelected = teamState.selectedTeam?.id == team.id;
                                       final teamColor = AppColors.teamColor(index);
                                       final teamIcon = _iconForTeam(team.name, index);

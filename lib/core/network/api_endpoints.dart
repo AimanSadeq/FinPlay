@@ -12,14 +12,22 @@ class ApiEndpoints {
   static const String sessionInit = '/session/init';
 
   // Game State
-  static const String roundState = '/sheets/round/state';
+  // Game endpoints moved from /api/sheets/* to /api/game/* (the old prefix is a
+  // deprecated server-side alias).
+  static const String roundState = '/game/round/state';
   static const String teamProgression = '/team-progression/status';
+<<<<<<< Updated upstream
   // POST /team-progression/advance/{teamId} (no body): moves ONE team to its
   // next module once its decisions are confirmed and the facilitator has
   // unlocked "Move to Next Decisions". 200 { success, action, nextModule:
   // 'investing'|'operating'|'dashboard', previousModule }; 403 { error:
   // 'Advancement locked', message }; 400 { error: 'Decisions not confirmed' }.
   // Broadcasts team:module_advanced to the team's other members.
+=======
+  // POST /team-progression/advance/{teamId} (no body). 400 'Decisions not confirmed',
+  // 403 while the facilitator has not unlocked the next decision; returns
+  // { action: 'completed_all_modules' } after Operating. Replaces /excel/advance-stage.
+>>>>>>> Stashed changes
   static const String teamProgressionAdvance = '/team-progression/advance';
 
   // Decisions
@@ -33,11 +41,15 @@ class ApiEndpoints {
   // its own confirmed decisions. A facilitator token gets 401 here; the
   // facilitator's pacing control is facilitatorToggleNextDecisions.
   static const String decisionsUnlock = '/decisions/unlock';
+  // POST {teamId, module, ...amounts} — unconfirmed draft so the facilitator sees
+  // work in progress. 409 ALREADY_CONFIRMED once the module is confirmed.
+  static const String decisionsDraft = '/decisions/draft';
 
   // Scenarios
   static const String scenarios = '/scenarios';
 
   // Financial Data & Results
+<<<<<<< Updated upstream
   // GET /game/results/round?teamId&round&statement=income|balance|cashflow|ratios
   // -> { round, team, financials:{ incomeStatement, balanceSheet, cashFlow, ratios }, kpis }.
   // Round 0 is the baseline (opening position). The server still rewrites the
@@ -47,6 +59,10 @@ class ApiEndpoints {
   static const String sheetsLeaderboard = '/sheets/leaderboard';
   static const String leaderboardDay = '/leaderboard/live';
   static const String balanceValidation = '/sheets/balance-validation';
+=======
+  static const String resultsRound = '/game/results/round';
+  static const String leaderboardDay = '/leaderboard/live';
+>>>>>>> Stashed changes
   static const String dashboardData = '/dashboard-data';
 
   // Facilitator
@@ -60,6 +76,7 @@ class ApiEndpoints {
   static const String facilitatorAuth = '/facilitator/authenticate';
   static const String facilitatorAdminAuth = '/facilitator/admin-authenticate';
   static const String facilitatorStatus = '/facilitator/status';
+<<<<<<< Updated upstream
   // GET (facilitator) -> { success, currentRound, gameState:{lockFinancing,
   // lockInvesting, lockOperating, nextDecisionsUnlocked}, teams:[{teamId,
   // teamName, currentRound, currentModule, moduleStatus:{financing|investing|
@@ -69,6 +86,8 @@ class ApiEndpoints {
   // GET -> { financing: { [teamId]: { [round]: [ {scenarioId, title, amount,
   // confirmed} ] } }, investing: {...}, operating: {...} } with NO success/data
   // wrapper (server/routes.ts); a failure is 500 {error}.
+=======
+>>>>>>> Stashed changes
   static const String facilitatorAllDecisions = '/facilitator/all-decisions';
   static const String facilitatorStartGame = '/facilitator/start-game';
   static const String facilitatorPauseGame = '/facilitator/pause-game';
@@ -115,18 +134,25 @@ class ApiEndpoints {
   // Shocks
   static const String shocksPredefined = '/shocks/predefined';
   static const String shocksTrigger = '/shocks/trigger';
+<<<<<<< Updated upstream
   // GET ?teamId= -> { success, shocks:[{id, shockId, definition:{name, nameAr,
   // description, descriptionAr, category, severity, ...}, triggeredAt, target,
   // round, module, isActive, acknowledgedBy}], count }.
+=======
+  static const String shocksTriggerCustom = '/shocks/trigger-custom';
+>>>>>>> Stashed changes
   static const String shocksActive = '/shocks/active';
   static const String shocksAcknowledge = '/shocks/acknowledge';
   static const String shocksHistory = '/shocks/history';
   // GET /shocks/unacknowledged/{teamId} -> { success, teamId, shocks, count }
   // (same rows as shocksActive). The bare path answers 404.
   static const String shocksUnacknowledged = '/shocks/unacknowledged';
+<<<<<<< Updated upstream
   // POST {password, revertModel?, round?}: the password travels in the BODY
   // (this router does not read the x-facilitator-password header).
   static const String shocksClearAll = '/shocks/clear-all';
+=======
+>>>>>>> Stashed changes
 
   // Certificate — awarded once every learning module is complete.
   // /me is authenticated AND entitlement-gated (a lapsed learner gets 402), because issuing a
@@ -191,25 +217,42 @@ class ApiEndpoints {
   // { success, message }. 15-min expiry, 60s resend cooldown, 5-attempt cap.
   static const String selfPacedRequestVerification = '/self-paced/request-verification';
   static const String selfPacedLogin = '/self-paced/login';
+<<<<<<< Updated upstream
   // "Try Demo": POST with no body -> { success, token, user:{id, email,
   // displayName, firstName, lastName, currentRound, currentModule},
   // entitlement }. The server provisions demo-player@vifm.com on first use
   // with an unguessable password, so no password login can reach the demo.
+=======
+  // POST, no body: signs in the shared demo learner (provisioned on plan 'comp', which
+  // never expires; it is NOT plan 'demo', so the earned locks stay as for any learner).
+>>>>>>> Stashed changes
   static const String selfPacedDemoLogin = '/self-paced/demo-login';
   static const String selfPacedLogout = '/self-paced/logout';
   static const String selfPacedForgotPassword = '/self-paced/forgot-password';
   static const String selfPacedResetPassword = '/self-paced/reset-password';
+  /// Permanently delete the signed-in learner's account (Apple 5.1.1(v)).
+  /// POST { password } with the self-paced bearer.
+  static const String selfPacedDeleteAccount = '/self-paced/delete-account';
 
   // Assessment (pre/post knowledge tests)
   static const String assessmentQuestions = '/assessments/questions';
   static const String assessmentStatus = '/assessments/status';
   static const String assessmentSubmit = '/assessments/submit';
 
+<<<<<<< Updated upstream
   // Research (DBA study) mode. FinPlay does not collect the study's data: the
   // website removed the consent and instrument endpoints, and GET /config
   // carries collectsHere:false. Only the flag and the facilitator toggle remain.
   static const String researchConfig = '/research/config';
   static const String researchMode = '/research/mode'; // facilitator toggle
+=======
+  // Research study flag (the server no longer collects research data; a study
+  // cohort only suppresses the commercial assessments)
+  static const String researchConfig = '/research/config';
+  static const String researchMode = '/research/mode'; // facilitator toggle
+  // GET /roles/{teamId} -> the team's assigned roles (lobby: returning-player check).
+  static const String roles = '/roles';
+>>>>>>> Stashed changes
 
   // Facilitator model editor (admin)
   static const String modelAssumptions = '/facilitator/model/assumptions';
@@ -235,6 +278,12 @@ class ApiEndpoints {
 
   // Cohorts
   static const String facilitatorCohorts = '/facilitator/cohorts';
+  // GET (public) -> { open }; POST {open} (facilitator). Corporate simulation gate,
+  // also broadcast as socket event 'facilitator:simulation_access'.
+  static const String facilitatorSimulationAccess = '/facilitator/simulation-access';
+  // GET (public) -> { moduleNums: int[] | null, catalog }. A cohort's module plan:
+  // null = every module; otherwise only these catalog ids are shown.
+  static const String educationModulePlan = '/education/module-plan';
 
   // Vouchers / access codes
   static const String vouchers = '/vouchers';
@@ -270,11 +319,30 @@ class ApiEndpoints {
   static const String selfPacedProgressDashboardData = '/self-paced/progress/dashboard-data';
 
   // Gamification
-  static const String gamificationStart = '/sheets/gamification/start';
+  static const String gamificationStart = '/game/gamification/start';
 
   // Leaderboard
   static const String leaderboardLive = '/leaderboard/live';
 
+<<<<<<< Updated upstream
+=======
+  // Facilitator controls (paths confirmed against server/routes/*.ts)
+  static const String shocksClearAll = '/shocks/clear-all';
+  static const String facilitatorTeamOverview = '/facilitator/team-overview';
+  static const String facilitatorToggleCorporateMode = '/facilitator/toggle-corporate-mode';
+  static const String facilitatorTimerPresets = '/facilitator/timer-presets';
+  static const String healthConnection = '/health/connection';
+  static const String facilitatorTimerOverlaySettings = '/facilitator/timer-overlay/settings';
+  static const String facilitatorTimerOverlayStart = '/facilitator/timer-overlay/start';
+  static const String facilitatorTimerOverlayStop = '/facilitator/timer-overlay/stop';
+  static const String facilitatorSetCaseStudyOverrides = '/facilitator/set-case-study-overrides';
+  static const String facilitatorUnlockAllScenarioResults = '/facilitator/unlock-all-scenario-results';
+  static const String facilitatorToggleNextDecisions = '/facilitator/toggle-next-decisions';
+
+  // Facilitator team sign-in / timer
+  static const String facilitatorTeamSignin = '/facilitator/team-signin';
+
+>>>>>>> Stashed changes
   // Timer
   static const String timerStatus = '/timer/status';
 
@@ -293,4 +361,8 @@ class ApiEndpoints {
   // Education Admin. POST {password}: this router reads the password from the
   // body only, not the x-facilitator-password header.
   static const String educationAdminReset = '/education/admin/reset-all';
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 }

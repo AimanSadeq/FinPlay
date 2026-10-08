@@ -8,23 +8,58 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../app/i18n/app_strings.dart';
+import '../../../core/services/learn_resume.dart';
 
 // ─── DATA MODELS ───────────────────────────────────────────────────────────────
 
-class _SlideData {
+/// One Learn slide, ported verbatim (EN + AR) from the website's
+/// capital-budgeting-slides-content.ts (CB.1-CB.14). [id] is the website section id: it is what
+/// the resume position stores, so it must stay identical to the web.
+class CapitalBudgetingSlide {
+  final String id;
+  final String number;
   final String title;
-  final IconData icon;
-  final String description;
-  final String? formula;
-  final Color color;
+  final String titleAr;
+  final List<String> content;
+  final List<String> contentAr;
+  final List<String> keyPoints;
+  final List<String> keyPointsAr;
+  final String? highlightType;
+  final String? highlight;
+  final String? highlightAr;
+  final String? examplesTitle;
+  final String? examplesTitleAr;
+  final List<String> examples;
+  final List<String> examplesAr;
 
-  const _SlideData({
+  const CapitalBudgetingSlide({
+    required this.id,
+    required this.number,
     required this.title,
-    required this.icon,
-    required this.description,
-    this.formula,
-    required this.color,
+    required this.titleAr,
+    required this.content,
+    required this.contentAr,
+    this.keyPoints = const [],
+    this.keyPointsAr = const [],
+    this.highlightType,
+    this.highlight,
+    this.highlightAr,
+    this.examplesTitle,
+    this.examplesTitleAr,
+    this.examples = const [],
+    this.examplesAr = const [],
   });
+
+  static bool _has(String? v) => v != null && v.trim().isNotEmpty;
+  static bool _hasAll(List<String> v) => v.isNotEmpty && v.every(_has);
+
+  // Arabic when the UI is Arabic and a translation exists, else English.
+  String titleFor(bool ar) => ar && _has(titleAr) ? titleAr : title;
+  List<String> contentFor(bool ar) => ar && _hasAll(contentAr) ? contentAr : content;
+  List<String> keyPointsFor(bool ar) => ar && _hasAll(keyPointsAr) ? keyPointsAr : keyPoints;
+  String? highlightFor(bool ar) => ar && _has(highlightAr) ? highlightAr : highlight;
+  String? examplesTitleFor(bool ar) => ar && _has(examplesTitleAr) ? examplesTitleAr : examplesTitle;
+  List<String> examplesFor(bool ar) => ar && _hasAll(examplesAr) ? examplesAr : examples;
 }
 
 class _PracticeScenario {
@@ -65,208 +100,397 @@ class _PracticeScenario {
 
 // ─── SLIDE DATA ────────────────────────────────────────────────────────────────
 
-List<_SlideData> _buildSlides(AppStrings s) => <_SlideData>[
-  _SlideData(
-    title: s.tr('What is Capital Budgeting?', 'ما هي الموازنة الرأسمالية؟'),
-    icon: Icons.account_balance_rounded,
-    description: s.tr(
-        'The process of evaluating long-term investment projects. '
-        'Involves significant capital outlays. '
-        'Decisions are often irreversible with lasting impact on the firm.',
-        'عملية تقييم المشاريع الاستثمارية طويلة الأجل. '
-        'تنطوي على إنفاق رأسمالي كبير. '
-        'وغالبًا ما تكون القرارات غير قابلة للتراجع ولها أثر دائم على المنشأة.'),
-    color: AppColors.primaryLight,
+// Ported from the website by a generator (tool/generators/gen_decks.ts + patch_decks.py); do not hand-edit.
+const List<CapitalBudgetingSlide> capitalBudgetingSlides = [
+  CapitalBudgetingSlide(
+    id: 'section-cb-overview',
+    number: 'CB.1',
+    title: 'Introduction to Capital Budgeting',
+    titleAr: 'مقدمة في موازنة رأس المال',
+    content: ['Capital budgeting is the process of evaluating long-term investments such as equipment purchases, expansions or new product launches. The goal is to determine which projects add the most value to the company.', 'One principle governs the whole subject: a riyal today is worth more than a riyal tomorrow, because a riyal held today can be invested. Every technique in this module is a way of applying that idea to a stream of future cash flows.', 'It leads to three decision rules you will meet in turn: accept a project when its net present value is positive, when its internal rate of return exceeds the hurdle rate, and prefer a shorter payback where two projects are otherwise equal.'],
+    contentAr: ['موازنة رأس المال هي عملية تقييم الاستثمارات طويلة الأجل مثل شراء المعدات أو التوسع أو إطلاق منتجات جديدة. والهدف تحديد أي المشاريع يضيف أكبر قيمة للشركة.', 'ويحكم الموضوع كله مبدأ واحد: الريال اليوم يساوي أكثر من الريال غداً، لأن الريال المحتفظ به اليوم يمكن استثماره. وكل أسلوب في هذه الوحدة طريقة لتطبيق تلك الفكرة على سلسلة من التدفقات النقدية المستقبلية.', 'ويقود ذلك إلى ثلاث قواعد قرار ستقابلها تباعاً: اقبل المشروع حين يكون صافي قيمته الحالية موجباً، وحين يفوق معدل عائده الداخلي المعدل المطلوب، وفضّل الاسترداد الأقصر حين يتساوى مشروعان فيما عدا ذلك.'],
+    keyPoints: ['A riyal today is worth more than a riyal tomorrow', 'NPV above zero, IRR above the hurdle rate, shorter payback', 'These decisions are large and usually irreversible'],
+    keyPointsAr: ['الريال اليوم يساوي أكثر من الريال غداً', 'صافي قيمة حالية فوق الصفر، ومعدل عائد داخلي فوق المطلوب، واسترداد أقصر', 'هذه القرارات كبيرة وغير قابلة للعكس عادةً'],
   ),
-  _SlideData(
-    title: s.tr('Time Value of Money', 'القيمة الزمنية للنقود'),
-    icon: Icons.schedule_rounded,
-    description: s.tr(
-        'A dollar today is worth more than a dollar tomorrow. '
-        'Driven by opportunity cost, risk, and inflation. '
-        'This is the foundation for all capital budgeting techniques.',
-        'الريال اليوم يساوي أكثر من الريال غدًا. '
-        'يعود ذلك إلى تكلفة الفرصة البديلة والمخاطر والتضخم. '
-        'وهذا هو الأساس لجميع أساليب الموازنة الرأسمالية.'),
-    color: AppColors.accentLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-1',
+    number: 'CB.2',
+    title: 'What is Capital Budgeting?',
+    titleAr: 'ما هي الموازنة الرأسمالية؟',
+    content: ['Capital budgeting is the process of evaluating and selecting long-term investment projects that will generate returns over multiple years.', 'These decisions involve significant capital outlay - purchasing equipment, building facilities, launching new products, or expanding into new markets.', 'Unlike day-to-day operating decisions, capital budgeting decisions are often irreversible and have long-lasting impacts on the organization.', 'The fundamental challenge is comparing an upfront cost today with uncertain future cash flows, requiring the use of discounting techniques.'],
+    contentAr: ['الموازنة الرأسمالية هي عملية تقييم واختيار المشاريع الاستثمارية طويلة الأجل التي ستولد عوائد على مدى سنوات متعددة.', 'تتضمن هذه القرارات إنفاقاً رأسمالياً كبيراً - شراء المعدات، بناء المنشآت، إطلاق منتجات جديدة، أو التوسع في أسواق جديدة.', 'على عكس القرارات التشغيلية اليومية، غالباً ما تكون قرارات الموازنة الرأسمالية غير قابلة للعكس ولها تأثيرات طويلة الأمد على المنظمة.', 'التحدي الأساسي هو مقارنة تكلفة مقدمة اليوم بتدفقات نقدية مستقبلية غير مؤكدة، مما يتطلب استخدام تقنيات الخصم.'],
+    keyPoints: ['Evaluates long-term investment projects', 'Decisions are often irreversible', 'Compares upfront costs with future returns'],
+    keyPointsAr: ['يقيّم المشاريع الاستثمارية طويلة الأجل', 'القرارات غالباً غير قابلة للعكس', 'يقارن التكاليف المقدمة بالعوائد المستقبلية'],
   ),
-  _SlideData(
-    title: s.tr('Present & Future Value', 'القيمة الحالية والمستقبلية'),
-    icon: Icons.swap_vert_rounded,
-    description: s.tr(
-        'Convert between present and future cash flows using discount/growth rates. '
-        'Cash flows further in the future are worth progressively less today.',
-        'التحويل بين التدفقات النقدية الحالية والمستقبلية باستخدام معدلات الخصم/النمو. '
-        'فالتدفقات النقدية الأبعد في المستقبل تساوي قيمة أقل تدريجيًا اليوم.'),
-    formula: 'FV = PV \u00d7 (1 + r)\u207f\nPV = FV / (1 + r)\u207f',
-    color: AppColors.secondaryLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-2',
+    number: 'CB.3',
+    title: 'Time Value of Money',
+    titleAr: 'القيمة الزمنية للنقود',
+    content: ['The Time Value of Money (TVM) is the concept that a dollar today is worth more than a dollar in the future, because today\'s dollar can be invested to earn returns.', 'This principle arises from three factors: the opportunity cost of capital, the risk of not receiving future payments, and the eroding effect of inflation.', 'TVM is the foundation of all capital budgeting methods. Without accounting for time value, comparing investments made today with returns received years later would be meaningless.', 'The discount rate reflects the required return - the minimum rate an investment must earn to be considered worthwhile, accounting for risk and opportunity cost.'],
+    contentAr: ['القيمة الزمنية للنقود هي مفهوم أن الدولار اليوم يساوي أكثر من الدولار في المستقبل، لأن دولار اليوم يمكن استثماره لكسب عوائد.', 'ينشأ هذا المبدأ من ثلاثة عوامل: تكلفة الفرصة البديلة لرأس المال، وخطر عدم استلام المدفوعات المستقبلية، والتأثير المتآكل للتضخم.', 'القيمة الزمنية للنقود هي أساس جميع طرق الموازنة الرأسمالية. بدون مراعاة القيمة الزمنية، ستكون مقارنة الاستثمارات التي تتم اليوم بالعوائد المستلمة بعد سنوات بلا معنى.', 'يعكس معدل الخصم العائد المطلوب - الحد الأدنى للمعدل الذي يجب أن يحققه الاستثمار ليعتبر جديراً بالاهتمام، مع مراعاة المخاطر وتكلفة الفرصة البديلة.'],
+    keyPoints: ['A dollar today > a dollar tomorrow', 'Driven by opportunity cost, risk, and inflation', 'Foundation of all capital budgeting methods'],
+    keyPointsAr: ['الدولار اليوم أكثر قيمة من دولار الغد', 'مدفوع بتكلفة الفرصة والمخاطر والتضخم', 'أساس جميع طرق الموازنة الرأسمالية'],
   ),
-  _SlideData(
-    title: s.tr('Net Present Value (NPV)', '\u0635\u0627\u0641\u064a \u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u062d\u0627\u0644\u064a\u0629 (NPV)'),
-    icon: Icons.assessment_rounded,
-    description: s.tr(
-        'The "gold standard" of capital budgeting \u2014 directly measures wealth creation. '
-        'Accept the project if NPV > 0. Reject if NPV < 0.',
-        '\u0627\u0644\u0645\u0639\u064a\u0627\u0631 \u0627\u0644\u0630\u0647\u0628\u064a \u0644\u0644\u0645\u0648\u0627\u0632\u0646\u0629 \u0627\u0644\u0631\u0623\u0633\u0645\u0627\u0644\u064a\u0629 \u2014 \u064a\u0642\u064a\u0633 \u0645\u0628\u0627\u0634\u0631\u0629\u064b \u062e\u0644\u0642 \u0627\u0644\u062b\u0631\u0648\u0629. '
-        '\u0627\u0642\u0628\u0644 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0625\u0630\u0627 \u0643\u0627\u0646\u062a NPV > 0\u060c \u0648\u0627\u0631\u0641\u0636\u0647 \u0625\u0630\u0627 \u0643\u0627\u0646\u062a NPV < 0.'),
-    formula: 'NPV = \u2013Investment + \u03a3 CF\u2099 / (1+r)\u207f',
-    color: AppColors.primaryLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-3',
+    number: 'CB.4',
+    title: 'Present & Future Value',
+    titleAr: 'القيمة الحالية والمستقبلية',
+    content: ['Future Value (FV) calculates what an amount invested today will grow to at a given interest rate over time: FV = PV x (1 + r)^n.', 'Present Value (PV) calculates what a future amount is worth today by discounting it back: PV = FV / (1 + r)^n.', 'The discount factor 1/(1+r)^n decreases as n increases, meaning cash flows further in the future are worth progressively less today.', 'These formulas can be applied to single amounts or to streams of cash flows (annuities). Most capital budgeting involves discounting a series of future cash flows.'],
+    contentAr: ['القيمة المستقبلية تحسب ما سينمو إليه مبلغ مستثمر اليوم بمعدل فائدة معين بمرور الوقت: القيمة المستقبلية = القيمة الحالية × (1 + معدل)^عدد الفترات.', 'القيمة الحالية تحسب ما يساويه مبلغ مستقبلي اليوم بخصمه: القيمة الحالية = القيمة المستقبلية / (1 + معدل)^عدد الفترات.', 'عامل الخصم 1/(1+معدل)^عدد الفترات يتناقص كلما زادت الفترات، مما يعني أن التدفقات النقدية البعيدة في المستقبل تساوي أقل تدريجياً اليوم.', 'يمكن تطبيق هذه الصيغ على مبالغ فردية أو على سلسلة من التدفقات النقدية (الدفعات السنوية). معظم الموازنة الرأسمالية تتضمن خصم سلسلة من التدفقات النقدية المستقبلية.'],
+    keyPoints: ['FV = PV x (1 + r)^n', 'PV = FV / (1 + r)^n', 'Farther cash flows are worth less today'],
+    keyPointsAr: ['القيمة المستقبلية = القيمة الحالية × (1 + معدل)^ن', 'القيمة الحالية = القيمة المستقبلية / (1 + معدل)^ن', 'التدفقات الأبعد تساوي أقل اليوم'],
+    highlightType: 'formula',
+    highlight: 'PV = FV / (1 + r)^n  |  FV = PV x (1 + r)^n',
+    highlightAr: 'القيمة الحالية = القيمة المستقبلية / (1 + معدل)^ن',
   ),
-  _SlideData(
-    title: s.tr('Internal Rate of Return', 'معدل العائد الداخلي'),
-    icon: Icons.percent_rounded,
-    description: s.tr(
-        'The discount rate that makes NPV equal to zero. '
-        'Accept if IRR > hurdle rate. '
-        'Intuitive percentage return, but can mislead for non-conventional cash flows.',
-        'معدل الخصم الذي يجعل صافي القيمة الحالية مساويًا للصفر. '
-        'اقبل المشروع إذا كان IRR > المعدل الأدنى المطلوب. '
-        'عائد نسبي بديهي، لكنه قد يضلّل في حالة التدفقات النقدية غير التقليدية.'),
-    formula: '0 = \u2013Investment + \u03a3 CF\u2099 / (1+IRR)\u207f',
-    color: AppColors.secondaryLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-4',
+    number: 'CB.5',
+    title: 'Net Present Value (NPV)',
+    titleAr: 'صافي القيمة الحالية',
+    content: ['Net Present Value (NPV) is the sum of all discounted future cash flows minus the initial investment. It represents the value a project adds to the firm.', 'NPV = -Initial Investment + CF1/(1+r)^1 + CF2/(1+r)^2 + ... + CFn/(1+r)^n, where r is the discount rate.', 'Decision rule: Accept the project if NPV > 0 (adds value), reject if NPV < 0 (destroys value). NPV = 0 means the project earns exactly the required return.', 'NPV is considered the gold standard of capital budgeting because it directly measures wealth creation in today\'s dollars, accounting for risk and time value.'],
+    contentAr: ['صافي القيمة الحالية هو مجموع كل التدفقات النقدية المستقبلية المخصومة ناقص الاستثمار الأولي. يمثل القيمة التي يضيفها المشروع للشركة.', 'صافي القيمة الحالية = -الاستثمار الأولي + التدفق1/(1+معدل)^1 + التدفق2/(1+معدل)^2 + ... + التدفقn/(1+معدل)^n.', 'قاعدة القرار: اقبل المشروع إذا كان صافي القيمة الحالية > 0 (يضيف قيمة)، ارفض إذا < 0 (يدمر القيمة). صافي القيمة الحالية = 0 يعني أن المشروع يحقق بالضبط العائد المطلوب.', 'يُعتبر صافي القيمة الحالية المعيار الذهبي للموازنة الرأسمالية لأنه يقيس مباشرة خلق الثروة بدولارات اليوم، مع مراعاة المخاطر والقيمة الزمنية.'],
+    keyPoints: ['NPV = Sum of discounted CFs - Initial Investment', 'Accept if NPV > 0, Reject if NPV < 0', 'Gold standard of capital budgeting'],
+    keyPointsAr: ['صافي القيمة الحالية = مجموع التدفقات المخصومة - الاستثمار الأولي', 'اقبل إذا > 0، ارفض إذا < 0', 'المعيار الذهبي للموازنة الرأسمالية'],
+    highlightType: 'formula',
+    highlight: 'NPV = -I₀ + CF₁/(1+r)¹ + CF₂/(1+r)² + ... + CFₙ/(1+r)ⁿ',
+    highlightAr: 'صافي القيمة الحالية = -الاستثمار + مجموع التدفقات المخصومة',
   ),
-  _SlideData(
-    title: s.tr('Payback Period', 'فترة الاسترداد'),
-    icon: Icons.timer_rounded,
-    description: s.tr(
-        'Time for cumulative cash flows to recover the initial investment. '
-        'Simple version ignores TVM. Discounted version is more accurate. '
-        'Ignores all cash flows occurring after the payback point.',
-        'الوقت اللازم لاسترداد الاستثمار الأولي من التدفقات النقدية المتراكمة. '
-        'النسخة البسيطة تتجاهل القيمة الزمنية للنقود، والنسخة المخصومة أكثر دقة. '
-        'وتتجاهل جميع التدفقات النقدية التي تحدث بعد نقطة الاسترداد.'),
-    color: AppColors.accentLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-5',
+    number: 'CB.6',
+    title: 'Internal Rate of Return (IRR)',
+    titleAr: 'معدل العائد الداخلي',
+    content: ['The Internal Rate of Return (IRR) is the discount rate that makes the NPV of a project equal to zero. It represents the project\'s own rate of return.', 'Decision rule: Accept if IRR > required rate of return (hurdle rate), reject if IRR < hurdle rate.', 'IRR is intuitive because it expresses project profitability as a percentage, making it easy to compare with the cost of capital - which is the correct hurdle rate for projects of average risk.', 'Limitations: (1) with non-conventional cash flows (more than one sign change), a project can have multiple IRRs or none at all; (2) IRR implicitly assumes interim cash flows are reinvested at the IRR itself, which overstates attractiveness when the IRR is high - NPV assumes reinvestment at the cost of capital, a more realistic rate; (3) for mutually exclusive projects of different sizes or timing, IRR rankings can conflict with NPV rankings - when they conflict, follow NPV, because it measures the value added in currency terms.'],
+    contentAr: ['معدل العائد الداخلي هو معدل الخصم الذي يجعل صافي القيمة الحالية للمشروع يساوي صفراً. يمثل معدل العائد الخاص بالمشروع.', 'قاعدة القرار: اقبل إذا كان معدل العائد الداخلي > معدل العائد المطلوب، ارفض إذا كان أقل.', 'معدل العائد الداخلي بديهي لأنه يعبر عن ربحية المشروع كنسبة مئوية، مما يسهل مقارنته بتكلفة رأس المال - وهي معدل العائد المطلوب الصحيح للمشاريع ذات المخاطر المتوسطة.', 'القيود: (1) مع التدفقات النقدية غير التقليدية (أكثر من تغير واحد في الإشارة) قد يكون للمشروع أكثر من معدل عائد داخلي أو لا يوجد له معدل أصلاً؛ (2) يفترض معدل العائد الداخلي ضمنياً إعادة استثمار التدفقات المرحلية بالمعدل نفسه، مما يبالغ في جاذبية المشروع عندما يكون المعدل مرتفعاً - بينما يفترض صافي القيمة الحالية إعادة الاستثمار بتكلفة رأس المال، وهو معدل أكثر واقعية؛ (3) في المشاريع المتنافية المختلفة في الحجم أو التوقيت قد يتعارض ترتيب معدل العائد الداخلي مع ترتيب صافي القيمة الحالية - وعند التعارض اتبع صافي القيمة الحالية لأنه يقيس القيمة المضافة بوحدات نقدية.'],
+    keyPoints: ['Discount rate that makes NPV = 0', 'Accept if IRR > cost of capital (hurdle rate)', 'When IRR and NPV conflict, follow NPV'],
+    keyPointsAr: ['معدل الخصم الذي يجعل صافي القيمة الحالية = 0', 'اقبل إذا كان أعلى من تكلفة رأس المال (المعدل المطلوب)', 'عند تعارض المعدل مع صافي القيمة الحالية، اتبع صافي القيمة الحالية'],
   ),
-  _SlideData(
-    title: s.tr('Profitability Index', '\u0645\u0624\u0634\u0631 \u0627\u0644\u0631\u0628\u062d\u064a\u0629'),
-    icon: Icons.pie_chart_rounded,
-    description: s.tr(
-        'Measures value created per dollar invested. '
-        'Accept if PI > 1. '
-        'Best metric for capital rationing \u2014 maximizes value per dollar invested.',
-        '\u064a\u0642\u064a\u0633 \u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0645\u062a\u0648\u0644\u062f\u0629 \u0639\u0646 \u0643\u0644 \u0631\u064a\u0627\u0644 \u0645\u0633\u062a\u062b\u0645\u0631. '
-        '\u0627\u0642\u0628\u0644 \u0627\u0644\u0645\u0634\u0631\u0648\u0639 \u0625\u0630\u0627 \u0643\u0627\u0646 PI > 1. '
-        '\u0648\u0647\u0648 \u0623\u0641\u0636\u0644 \u0645\u0642\u064a\u0627\u0633 \u0639\u0646\u062f \u062a\u0631\u0634\u064a\u062f \u0631\u0623\u0633 \u0627\u0644\u0645\u0627\u0644 \u2014 \u0625\u0630 \u064a\u0639\u0638\u0651\u0645 \u0627\u0644\u0642\u064a\u0645\u0629 \u0644\u0643\u0644 \u0631\u064a\u0627\u0644 \u0645\u0633\u062a\u062b\u0645\u0631.'),
-    formula: 'PI = PV of Cash Flows / Investment',
-    color: AppColors.primaryLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-6',
+    number: 'CB.7',
+    title: 'Payback Period',
+    titleAr: 'فترة الاسترداد',
+    content: ['The payback period is the time it takes for cumulative cash flows to recover the initial investment. Shorter payback periods are preferred.', 'Simple Payback does not account for the time value of money. Discounted Payback uses discounted cash flows for a more accurate measure.', 'To compute discounted payback, discount each year’s cash flow first - CF/(1+r)^n - then accumulate the discounted amounts until they cover the initial investment. Because discounting shrinks every inflow, discounted payback is always longer than simple payback.', 'Decision rule: Accept if payback period < the company\'s target cutoff period. Useful as a quick liquidity and risk screening tool.', 'Limitations: ignores cash flows after the payback period, does not measure total profitability, and may reject profitable long-term projects.'],
+    contentAr: ['فترة الاسترداد هي الوقت اللازم للتدفقات النقدية التراكمية لاسترداد الاستثمار الأولي. فترات الاسترداد الأقصر مفضلة.', 'الاسترداد البسيط لا يراعي القيمة الزمنية للنقود. الاسترداد المخصوم يستخدم التدفقات النقدية المخصومة لقياس أكثر دقة.', 'ولحساب الاسترداد المخصوم، اخصم تدفق كل سنة أولاً - التدفق/(1+معدل)^ن - ثم اجمع المبالغ المخصومة تراكمياً حتى تغطي الاستثمار الأولي. ولأن الخصم يقلّص كل تدفق داخل، فإن الاسترداد المخصوم يكون دائماً أطول من الاسترداد البسيط.', 'قاعدة القرار: اقبل إذا كانت فترة الاسترداد أقل من الفترة المستهدفة للشركة. مفيدة كأداة فرز سريعة للسيولة والمخاطر.', 'القيود: تتجاهل التدفقات النقدية بعد فترة الاسترداد، لا تقيس الربحية الإجمالية، وقد ترفض مشاريع طويلة الأجل مربحة.'],
+    keyPoints: ['Time to recover initial investment', 'Shorter payback = Lower risk', 'Does not measure total profitability'],
+    keyPointsAr: ['الوقت لاسترداد الاستثمار الأولي', 'استرداد أقصر = مخاطر أقل', 'لا يقيس الربحية الإجمالية'],
   ),
-  _SlideData(
-    title: s.tr('Capital Rationing', 'ترشيد رأس المال'),
-    icon: Icons.savings_rounded,
-    description: s.tr(
-        'Occurs when there are more positive-NPV projects than available funds. '
-        'Rank projects by PI and select from the top until the budget is exhausted. '
-        'Hard rationing (external) vs soft rationing (internal).',
-        'يحدث عندما تتوفر مشاريع ذات صافي قيمة حالية موجبة أكثر من الأموال المتاحة. '
-        'رتّب المشاريع حسب مؤشر الربحية واختر من الأعلى حتى نفاد الموازنة. '
-        'الترشيد الصارم (خارجي) مقابل الترشيد المرن (داخلي).'),
-    color: AppColors.dangerLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-arr',
+    number: 'CB.8',
+    title: 'Accounting Rate of Return (ARR)',
+    titleAr: 'معدل العائد المحاسبي',
+    content: ['The Accounting Rate of Return (ARR) expresses a project’s average annual profit as a percentage of the money tied up in it. Unlike every other measure in this module it is built from accounting profit rather than discounted cash flow, which is exactly why boards still ask for it: it speaks the language of the income statement and the return-on-capital targets that management is judged against.', 'ARR = Average Annual Profit / Average Investment. Average annual profit is the total profit the project earns over its life divided by the number of years, where total profit is all the cash the project returns plus any salvage value, less the amount originally invested. Average investment is (Initial Investment + Salvage Value) / 2, the midpoint between what is put in at the start and what is left at the end.', 'Worked example: a 150,000 machine returning 45,000 a year for five years with no salvage value. Total profit is (5 x 45,000) - 150,000 = 75,000, so average annual profit is 15,000. Average investment is 150,000 / 2 = 75,000. ARR = 15,000 / 75,000 = 20 percent.', 'Decision rule: accept if ARR exceeds the company’s target accounting return. Limitations: it ignores the time value of money entirely and depends on accounting policy - a change in the depreciation method changes the ARR without changing a single riyal of cash. Use it alongside NPV, never instead of it.'],
+    contentAr: ['معدل العائد المحاسبي يعبّر عن متوسط الربح السنوي للمشروع كنسبة مئوية من الأموال المرتبطة به. وهو - خلافاً لكل المقاييس الأخرى في هذه الوحدة - مبني على الربح المحاسبي لا على التدفق النقدي المخصوم، ولهذا تحديداً ما زالت المجالس تطلبه: فهو يتحدث بلغة قائمة الدخل وأهداف العائد على رأس المال التي تُقاس بها الإدارة.', 'معدل العائد المحاسبي = متوسط الربح السنوي / متوسط الاستثمار. ومتوسط الربح السنوي هو إجمالي ربح المشروع على مدى عمره مقسوماً على عدد السنوات، حيث إجمالي الربح هو كل ما يعيده المشروع من نقد زائداً القيمة المتبقية ناقصاً المبلغ المستثمر أصلاً. ومتوسط الاستثمار = (الاستثمار الأولي + القيمة المتبقية) / 2، أي منتصف المسافة بين ما يُوضع في البداية وما يتبقى في النهاية.', 'مثال محلول: آلة بـ 150,000 تعيد 45,000 سنوياً لخمس سنوات بلا قيمة متبقية. إجمالي الربح = (5 × 45,000) - 150,000 = 75,000، فيكون متوسط الربح السنوي 15,000. ومتوسط الاستثمار = 150,000 / 2 = 75,000. إذاً معدل العائد المحاسبي = 15,000 / 75,000 = 20 بالمئة.', 'قاعدة القرار: اقبل إذا تجاوز معدل العائد المحاسبي العائد المحاسبي المستهدف للشركة. أما القيود فهي أنه يتجاهل القيمة الزمنية للنقود تماماً ويعتمد على السياسة المحاسبية - فتغيير طريقة الإهلاك يغيّر المعدل دون أن يتغير ريال واحد من النقد. استخدمه إلى جانب صافي القيمة الحالية، لا بديلاً عنه.'],
+    keyPoints: ['ARR = Average Annual Profit / Average Investment', 'Average Investment = (Initial Investment + Salvage) / 2', 'Ignores time value - pair it with NPV, never replace NPV'],
+    keyPointsAr: ['معدل العائد المحاسبي = متوسط الربح السنوي / متوسط الاستثمار', 'متوسط الاستثمار = (الاستثمار الأولي + القيمة المتبقية) / 2', 'يتجاهل القيمة الزمنية - اقرنه بصافي القيمة الحالية ولا تستبدله به'],
+    highlightType: 'formula',
+    highlight: 'ARR = Average Annual Profit / Average Investment, where Average Investment = (I₀ + Salvage) / 2',
+    highlightAr: 'معدل العائد المحاسبي = متوسط الربح السنوي / متوسط الاستثمار، حيث متوسط الاستثمار = (الاستثمار + القيمة المتبقية) ÷ 2',
   ),
-  _SlideData(
-    title: s.tr('Discounted Cash Flow (DCF)', 'التدفق النقدي المخصوم (DCF)'),
-    icon: Icons.water_drop_rounded,
-    description: s.tr(
-        'The umbrella technique behind NPV and IRR: project future cash flows, '
-        'then discount each back to today at the required rate of return. '
-        'Value depends on the size, timing, and risk of those cash flows.',
-        'الأسلوب الشامل الذي تستند إليه NPV و IRR: توقّع التدفقات النقدية المستقبلية، '
-        'ثم اخصم كلًّا منها إلى قيمته الحالية باستخدام معدل العائد المطلوب. '
-        'وتعتمد القيمة على حجم تلك التدفقات وتوقيتها ومخاطرها.'),
-    formula: 'Value = Σ CFₙ / (1 + r)ⁿ',
-    color: AppColors.primaryLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-7',
+    number: 'CB.9',
+    title: 'Profitability Index',
+    titleAr: 'مؤشر الربحية',
+    content: ['The Profitability Index (PI) measures the value created per dollar invested. PI = PV of Future Cash Flows / Initial Investment.', 'Alternatively: PI = 1 + (NPV / Initial Investment). A PI greater than 1 means the project creates value.', 'Decision rule: Accept if PI > 1 (equivalent to NPV > 0), reject if PI < 1. The higher the PI, the more value per dollar invested.', 'PI is especially useful for capital rationing - when limited funds must be allocated among multiple positive-NPV projects, rank them by PI to maximize total value.'],
+    contentAr: ['مؤشر الربحية يقيس القيمة المُنشأة لكل دولار مستثمر. مؤشر الربحية = القيمة الحالية للتدفقات المستقبلية / الاستثمار الأولي.', 'بديلاً: مؤشر الربحية = 1 + (صافي القيمة الحالية / الاستثمار الأولي). مؤشر ربحية أكبر من 1 يعني أن المشروع يخلق قيمة.', 'قاعدة القرار: اقبل إذا كان مؤشر الربحية > 1 (يعادل صافي القيمة الحالية > 0)، ارفض إذا < 1. كلما ارتفع المؤشر، زادت القيمة لكل دولار مستثمر.', 'مؤشر الربحية مفيد بشكل خاص لتقنين رأس المال - عندما يجب تخصيص أموال محدودة بين مشاريع متعددة إيجابية صافي القيمة الحالية، رتبها حسب المؤشر لتعظيم القيمة الإجمالية.'],
+    keyPoints: ['PI = PV of Cash Flows / Initial Investment', 'Accept if PI > 1', 'Best for ranking projects under capital rationing'],
+    keyPointsAr: ['مؤشر الربحية = القيمة الحالية للتدفقات / الاستثمار الأولي', 'اقبل إذا كان المؤشر > 1', 'الأفضل لترتيب المشاريع عند تقنين رأس المال'],
+    highlightType: 'formula',
+    highlight: 'PI = PV of Future Cash Flows / Initial Investment',
+    highlightAr: 'مؤشر الربحية = القيمة الحالية للتدفقات / الاستثمار الأولي',
   ),
-  _SlideData(
-    title: s.tr('Future Value (FV)', 'القيمة المستقبلية (FV)'),
-    icon: Icons.trending_up_rounded,
-    description: s.tr(
-        'How much a sum invested today grows to by a future date at a given rate. '
-        'The mirror image of present value — compounding forward instead of '
-        'discounting back.',
-        'إلى أي قيمة ينمو مبلغ مستثمر اليوم بحلول تاريخ مستقبلي عند معدل معيّن. '
-        'وهي الصورة المعاكسة للقيمة الحالية — تراكم إلى الأمام بدلًا من الخصم إلى الوراء.'),
-    formula: 'FV = PV × (1 + r)ⁿ',
-    color: AppColors.accentLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-8',
+    number: 'CB.10',
+    title: 'Capital Rationing',
+    titleAr: 'تقنين رأس المال',
+    content: ['Capital rationing occurs when a company has more positive-NPV projects than it can fund. Limited budgets force managers to choose the best combination.', 'Hard rationing is an external constraint (e.g., cannot raise more capital). Soft rationing is an internal budget limit set by management.', 'Under capital rationing, NPV alone is insufficient - you must maximize total NPV within the budget. PI ranking helps identify the best portfolio.', 'The optimal approach is to rank projects by PI and select from the top until the budget is exhausted, then verify total NPV is maximized.'],
+    contentAr: ['يحدث تقنين رأس المال عندما يكون لدى الشركة مشاريع إيجابية صافي القيمة الحالية أكثر مما يمكنها تمويله. الميزانيات المحدودة تجبر المديرين على اختيار أفضل مجموعة.', 'التقنين الصعب هو قيد خارجي (مثل عدم القدرة على جمع المزيد من رأس المال). التقنين المرن هو حد ميزانية داخلي تحدده الإدارة.', 'تحت تقنين رأس المال، صافي القيمة الحالية وحده غير كافٍ - يجب تعظيم إجمالي صافي القيمة الحالية ضمن الميزانية. ترتيب مؤشر الربحية يساعد في تحديد أفضل محفظة.', 'النهج الأمثل هو ترتيب المشاريع حسب مؤشر الربحية والاختيار من الأعلى حتى تنفد الميزانية، ثم التحقق من تعظيم إجمالي صافي القيمة الحالية.'],
+    keyPoints: ['More good projects than available funds', 'Rank by PI to maximize portfolio value', 'Hard vs. soft rationing constraints'],
+    keyPointsAr: ['مشاريع جيدة أكثر من الأموال المتاحة', 'رتب حسب مؤشر الربحية لتعظيم قيمة المحفظة', 'قيود التقنين الصعب مقابل المرن'],
   ),
-  _SlideData(
-    title: s.tr('Discounted Payback Period', 'فترة الاسترداد المخصومة'),
-    icon: Icons.timelapse_rounded,
-    description: s.tr(
-        'Like payback, but recovers the investment from DISCOUNTED cash flows, '
-        'so it respects the time value of money. Always longer than simple '
-        'payback. Still ignores cash flows after the cut-off.',
-        'مثل فترة الاسترداد، لكنها تسترد الاستثمار من التدفقات النقدية المخصومة، '
-        'لذا تراعي القيمة الزمنية للنقود. وهي دائمًا أطول من الاسترداد البسيط. '
-        'ولا تزال تتجاهل التدفقات النقدية بعد نقطة القطع.'),
-    color: AppColors.accentLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-9',
+    number: 'CB.11',
+    title: 'Decision Rules Summary',
+    titleAr: 'ملخص قواعد القرار',
+    content: ['NPV: Accept if > 0. The most reliable method - directly measures value creation. Always use NPV as the primary decision criterion.', 'IRR: Accept if > hurdle rate. Intuitive but can be misleading for non-conventional cash flows or mutually exclusive projects.', 'Payback: Accept if < target cutoff. Quick risk/liquidity check, but ignores time value and post-payback cash flows.', 'PI: Accept if > 1. Best for capital rationing decisions. Equivalent to NPV for accept/reject but superior for ranking under budget constraints.', 'ARR: Accept if above the target accounting return. The only measure here based on accounting profit rather than cash flow, so it connects the project to reported return on capital - but it ignores time value entirely.'],
+    contentAr: ['صافي القيمة الحالية: اقبل إذا > 0. الطريقة الأكثر موثوقية - تقيس مباشرة خلق القيمة. استخدمها دائماً كمعيار القرار الأساسي.', 'معدل العائد الداخلي: اقبل إذا > المعدل المطلوب. بديهي لكن قد يكون مضللاً للتدفقات غير التقليدية أو المشاريع المتبادلة.', 'فترة الاسترداد: اقبل إذا < الحد المستهدف. فحص سريع للمخاطر/السيولة، لكن يتجاهل القيمة الزمنية والتدفقات بعد الاسترداد.', 'مؤشر الربحية: اقبل إذا > 1. الأفضل لقرارات تقنين رأس المال. يعادل صافي القيمة الحالية للقبول/الرفض لكنه أفضل للترتيب تحت قيود الميزانية.', 'معدل العائد المحاسبي: اقبل إذا تجاوز العائد المحاسبي المستهدف. وهو المقياس الوحيد هنا المبني على الربح المحاسبي لا على التدفق النقدي، فيربط المشروع بالعائد على رأس المال المُعلن - لكنه يتجاهل القيمة الزمنية تماماً.'],
+    keyPoints: ['NPV is the primary decision tool', 'Use multiple metrics for complete analysis', 'Each metric has strengths and limitations'],
+    keyPointsAr: ['صافي القيمة الحالية هو أداة القرار الأساسية', 'استخدم مقاييس متعددة للتحليل الكامل', 'كل مقياس له نقاط قوة وقيود'],
   ),
-  _SlideData(
-    title: s.tr('Accounting Rate of Return (ARR)', 'المعدل المحاسبي للعائد (ARR)'),
-    icon: Icons.calculate_rounded,
-    description: s.tr(
-        'A profitability measure based on accounting profit, not cash flow. '
-        'Easy to compute from financial statements, but ignores the time value '
-        'of money — use it only as a rough screen.',
-        'مقياس للربحية يستند إلى الربح المحاسبي وليس التدفق النقدي. '
-        'سهل الحساب من القوائم المالية، لكنه يتجاهل القيمة الزمنية للنقود — '
-        'استخدمه فقط كأداة فرز أولية تقريبية.'),
-    formula: 'ARR = Average Accounting Profit / Average Investment',
-    color: AppColors.dangerLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-10',
+    number: 'CB.12',
+    title: 'Summary of Capital Budgeting',
+    titleAr: 'ملخص الموازنة الرأسمالية',
+    content: ['Capital budgeting provides a systematic framework for evaluating long-term investments, ensuring resources are allocated to projects that create the most value.', 'The Time Value of Money is the foundation: present value and future value calculations enable meaningful comparison of cash flows across time periods.', 'NPV remains the gold standard, supported by IRR for intuitive return comparisons, Payback for risk screening, and PI for capital rationing.', 'Effective capital budgeting combines quantitative analysis with qualitative judgment about strategic fit, market conditions, and organizational capabilities.'],
+    contentAr: ['توفر الموازنة الرأسمالية إطاراً منهجياً لتقييم الاستثمارات طويلة الأجل، مما يضمن تخصيص الموارد للمشاريع التي تخلق أكبر قيمة.', 'القيمة الزمنية للنقود هي الأساس: حسابات القيمة الحالية والمستقبلية تمكن من المقارنة الهادفة للتدفقات النقدية عبر الفترات الزمنية.', 'صافي القيمة الحالية يبقى المعيار الذهبي، مدعوماً بمعدل العائد الداخلي لمقارنات العائد البديهية، وفترة الاسترداد لفحص المخاطر، ومؤشر الربحية لتقنين رأس المال.', 'الموازنة الرأسمالية الفعالة تجمع بين التحليل الكمي والحكم النوعي حول الملاءمة الاستراتيجية وظروف السوق وقدرات المنظمة.'],
+    keyPoints: ['Systematic framework for investment evaluation', 'NPV is the gold standard metric', 'Combines quantitative and qualitative analysis'],
+    keyPointsAr: ['إطار منهجي لتقييم الاستثمارات', 'صافي القيمة الحالية هو المعيار الذهبي', 'يجمع بين التحليل الكمي والنوعي'],
   ),
-  _SlideData(
-    title: s.tr('Mutually Exclusive Projects', 'المشاريع المتنافية'),
-    icon: Icons.call_split_rounded,
-    description: s.tr(
-        'When choosing only ONE of several projects, pick the highest POSITIVE '
-        'NPV — not the highest IRR. IRR and PI can rank mutually exclusive '
-        'projects incorrectly because of differences in scale and timing.',
-        'عند اختيار مشروع واحد فقط من بين عدة مشاريع، اختر صاحب أعلى صافي قيمة حالية '
-        'موجبة — وليس أعلى معدل عائد داخلي. فمعدل العائد الداخلي ومؤشر الربحية قد يرتّبان '
-        'المشاريع المتنافية ترتيبًا خاطئًا بسبب اختلاف الحجم والتوقيت.'),
-    color: AppColors.purple,
+  CapitalBudgetingSlide(
+    id: 'section-cb-frameworks',
+    number: 'CB.13',
+    title: 'Grounded in International Frameworks',
+    titleAr: 'مُؤسَّس على الأطر الدولية',
+    content: ['The investment criteria taught in this module - NPV, IRR, payback and discounted payback, and the profitability index - follow the standard corporate finance canon as codified by the global professional bodies.', 'The primary anchor is the CFA Program curriculum of CFA Institute, in the Corporate Issuers area, which establishes the primacy of the NPV rule, documents the IRR pitfalls covered here (multiple IRRs with non-conventional cash flows, the reinvestment-rate assumption, and conflicting rankings for mutually exclusive projects), and examines capital allocation with exactly these decision rules: accept positive-NPV projects, use the cost of capital as the discount rate, and rely on NPV when methods disagree.'],
+    contentAr: ['معايير الاستثمار التي تُدرَّس في هذه الوحدة - صافي القيمة الحالية، ومعدل العائد الداخلي، وفترة الاسترداد والاسترداد المخصوم، ومؤشر الربحية - تتبع المرجعية القياسية لتمويل الشركات كما تُقنِّنها الهيئات المهنية العالمية.', 'المرجع الأساسي هو منهج برنامج المحلل المالي المعتمد (CFA) الصادر عن معهد CFA، في مجال "الجهات المُصدِرة" (Corporate Issuers)، الذي يُرسِّخ أولوية قاعدة صافي القيمة الحالية، ويوثق قيود معدل العائد الداخلي المشمولة هنا (تعدد المعدلات مع التدفقات غير التقليدية، وافتراض معدل إعادة الاستثمار، وتعارض الترتيب في المشاريع المتنافية)، ويختبر تخصيص رأس المال بقواعد القرار نفسها: اقبل المشاريع ذات صافي القيمة الحالية الموجب، واستخدم تكلفة رأس المال معدلاً للخصم، واعتمد على صافي القيمة الحالية عند اختلاف الطرق.'],
+    keyPoints: ['CFA Institute, CFA Program curriculum (Corporate Issuers) - NPV rule primacy, IRR pitfalls, capital allocation criteria'],
+    keyPointsAr: ['معهد CFA، منهج برنامج CFA (مجال الجهات المُصدِرة) - أولوية قاعدة NPV وقيود IRR ومعايير تخصيص رأس المال'],
   ),
-  _SlideData(
-    title: s.tr('NPV vs IRR Conflicts', 'تعارض NPV مع IRR'),
-    icon: Icons.compare_arrows_rounded,
-    description: s.tr(
-        'NPV and IRR usually agree, but can conflict with mutually exclusive '
-        'projects or non-conventional cash flows (which may give multiple IRRs). '
-        'When they disagree, trust NPV — it measures wealth created directly.',
-        'عادةً ما تتفق NPV و IRR، لكنهما قد تتعارضان في المشاريع المتنافية أو التدفقات '
-        'النقدية غير التقليدية (التي قد تعطي عدة قيم لـ IRR). '
-        'وعند اختلافهما، اعتمد على NPV — فهي تقيس الثروة المتولدة مباشرةً.'),
-    color: AppColors.secondaryLight,
-  ),
-  _SlideData(
-    title: s.tr('Decision Rules Summary', 'ملخص قواعد القرار'),
-    icon: Icons.checklist_rounded,
-    description: s.tr(
-        'NPV > 0 (primary criterion)\n'
-        'IRR > hurdle rate\n'
-        'Payback < target period\n'
-        'PI > 1\n\n'
-        'NPV is the most reliable and should be the primary criterion.',
-        'NPV > 0 (المعيار الأساسي)\n'
-        'IRR > المعدل الأدنى المطلوب\n'
-        'فترة الاسترداد < الفترة المستهدفة\n'
-        'PI > 1\n\n'
-        'صافي القيمة الحالية هو الأكثر موثوقية ويجب أن يكون المعيار الأساسي.'),
-    color: AppColors.secondaryLight,
-  ),
-  _SlideData(
-    title: s.tr('Key Takeaways', 'أبرز النقاط'),
-    icon: Icons.lightbulb_rounded,
-    description: s.tr(
-        'TVM is the foundation of all analysis. '
-        'NPV is the gold standard metric. '
-        'Use multiple metrics together for robust decisions. '
-        'Combine quantitative analysis with qualitative judgment.',
-        'القيمة الزمنية للنقود هي أساس كل تحليل. '
-        'وصافي القيمة الحالية هو المقياس المعياري الذهبي. '
-        'استخدم عدة مقاييس معًا لاتخاذ قرارات متينة. '
-        'وادمج التحليل الكمي مع الحكم النوعي.'),
-    color: AppColors.accentLight,
+  CapitalBudgetingSlide(
+    id: 'section-cb-framework-bodies',
+    number: 'CB.14',
+    title: 'ACCA and the Shared Foundations',
+    titleAr: 'جمعية ACCA والأسس المشتركة',
+    content: ['The same appraisal framework is examinable content in the Financial Management (FM) syllabus of ACCA (the Association of Chartered Certified Accountants), where investment appraisal using NPV, IRR, and payback against the cost of capital is a named syllabus area.', 'The time-value-of-money foundations - present value, future value, and discounting - are common to the curricula of both bodies and to the quantitative methods portion of the CFA Program. Aligning with these frameworks ensures that what you practice in the calculators of this module is the same analysis applied in professional investment appraisal.'],
+    contentAr: ['وإطار التقييم ذاته محتوى قابل للاختبار في منهج «الإدارة المالية» (FM) الصادر عن جمعية المحاسبين القانونيين المعتمدين (ACCA)، حيث يشكل تقييم الاستثمار باستخدام NPV وIRR وفترة الاسترداد مقابل تكلفة رأس المال مجالاً منهجياً معتمداً.', 'وأسس القيمة الزمنية للنقود - القيمة الحالية والقيمة المستقبلية والخصم - مشتركة بين منهجي الهيئتين وبين قسم الأساليب الكمية في برنامج CFA. والتوافق مع هذه الأطر يضمن أن ما تتدرب عليه في حاسبات هذه الوحدة هو التحليل ذاته المطبق في التقييم الاستثماري المهني.'],
+    keyPoints: ['ACCA, Financial Management (FM) syllabus - investment appraisal with NPV, IRR, and payback', 'Cost of capital as the hurdle rate - shared by both frameworks'],
+    keyPointsAr: ['جمعية ACCA، منهج «الإدارة المالية» (FM) - تقييم الاستثمار بـ NPV وIRR وفترة الاسترداد', 'تكلفة رأس المال معدلاً للعائد المطلوب - قاسم مشترك بين الإطارين'],
+    highlightType: 'info',
+    highlight: 'This module is aligned with these corporate finance frameworks to ensure objective, verifiable knowledge transfer.',
+    highlightAr: 'هذه الوحدة متوائمة مع أطر تمويل الشركات هذه لضمان نقل معرفة موضوعية قابلة للتحقق.',
   ),
 ];
+
+/// Icon + accent color per slide (by website section id; unknown ids cycle).
+(IconData, Color) _cbSlideStyle(String id, int index) {
+  const styles = <String, (IconData, Color)>{
+    'section-cb-overview': (Icons.account_balance_rounded, AppColors.primaryLight),
+    'section-cb-1': (Icons.business_center_rounded, AppColors.primaryLight),
+    'section-cb-2': (Icons.schedule_rounded, Color(0xFF8B5CF6)),
+    'section-cb-3': (Icons.trending_up_rounded, Color(0xFF06B6D4)),
+    'section-cb-4': (Icons.attach_money_rounded, AppColors.secondaryLight),
+    'section-cb-5': (Icons.percent_rounded, Color(0xFFF59E0B)),
+    'section-cb-6': (Icons.timer_rounded, Color(0xFFEF4444)),
+    'section-cb-arr': (Icons.bar_chart_rounded, Color(0xFFEC4899)),
+    'section-cb-7': (Icons.analytics_rounded, Color(0xFF8B5CF6)),
+    'section-cb-8': (Icons.filter_alt_rounded, Color(0xFF06B6D4)),
+    'section-cb-9': (Icons.checklist_rounded, AppColors.secondaryLight),
+    'section-cb-10': (Icons.lightbulb_rounded, AppColors.accentLight),
+    'section-cb-frameworks': (Icons.public_rounded, AppColors.primaryLight),
+    'section-cb-framework-bodies': (Icons.school_rounded, Color(0xFF06B6D4)),
+  };
+  const cycle = [AppColors.primaryLight, AppColors.secondaryLight, Color(0xFFF59E0B), Color(0xFF8B5CF6)];
+  return styles[id] ?? (Icons.menu_book_rounded, cycle[index % cycle.length]);
+}
+
+/// Renders one deck slide: number + title, paragraphs, key points, highlight
+/// and examples. Scrolls inside the page so long slides never overflow.
+Widget _buildCbSlideCard(BuildContext context, {
+  required CapitalBudgetingSlide slide,
+  required int index,
+  required int total,
+  required bool ar,
+  required IconData icon,
+  required Color color,
+}) {
+  final dir = ar ? TextDirection.rtl : TextDirection.ltr;
+  final align = ar ? TextAlign.right : TextAlign.left;
+  final keyPoints = slide.keyPointsFor(ar);
+  final highlight = slide.highlightFor(ar);
+  final examples = slide.examplesFor(ar);
+  final hlIcon = switch (slide.highlightType) {
+    'formula' => Icons.functions_rounded,
+    'warning' => Icons.warning_amber_rounded,
+    'tip' => Icons.lightbulb_rounded,
+    _ => Icons.info_outline_rounded,
+  };
+  return GlassCard(
+    borderColor: color.withValues(alpha: 0.3),
+    padding: const EdgeInsets.all(20),
+    child: Directionality(
+      textDirection: dir,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color.withValues(alpha: 0.15),
+                        ),
+                        child: Icon(icon, color: color, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              slide.number,
+                              textDirection: TextDirection.ltr,
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 11,
+                                color: color,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              slide.titleFor(ar),
+                              textAlign: align,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ...slide.contentFor(ar).map((p) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Text(
+                          p,
+                          textAlign: align,
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            height: 1.6,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                      )),
+                  if (keyPoints.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: color.withValues(alpha: 0.08),
+                        border: Border.all(color: color.withValues(alpha: 0.2)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.check_circle_outline_rounded, size: 16, color: color),
+                              const SizedBox(width: 6),
+                              Text(
+                                ar ? 'النقاط الرئيسية' : 'Key Points',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: color,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ...keyPoints.map((k) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('•  ', style: TextStyle(color: color, height: 1.5)),
+                                    Expanded(
+                                      child: Text(
+                                        k,
+                                        textAlign: align,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          height: 1.5,
+                                          color: AppColors.textPrimary(context),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (examples.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      slide.examplesTitleFor(ar) ?? (ar ? 'أمثلة' : 'Examples'),
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    ...examples.map((e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text('•  $e',
+                              textAlign: align,
+                              style: TextStyle(
+                                  fontSize: 13, height: 1.5, color: AppColors.textSecondary(context))),
+                        )),
+                  ],
+                  if (highlight != null && highlight.trim().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: AppColors.accentLight.withValues(alpha: 0.08),
+                        border: Border.all(color: AppColors.accentLight.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(hlIcon, size: 18, color: AppColors.accentLight),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              highlight,
+                              textAlign: align,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                fontWeight: slide.highlightType == 'formula'
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: AppColors.textPrimary(context),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: (index + 1) / total,
+              minHeight: 4,
+              backgroundColor: AppColors.borderColor(context),
+              valueColor: AlwaysStoppedAnimation(color),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
 // ─── PRACTICE DATA ─────────────────────────────────────────────────────────────
 
@@ -512,8 +736,42 @@ class _CapitalBudgetingScreenState
   int _toolTab = 0;
 
   // Learn tab
-  final PageController _slideController = PageController();
+  PageController _slideController = PageController();
   int _currentSlide = 0;
+  // Resume at the last slide viewed (website a2da32f, key 'capital-budgeting').
+  final LearnResumeRecorder _resume =
+      LearnResumeRecorder(LearnResumeStore.capitalBudgetingKey);
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSlide();
+  }
+
+  /// Reopen the deck at the slide the learner last had on screen.
+  Future<void> _restoreSlide() async {
+    final saved = await _resume.restore(ref);
+    if (!mounted) return;
+    final i = LearnResumeStore.indexIn(
+        capitalBudgetingSlides.map((sl) => sl.id).toList(), saved);
+    if (i != _currentSlide) {
+      setState(() {
+        _currentSlide = i;
+        if (_slideController.hasClients) {
+          _slideController.jumpToPage(i);
+        } else {
+          _slideController.dispose();
+          _slideController = PageController(initialPage: i);
+        }
+      });
+    }
+    _resume.record(ref, capitalBudgetingSlides[i].id);
+  }
+
+  void _onSlideChanged(int i) {
+    setState(() => _currentSlide = i);
+    _resume.record(ref, capitalBudgetingSlides[i].id);
+  }
 
   // Practice tab
   final Set<int> _expandedScenarios = {};
@@ -613,6 +871,7 @@ class _CapitalBudgetingScreenState
   @override
   void dispose() {
     _slideController.dispose();
+    _resume.dispose();
     super.dispose();
   }
 
@@ -683,7 +942,7 @@ class _CapitalBudgetingScreenState
 
   Widget _buildLearnTab() {
     final s = ref.watch(stringsProvider);
-    final slides = _buildSlides(s);
+    const slides = capitalBudgetingSlides;
     return Column(
       key: const ValueKey('learn'),
       children: [
@@ -736,12 +995,18 @@ class _CapitalBudgetingScreenState
           child: PageView.builder(
             controller: _slideController,
             itemCount: slides.length,
-            onPageChanged: (i) => setState(() => _currentSlide = i),
+            onPageChanged: _onSlideChanged,
             itemBuilder: (context, index) {
-              final slide = slides[index];
+              final st = _cbSlideStyle(slides[index].id, index);
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _LearnSlideCard(slide: slide, index: index, total: slides.length),
+                child: _buildCbSlideCard(context,
+                    slide: slides[index],
+                    index: index,
+                    total: slides.length,
+                    ar: s.ar,
+                    icon: st.$1,
+                    color: st.$2),
               );
             },
           ),
@@ -762,7 +1027,7 @@ class _CapitalBudgetingScreenState
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
                   color: isActive
-                      ? slides[_currentSlide].color
+                      ? _cbSlideStyle(slides[_currentSlide].id, _currentSlide).$2
                       : AppColors.borderColor(context),
                 ),
               );
@@ -1486,111 +1751,6 @@ class _MainTabBar extends StatelessWidget {
 }
 
 // ── Learn Slide Card ──
-
-class _LearnSlideCard extends StatelessWidget {
-  final _SlideData slide;
-  final int index;
-  final int total;
-
-  const _LearnSlideCard({required this.slide, required this.index, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassCard(
-      borderColor: slide.color.withValues(alpha: 0.3),
-      padding: const EdgeInsets.all(24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Slide number badge
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: slide.color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${index + 1} / $total',
-                style: GoogleFonts.jetBrainsMono(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: slide.color,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Icon
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: slide.color.withValues(alpha: 0.12),
-              ),
-              child: Icon(slide.icon, color: slide.color, size: 32),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Title
-            Text(
-              slide.title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary(context),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Description
-            Text(
-              slide.description,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                height: 1.6,
-                color: AppColors.textSecondary(context),
-              ),
-            ),
-
-            // Formula box (optional)
-            if (slide.formula != null) ...[
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: slide.color.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: slide.color.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Text(
-                  slide.formula!,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    height: 1.6,
-                    color: slide.color,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ── Navigation Arrow ──
 

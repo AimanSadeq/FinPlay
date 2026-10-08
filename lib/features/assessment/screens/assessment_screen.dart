@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/utils/constants.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../shared/widgets/gradient_button.dart';
@@ -21,10 +24,55 @@ class AssessmentScreen extends ConsumerStatefulWidget {
   ConsumerState<AssessmentScreen> createState() => _AssessmentScreenState();
 }
 
-enum _Phase { intro, running, results }
+enum _Phase { loading, intro, running, results, blocked }
+
+/// Why the assessment cannot be taken here (website assessment.tsx gates).
+enum AssessmentBlock { loadError, suppressed, alreadyDone, needsSignIn }
+
+/// What GET /assessments/status means for this learner, decided before the
+/// first question (website 515b5a1 / 5d894a7 / 1cfce67).
+class AssessmentGate {
+  const AssessmentGate._(this.block, {this.reason, this.score, this.total});
+
+  /// Null when the assessment may be taken.
+  final AssessmentBlock? block;
+  final String? reason;
+  final int? score;
+  final int? total;
+
+  bool get open => block == null;
+
+  /// `suppressed` (a research cohort: the assessment does not run here) wins,
+  /// then `anonymous` (no valid session: a submit would be refused), then a
+  /// recorded attempt (one attempt per person per kind).
+  factory AssessmentGate.fromStatus(Map<String, dynamic> status) {
+    if (status['suppressed'] == true) {
+      return AssessmentGate._(AssessmentBlock.suppressed,
+          reason: status['suppressedReason']?.toString());
+    }
+    if (status['anonymous'] == true) return const AssessmentGate._(AssessmentBlock.needsSignIn);
+    if (status['completed'] == true) {
+      final last = status['lastScore'];
+      return AssessmentGate._(AssessmentBlock.alreadyDone,
+          score: last is Map ? (last['score'] as num?)?.toInt() : null,
+          total: last is Map ? (last['total'] as num?)?.toInt() : null);
+    }
+    return const AssessmentGate._(null);
+  }
+}
 
 class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
-  _Phase _phase = _Phase.intro;
+  _Phase _phase = _Phase.loading;
+  AssessmentBlock? _block;
+  String? _blockReason; // suppressedReason from the server
+  int? _priorScore; // a recorded attempt (status lastScore, or the 409 body)
+  int? _priorTotal;
+  bool _submitting = false;
+  bool _sessionExpired = false; // a submit came back 401
+  String? _submitError;
+  String? _startedAt;
+  // Correct option per question id, from the server's grading (authoritative).
+  Map<String, int> _serverKey = const {};
   int _index = 0;
   final Map<String, int> _answers = {};
 
@@ -32,8 +80,9 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   // differ and stay current); falls back to the bundled bank when offline.
   List<AssessmentQuestion> _questions = kAssessmentBank;
 
-  // results
+  // results (the server's grade)
   int _score = 0;
+  int _total = 0;
   int? _otherScore; // the opposite kind's last score, for comparison
 
   bool get _isPre => widget.kind == 'pre';
@@ -57,6 +106,68 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
     super.initState();
     _loadOther();
     _loadQuestions();
+    _loadStatus();
+  }
+
+  /// Corporate delegates identify with their team-member bearer token plus
+  /// x-team-id / x-player-name (website assessment-api.ts). Self-paced learners
+  /// need only the bearer, which ApiClient already carries.
+  Future<Map<String, String>> _actorHeaders() async {
+    if (ref.read(authProvider).user != null) return const {};
+    final prefs = await SharedPreferences.getInstance();
+    final teamId = prefs.getString(AppConstants.teamIdKey);
+    final player = prefs.getString(AppConstants.playerNameKey);
+    if (teamId == null || player == null || player.isEmpty) return const {};
+    return {'x-team-id': teamId, 'x-player-name': player};
+  }
+
+  /// A request that keeps the HTTP status (ApiClient.post drops it).
+  Future<({int status, Map<String, dynamic> body})> _request(String path,
+      {Map<String, dynamic>? query, Object? data}) async {
+    final dio = ref.read(apiClientProvider).dio;
+    final options = Options(headers: await _actorHeaders());
+    try {
+      final r = data == null
+          ? await dio.get(path, queryParameters: query, options: options)
+          : await dio.post(path, data: data, options: options);
+      final body = r.data is Map ? Map<String, dynamic>.from(r.data as Map) : <String, dynamic>{};
+      return (status: r.statusCode ?? 200, body: body);
+    } on DioException catch (e) {
+      final res = e.response;
+      if (res == null) rethrow; // offline / timeout
+      final body = res.data is Map ? Map<String, dynamic>.from(res.data as Map) : <String, dynamic>{};
+      return (status: res.statusCode ?? 0, body: body);
+    }
+  }
+
+  Future<void> _loadStatus() async {
+    setState(() {
+      _phase = _Phase.loading;
+      _block = null;
+    });
+    try {
+      final r = await _request(ApiEndpoints.assessmentStatus, query: {'kind': widget.kind});
+      if (!mounted) return;
+      if (r.status >= 400) throw Exception(r.body['error'] ?? 'Failed to load status');
+      final gate = AssessmentGate.fromStatus(r.body);
+      setState(() {
+        if (gate.open) {
+          _phase = _Phase.intro;
+        } else {
+          _phase = _Phase.blocked;
+          _block = gate.block;
+          _blockReason = gate.reason;
+          _priorScore = gate.score;
+          _priorTotal = gate.total;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _phase = _Phase.blocked;
+        _block = AssessmentBlock.loadError;
+      });
+    }
   }
 
   /// Fetch the question set for this kind from the server, merging the local
@@ -98,33 +209,87 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
     setState(() {
       _phase = _Phase.running;
       _index = 0;
+      _startedAt ??= DateTime.now().toUtc().toIso8601String();
     });
   }
 
+  /// The server grades the attempt; a result is shown only once it has been
+  /// recorded. Failures keep the answers and say so — never a local score.
   Future<void> _submit() async {
-    int score = 0;
-    for (final q in _questions) {
-      if (_answers[q.id] == q.correctIdx) score++;
-    }
-    _score = score;
-
-    // Persist locally so pre/post can be compared.
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_storeKey, score);
-
-    // Best-effort submit to the backend (ignored if offline).
+    if (_submitting) return;
+    setState(() {
+      _submitting = true;
+      _submitError = null;
+      _sessionExpired = false;
+    });
+    final s = ref.read(stringsProvider);
     try {
-      await ref.read(apiClientProvider).post(
-        ApiEndpoints.assessmentSubmit,
-        data: {
-          'kind': widget.kind,
-          'answers': _answers,
-          'version': kAssessmentVersion,
-        },
-      );
-    } catch (_) {/* offline-friendly */}
-
-    if (mounted) setState(() => _phase = _Phase.results);
+      final r = await _request(ApiEndpoints.assessmentSubmit, data: {
+        'kind': widget.kind,
+        'answers': _answers,
+        if (_startedAt != null) 'startedAt': _startedAt,
+      });
+      if (!mounted) return;
+      final attempt = r.body['attempt'];
+      if (r.status == 409) {
+        // One attempt per person per kind: show the one already on record.
+        setState(() {
+          _phase = _Phase.blocked;
+          _block = AssessmentBlock.alreadyDone;
+          _priorScore = attempt is Map ? (attempt['score'] as num?)?.toInt() : null;
+          _priorTotal = attempt is Map ? (attempt['total'] as num?)?.toInt() : null;
+        });
+      } else if (r.status == 403) {
+        // A research cohort: the server refuses the commercial assessment.
+        setState(() {
+          _phase = _Phase.blocked;
+          _block = AssessmentBlock.suppressed;
+          _blockReason = r.body['error']?.toString();
+        });
+      } else if (r.status == 401) {
+        // Session died mid-assessment. Stay on the runner so the answers are
+        // kept: the learner signs in (the login pops back here) and resubmits.
+        setState(() {
+          _sessionExpired = true;
+          _submitError = s.tr(
+              "Your session isn't active, so your answers couldn't be saved. Sign in, then submit again - your answers are kept.",
+              'جلستك غير نشطة، لذا تعذّر حفظ إجاباتك. سجّل الدخول ثم أعد الإرسال - إجاباتك محفوظة.');
+        });
+      } else if (r.status < 300 && r.body['success'] == true && attempt is Map) {
+        final score = (attempt['score'] as num?)?.toInt() ?? 0;
+        final total = (attempt['total'] as num?)?.toInt() ?? _questions.length;
+        final key = <String, int>{};
+        final per = r.body['perQuestion'];
+        if (per is List) {
+          for (final q in per) {
+            if (q is Map && q['id'] != null && q['correct'] is num) {
+              key[q['id'].toString()] = (q['correct'] as num).toInt();
+            }
+          }
+        }
+        // Persist locally so pre/post can be compared.
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_storeKey, score);
+        if (!mounted) return;
+        setState(() {
+          _score = score;
+          _total = total;
+          _serverKey = key;
+          _phase = _Phase.results;
+        });
+      } else {
+        setState(() => _submitError = r.body['error']?.toString() ??
+            s.tr('Submit failed. Please try again.', 'تعذّر الإرسال. يرجى المحاولة مرة أخرى.'));
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _submitError = s.tr(
+            "Couldn't reach the server, so your answers were not saved. Check your connection and submit again.",
+            'تعذّر الوصول إلى الخادم، لذا لم تُحفظ إجاباتك. تحقّق من اتصالك وأعد الإرسال.'));
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -135,9 +300,11 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
             BoxDecoration(gradient: AppColors.backgroundGradient(context)),
         child: SafeArea(
           child: switch (_phase) {
+            _Phase.loading => const Center(child: CircularProgressIndicator()),
             _Phase.intro => _buildIntro(),
             _Phase.running => _buildRunner(),
             _Phase.results => _buildResults(),
+            _Phase.blocked => _buildBlocked(),
           },
         ),
       ),
@@ -366,6 +533,33 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
             ],
           ),
         ),
+        if (_submitError != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+            child: Column(
+              children: [
+                Text(_submitError!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12.5, color: AppColors.dangerLight)),
+                if (_sessionExpired)
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    children: [
+                      // Pushed (not go): this screen and its answers stay underneath.
+                      TextButton(
+                        onPressed: () => context.push('/self-paced-login?return=1'),
+                        child: Text(s.tr('Learner sign in', 'تسجيل دخول المتعلّم')),
+                      ),
+                      TextButton(
+                        onPressed: _submitting ? null : _submit,
+                        child: Text(s.tr('Submit again', 'أعد الإرسال')),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
         // Nav
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -394,7 +588,8 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                       ? Icons.check_rounded
                       : Icons.arrow_forward_rounded,
                   width: double.infinity,
-                  onPressed: selected == null
+                  isLoading: _submitting,
+                  onPressed: selected == null || _submitting
                       ? null
                       : isLast
                           ? (answered == _questions.length
@@ -428,8 +623,8 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
   // ── Results ──
   Widget _buildResults() {
     final s = ref.watch(stringsProvider);
-    final total = _questions.length;
-    final pct = (_score / total * 100).round();
+    final total = _total > 0 ? _total : _questions.length;
+    final pct = total == 0 ? 0 : (_score / total * 100).round();
     final Color tone = pct >= 80
         ? AppColors.secondaryLight
         : pct >= 50
@@ -487,7 +682,8 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
               const SizedBox(height: 8),
               ..._questions.map((q) {
                 final sel = _answers[q.id];
-                final correct = sel == q.correctIdx;
+                final correctIdx = _serverKey[q.id] ?? q.correctIdx;
+                final correct = sel == correctIdx;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: GlassCard(
@@ -526,11 +722,11 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                                 color: correct
                                     ? AppColors.secondaryLight
                                     : AppColors.dangerLight)),
-                        if (!correct)
+                        if (!correct && correctIdx >= 0 && correctIdx < q.options.length)
                           Padding(
                             padding: const EdgeInsets.only(top: 2),
                             child: Text(
-                                s.tr('Correct: ', 'الصحيح: ') + q.options[q.correctIdx],
+                                s.tr('Correct: ', 'الصحيح: ') + q.options[correctIdx],
                                 style: const TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w600,
@@ -549,6 +745,101 @@ class _AssessmentScreenState extends ConsumerState<AssessmentScreen> {
                 onPressed: () => context.pop(),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Blocked (website FullPageMessage states) ──
+  Widget _buildBlocked() {
+    final s = ref.watch(stringsProvider);
+    late final String title;
+    late final String body;
+    IconData icon = Icons.info_outline_rounded;
+    final actions = <Widget>[];
+    Widget back() => OutlinedButton(
+          onPressed: () => context.pop(),
+          child: Text(s.tr('Back to the course', 'العودة إلى الدورة')),
+        );
+    switch (_block!) {
+      case AssessmentBlock.alreadyDone:
+        icon = Icons.task_alt_rounded;
+        title = _isPre
+            ? s.tr('Pre-course assessment already completed', 'تم إكمال تقييم ما قبل الدورة مسبقًا')
+            : s.tr('Post-course assessment already completed', 'تم إكمال تقييم ما بعد الدورة مسبقًا');
+        body = (_priorTotal ?? 0) > 0
+            ? s.tr(
+                'Your recorded score is $_priorScore/$_priorTotal. Each assessment can be taken once.',
+                'نتيجتك المسجّلة هي $_priorScore/$_priorTotal. يمكن أداء كل تقييم مرة واحدة فقط.')
+            : s.tr('You have already completed this assessment. Each assessment can be taken once.',
+                'لقد أكملت هذا التقييم مسبقًا. يمكن أداء كل تقييم مرة واحدة فقط.');
+        actions.add(back());
+      case AssessmentBlock.suppressed:
+        icon = Icons.block_rounded;
+        title = s.tr('Assessment not available for this group', 'التقييم غير متاح لهذه المجموعة');
+        body = _blockReason ??
+            s.tr('This cohort is enrolled in the research study, so the course assessment does not run here.',
+                'هذه المجموعة مسجّلة في الدراسة البحثية، لذا لا يُجرى تقييم الدورة هنا.');
+        actions.add(back());
+      case AssessmentBlock.needsSignIn:
+        icon = Icons.lock_outline_rounded;
+        title = s.tr('Sign in to take the assessment', 'سجّل الدخول لأداء التقييم');
+        body = s.tr(
+            "Your session isn't active, so your answers couldn't be saved. Sign in first.",
+            'جلستك غير نشطة، لذا تعذّر حفظ إجاباتك. سجّل الدخول أولًا.');
+        actions
+          ..add(FilledButton(
+            onPressed: () => context.push('/self-paced-login'),
+            child: Text(s.tr('Learner sign in', 'تسجيل دخول المتعلّم')),
+          ))
+          ..add(OutlinedButton(
+            onPressed: () => context.push('/lobby'),
+            child: Text(s.tr('Join a team', 'انضم إلى فريق')),
+          ));
+      case AssessmentBlock.loadError:
+        icon = Icons.cloud_off_rounded;
+        title = s.tr("Couldn't load the assessment", 'تعذّر تحميل التقييم');
+        body = s.tr('Check your connection and try again.', 'تحقّق من اتصالك وحاول مرة أخرى.');
+        actions.add(FilledButton(
+          onPressed: _loadStatus,
+          child: Text(s.tr('Try again', 'حاول مرة أخرى')),
+        ));
+    }
+    return Column(
+      children: [
+        _appBar('$_kindLabel ${s.tr('Assessment', 'التقييم')}'),
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: GlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Icon(icon, size: 40, color: AppColors.primaryLight),
+                    const SizedBox(height: 14),
+                    Text(title,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    Text(body,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 13.5,
+                            height: 1.5,
+                            color: AppColors.textSecondary(context))),
+                    const SizedBox(height: 20),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.center,
+                      children: actions,
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(),
+            ),
           ),
         ),
       ],

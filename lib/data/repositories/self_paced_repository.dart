@@ -1,6 +1,28 @@
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 
+/// Thrown when a paid self-paced endpoint answers 402 { code: 'SUBSCRIPTION_REQUIRED' }:
+/// the learner's trial or subscription has lapsed. Callers show the informational
+/// access-ended view instead of an empty (or fallback) simulation.
+class SubscriptionRequiredException implements Exception {
+  const SubscriptionRequiredException();
+
+  /// Stable marker carried in [toString], so a provider that stores `e.toString()` as its
+  /// error can still be recognised by a screen (see [isSubscriptionRequiredError]).
+  static const String code = 'SUBSCRIPTION_REQUIRED';
+
+  /// Whether an API response body is the server's lapsed-access answer.
+  static bool matches(Map<String, dynamic> response) =>
+      response['code'] == code || response[httpStatusKey] == 402;
+
+  @override
+  String toString() => 'SubscriptionRequiredException: $code';
+}
+
+/// True when a stored error string came from a [SubscriptionRequiredException].
+bool isSubscriptionRequiredError(String? error) =>
+    error != null && error.contains(SubscriptionRequiredException.code);
+
 class SelfPacedRepository {
   final ApiClient _api;
 
@@ -13,24 +35,32 @@ class SelfPacedRepository {
 
   /// GET /self-paced/progress/scenarios?module=X&round=Y
   /// Backend returns { scenarios: [...], source: 'excel'|'fallback' }
+  ///
+  /// The route is entitlement-gated: a lapsed learner gets 402 SUBSCRIPTION_REQUIRED, which
+  /// is surfaced as [SubscriptionRequiredException] rather than an empty list (an empty list
+  /// would silently render the offline fallback scenarios as if the learner could play).
   Future<List<dynamic>> fetchScenarios({
     required String module,
     required int round,
   }) async {
+    Map<String, dynamic> response;
     try {
-      final response = await _api.get(
+      response = await _api.get(
         ApiEndpoints.selfPacedProgressScenarios,
         params: {'module': module, 'round': round.toString()},
       );
-      // Backend returns { scenarios: [...], source: 'excel'|'fallback' }
-      final scenarios = response['scenarios'];
-      if (scenarios is List && scenarios.isNotEmpty) {
-        return scenarios;
-      }
-      return [];
     } catch (_) {
       return [];
     }
+    if (SubscriptionRequiredException.matches(response)) {
+      throw const SubscriptionRequiredException();
+    }
+    // Backend returns { scenarios: [...], source: 'excel'|'fallback' }
+    final scenarios = response['scenarios'];
+    if (scenarios is List && scenarios.isNotEmpty) {
+      return scenarios;
+    }
+    return [];
   }
 
   /// POST /self-paced/progress/decision

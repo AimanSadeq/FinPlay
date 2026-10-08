@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/socket_provider.dart';
 import '../../app/theme/app_colors.dart';
 
@@ -8,15 +9,18 @@ import '../../app/theme/app_colors.dart';
 ///
 /// Watches [timerSecondsProvider] and renders MM:SS with color coding:
 /// - Green (> 60 s), Amber (30-60 s), Red (< 30 s).
-/// Hidden when the timer value is null.
+/// Hidden when the timer value is null, and on every device not signed in as the
+/// facilitator (website 02ad84b: the header countdown is the facilitator's only). The
+/// timer is still polled app-wide (GlobalTimerOverlay), so expiry locking keeps working.
 class HeaderTimer extends ConsumerWidget {
   const HeaderTimer({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isFacilitator = ref.watch(authProvider.select((a) => a.isFacilitator));
     final seconds = ref.watch(timerSecondsProvider);
 
-    if (seconds == null) return const SizedBox.shrink();
+    if (!isFacilitator || seconds == null) return const SizedBox.shrink();
 
     final minutes = seconds ~/ 60;
     final secs = seconds % 60;

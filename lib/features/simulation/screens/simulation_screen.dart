@@ -27,14 +27,28 @@ import '../../../shared/widgets/header_timer.dart';
 import '../../../shared/widgets/active_shocks_display.dart';
 import '../../../shared/widgets/team_leader_banner.dart';
 import '../../earnings_call/widgets/earnings_call_banner.dart';
+import '../../../core/network/api_client.dart' show httpStatusKey;
 import '../../../core/network/api_endpoints.dart';
+import '../../../core/utils/constants.dart';
 import '../../../providers/repository_providers.dart';
+import '../../self_paced/widgets/entitlement_banner.dart' show AccessEndedView;
 import '../../../providers/self_paced_provider.dart';
 import '../widgets/self_paced_round_progress.dart';
 import '../widgets/self_paced_scenario_panel.dart';
 import '../widgets/self_paced_game_complete.dart';
 import '../widgets/simulation_access_waiting.dart';
 import 'scenario_education_screen.dart';
+import '../impact/decision_impact_panel.dart';
+import '../sign_policy.dart';
+import '../recommendations/member_recommendations.dart';
+import '../widgets/pro_forma_preview.dart';
+import '../../shocks/widgets/market_wire_section.dart';
+import '../../roles/team_roles.dart';
+
+/// Whether the screen owning [context] is the visible route. The Results shortcuts push
+/// /dashboard on top of the simulation (so back returns to it); while covered, the
+/// simulation's polls and its `team:module_advanced` navigation stand down.
+bool _routeIsCurrent(BuildContext context) => ModalRoute.of(context)?.isCurrent ?? true;
 
 // ---------------------------------------------------------------------------
 // Case Study constraint data model
@@ -155,6 +169,14 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     'investing': [],
     'operating': [],
   };
+
+  // Debounced draft save of typed-but-unconfirmed amounts (website bdcb696).
+  Timer? _draftTimer;
+  String _lastDraft = '';
+
+  // Guards a double navigation when both the advance response and the team's
+  // `team:module_advanced` push send this device to the results dashboard.
+  bool _leavingForDashboard = false;
 
   @override
   void initState() {
@@ -290,6 +312,8 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     );
     final team = ref.read(teamProvider).selectedTeam;
     if (team != null) {
+      _ensureTeamSocket(team.id);
+      _redirectIfParkedOnResults(team.id);
       ref.read(financialProvider.notifier).fetchTeamFinancials(team.id);
       ref.read(decisionProvider.notifier).fetchTeamDecisions(team.id, round: round);
       _fetchBaselineFinancials();
@@ -299,10 +323,13 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     // exists server-side; the website polls this endpoint the same way).
     _caseStudyPollTimer ??= Timer.periodic(
       const Duration(seconds: 12),
-      (_) => _fetchCaseStudyConstraints(silent: true),
+      (_) {
+        if (mounted && _routeIsCurrent(context)) _fetchCaseStudyConstraints(silent: true);
+      },
     );
   }
 
+<<<<<<< Updated upstream
   /// Baseline (round 0) statements for the Baseline badge and the module
   /// panels: the same GET /game/results/round reads the website's
   /// BaselineFinancialStatements makes. The opening position is shared by
@@ -315,11 +342,137 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
       if (mounted) {
         setState(() {
           _baselineFinancials = baseline;
+=======
+  /// Join this device to the team's socket room. The lobby does this on a fresh join, but
+  /// a relaunch restores the team from storage without passing through the lobby, which
+  /// left the device out of the room: no teammate updates, no `team:module_advanced`.
+  Future<void> _ensureTeamSocket(String teamId) async {
+    final socket = ref.read(socketManagerProvider);
+    // Already in (or joining) this team's room on a live or still-handshaking socket:
+    // leave it alone. Reconnecting here would tear down the lobby's socket mid-handshake.
+    if (socket.joinedTeamId == teamId && socket.hasSocket) return;
+    String? playerName;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      playerName = prefs.getString(AppConstants.playerNameKey);
+    } catch (_) {}
+    if (!mounted) return;
+    // Record the room first so the connect handler joins it; joinTeam only emits by itself
+    // when the socket is already connected.
+    socket.joinTeam(teamId, playerName: playerName);
+    if (!socket.hasSocket) socket.connect(teamId: teamId);
+  }
+
+  /// The facilitator can park every team on a round's results (website 5fcc4ee). A member
+  /// who opens the simulation while parked belongs on the dashboard, not a locked tab.
+  Future<void> _redirectIfParkedOnResults(String teamId) async {
+    try {
+      final res = await ref.read(apiClientProvider).get(
+            '${ApiEndpoints.teamProgression}/${Uri.encodeComponent(teamId)}',
+          );
+      if (res['currentModule'] == 'dashboard') _goToResults();
+    } catch (_) {/* best effort */}
+  }
+
+  void _goToResults() {
+    if (!mounted || _leavingForDashboard) return;
+    _leavingForDashboard = true;
+    context.go('/dashboard');
+  }
+
+  /// The team pushed on (leader advanced, or the facilitator parked teams on results):
+  /// follow it — switch to the next module's tab, or go to the results dashboard.
+  void _onTeamModuleAdvanced(TeamModuleAdvance advance) {
+    if (!mounted || _isSelfPaced) return;
+    final s = ref.read(stringsProvider);
+    // Covered by the pushed dashboard: the user is already looking at results, so a
+    // 'dashboard' push needs nothing; a module push only lines the hidden tab up, quietly.
+    if (!_routeIsCurrent(context)) {
+      final idx = _modules.indexOf(advance.nextModule);
+      if (!advance.toDashboard && idx >= 0 && _tabController.index != idx) {
+        _saveCurrentModuleSelections();
+        _tabController.animateTo(idx);
+      }
+      return;
+    }
+    if (advance.toDashboard) {
+      final round = advance.roundNum;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(round != null
+              ? s.tr('Round $round is complete. Opening your results...',
+                  'اكتملت الجولة $round. جارٍ فتح نتائجك...')
+              : s.tr('Opening your results...', 'جارٍ فتح نتائجك...')),
+          backgroundColor: AppColors.secondary,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      _goToResults();
+      return;
+    }
+    final idx = _modules.indexOf(advance.nextModule);
+    if (idx < 0) return;
+    if (_tabController.index != idx) {
+      _saveCurrentModuleSelections();
+      _tabController.animateTo(idx);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.tr(
+              'Your team is advancing to ${_moduleLabels[idx]} decisions',
+              'ينتقل فريقك إلى قرارات ${_localizedModule(s, _modules[idx], _moduleLabels[idx])}')),
+          backgroundColor: const Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+    final team = ref.read(teamProvider).selectedTeam;
+    if (team != null) {
+      ref.read(decisionProvider.notifier).fetchTeamDecisions(team.id, round: _effectiveRound);
+    }
+  }
+
+  /// Opening position for the round, as the website's BaselineFinancialStatements shows it
+  /// inside the decision modules: the previous round's closing statements (round 0 is the
+  /// baseline), read from /api/game/results/round one statement at a time.
+  Future<void> _fetchBaselineFinancials(String teamId) async {
+    if (_loadingBaseline) return; // Prevent duplicate calls
+    setState(() => _loadingBaseline = true);
+    try {
+      final api = ref.read(apiClientProvider);
+      final round = (_effectiveRound - 1).clamp(0, 3);
+      final responses = await Future.wait([
+        for (final statement in const ['income', 'balance', 'cashflow'])
+          api.get(ApiEndpoints.resultsRound, params: {
+            'teamId': teamId,
+            'round': round,
+            'statement': statement,
+          }),
+      ]);
+      FinancialData? merged;
+      for (final r in responses) {
+        if (r[httpStatusKey] != null) continue; // 4xx body, not a statement
+        final part = FinancialData.fromSheetResponse(r);
+        merged = merged == null ? part : merged.mergeWith(part);
+      }
+      final hasRows = merged != null &&
+          (merged.incomeRows.isNotEmpty ||
+              merged.balanceRows.isNotEmpty ||
+              merged.cashFlowRows.isNotEmpty);
+      if (mounted) {
+        setState(() {
+          _baselineFinancials = hasRows ? merged : null;
+>>>>>>> Stashed changes
           _loadingBaseline = false;
         });
       }
     } catch (_) {
+<<<<<<< Updated upstream
       // Baseline not served: the badge stays grey and the panels show nothing.
+=======
+      // Baseline unavailable - the card and the Baseline chip simply stay hidden/grey.
+>>>>>>> Stashed changes
       if (mounted) setState(() => _loadingBaseline = false);
     }
   }
@@ -461,6 +614,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
               Expanded(
                 child: spState.isLoading
                     ? const Center(child: CircularProgressIndicator())
+                    // Lapsed trial/subscription: the scenarios route answers 402, so show
+                    // the access-ended notice rather than an empty or fallback simulation.
+                    : spState.entitlement.isLapsed
+                        ? AccessEndedView(
+                            onBack: () => context.canPop() ? context.pop() : context.go('/self-paced-progress'),
+                          )
                     : spState.isGameComplete
                         ? SingleChildScrollView(
                             padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
@@ -577,9 +736,22 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
   @override
   void dispose() {
     _caseStudyPollTimer?.cancel();
+    _draftTimer?.cancel();
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     super.dispose();
+  }
+
+  /// The pending set for the live pro-forma preview (scenarioId -> amount), as the website's
+  /// ScenarioPanel builds it: any scenario with an amount or a selection counts, at the
+  /// amount the team sees (an edit overrides the stored value).
+  Map<String, double> _previewPending(ScenarioState scenarioState) {
+    final map = <String, double>{};
+    for (final sc in scenarioState.scenarios) {
+      final amount = scenarioState.amountFor(sc);
+      if (amount != 0 || scenarioState.selectedScenarioIds.contains(sc.id)) map[sc.id] = amount;
+    }
+    return map;
   }
 
   /// Compute the total amount of all selected scenarios
@@ -651,14 +823,35 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
       decisions: decisions,
     );
 
+    if (!success && mounted) {
+      // The server refused the confirm (e.g. MODULE_EMPTY, or "Only SAR X of reserves is
+      // available"): show its own message. Nothing was locked.
+      final error = ref.read(decisionProvider).error;
+      final s = ref.read(stringsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(error ?? s.tr('Could not confirm decisions', 'تعذّر تأكيد القرارات')),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
     if (success && mounted) {
-      if (!_isSelfPaced) {
-        ref.read(socketManagerProvider).sendDecision({
-          'teamId': teamId,
-          'round': round,
-          'module': module,
-        });
-      }
+      _draftTimer?.cancel(); // confirmed: a pending draft would only get 409
+      // No client broadcast here: /decisions/confirm itself sends decision:updated
+      // { confirmed: true } to the team room.
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -700,6 +893,12 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     if (team == null) return;
     final round = _effectiveRound;
 
+<<<<<<< Updated upstream
+=======
+    // Save as an unconfirmed draft (debounced) so a reload cannot lose it.
+    _scheduleDraftSave(module);
+
+>>>>>>> Stashed changes
     // Broadcast so teammates see the amount update live.
     ref.read(socketManagerProvider).sendDecision({
       'teamId': team.id,
@@ -710,8 +909,45 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
     });
   }
 
+  /// Debounced POST /decisions/draft of the module's typed amounts and selections
+  /// (website bdcb696). Corporate teams only; the payload is captured now, so a tab switch
+  /// inside the debounce still saves the module that was edited. 409 ALREADY_CONFIRMED and
+  /// other failures are ignored: confirm sends the authoritative amounts regardless.
+  void _scheduleDraftSave(String module) {
+    if (_isSelfPaced) return;
+    final team = ref.read(teamProvider).selectedTeam;
+    if (team == null) return;
+    final scenarioState = ref.read(scenarioProvider);
+    if (scenarioState.scenarios.isEmpty) return;
+    final decisions = scenarioState.scenarios
+        .map((sc) => <String, dynamic>{
+              'scenarioId': sc.id,
+              'amount': scenarioState.amountFor(sc),
+            })
+        .where((d) =>
+            d['amount'] != 0 || scenarioState.selectedScenarioIds.contains(d['scenarioId']))
+        .toList();
+    final round = _effectiveRound;
+    final key = '${team.id}|$round|$module|$decisions';
+    if (key == _lastDraft) return;
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 1200), () async {
+      final ok = await ref.read(decisionRepositoryProvider).saveDraft(
+            teamId: team.id,
+            round: round,
+            module: module,
+            decisions: decisions,
+          );
+      if (ok) _lastDraft = key;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Follow the team when it is moved on (leader advanced / facilitator parked on results).
+    ref.listen<TeamModuleAdvance?>(teamModuleAdvanceProvider, (prev, next) {
+      if (next != null && !identical(prev, next)) _onTeamModuleAdvanced(next);
+    });
     final s = ref.watch(stringsProvider);
     final teamState = ref.watch(teamProvider);
     final team = teamState.selectedTeam;
@@ -950,7 +1186,34 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
                 ),
               ),
 
+              // Market wire + Hedge Desk (corporate only, website parity): renders nothing
+              // while the wire is quiet; owns the forecasts/hedges polls.
+              if (team != null) MarketWireSection(teamId: team.id, round: currentRound),
+              // Member recommendations: one poll for the visible module, feeding every card.
+              if (team != null)
+                MemberRecommendationsPoller(
+                  teamId: team.id,
+                  module: _modules[_tabController.index],
+                  roundNum: currentRound,
+                ),
+
               const SizedBox(height: 12),
+
+              // Live pro-forma impact ticker above the round progress (website portals its
+              // ticker into the same spot): projected net income / cash / D-E of the
+              // amounts on screen versus the confirmed position.
+              if (team != null && !scenarioState.isLoading && scenarioState.scenarios.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+                  child: ProFormaPreview(
+                    teamId: team.id,
+                    module: scenarioState.scenarios.first.module.isNotEmpty
+                        ? scenarioState.scenarios.first.module
+                        : _modules[_tabController.index],
+                    roundNum: currentRound,
+                    pending: _previewPending(scenarioState),
+                  ),
+                ),
 
               // Round Progress Boxes (like website's 3 colored boxes)
               Padding(
@@ -1119,6 +1382,7 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
                         _tabController.animateTo(currentIdx + 1);
                       }
                     },
+                    onRoundComplete: _goToResults,
                   );
                 }),
 
@@ -1170,10 +1434,20 @@ class _SimulationScreenState extends ConsumerState<SimulationScreen>
                           : (id) {
                               ref.read(scenarioProvider.notifier).toggleScenario(id);
                               if (!isSelfPacedMode) {
+                                final module = _modules[moduleIndex];
+                                final title = scenarioState.scenarios
+                                        .where((sc) => sc.id == id)
+                                        .firstOrNull
+                                        ?.title ??
+                                    '';
                                 ref.read(socketManagerProvider).selectScenario({
-                                  'scenarioId': id,
                                   'teamId': team?.id,
+                                  'round': currentRound,
+                                  'module': module,
+                                  'scenarioId': id,
+                                  'scenarioTitle': title,
                                 });
+                                _scheduleDraftSave(module);
                               }
                             },
                       onAmountChanged: (id, amount) =>
@@ -1901,6 +2175,7 @@ class _DecisionStatusBar extends ConsumerStatefulWidget {
   final int currentRound;
   final int selectedCount;
   final VoidCallback onMoveNextTab;
+  final VoidCallback onRoundComplete;
   final FinancialData? baselineFinancials;
 
   const _DecisionStatusBar({
@@ -1913,6 +2188,7 @@ class _DecisionStatusBar extends ConsumerStatefulWidget {
     required this.currentRound,
     required this.selectedCount,
     required this.onMoveNextTab,
+    required this.onRoundComplete,
     this.baselineFinancials,
   });
 
@@ -1924,20 +2200,52 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
   bool _unlocking = false;
   bool _advancing = false;
 
+  // GET /team-progression/status/{teamId}: the facilitator's "Move to Next Decisions"
+  // unlock is scoped to one decision, so the global round-state flag cannot say whether
+  // it covers THIS team's module. The status resolves it server-side (website 00f3d72,
+  // bb43dd6, 757c4c9): the button enables on facilitatorUnlocked && currentModule == tab.
+  bool _facilitatorUnlocked = false;
+  String? _progressionModule;
+  Timer? _progressionPollTimer;
+
   @override
   void initState() {
     super.initState();
     // Poll decision lock state every 5 seconds (website polls every 3s)
     _startDecisionPolling();
+    _fetchProgressionStatus();
+    _progressionPollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && _routeIsCurrent(context)) _fetchProgressionStatus();
+    });
   }
 
   Timer? _decisionPollTimer;
   Timer? _gameStatePollTimer;
 
+  Future<void> _fetchProgressionStatus() async {
+    if (!mounted || widget.teamId.isEmpty) return;
+    try {
+      final res = await ref.read(apiClientProvider).get(
+            '${ApiEndpoints.teamProgression}/${Uri.encodeComponent(widget.teamId)}',
+          );
+      if (!mounted || res[httpStatusKey] != null) return;
+      final unlocked = res['facilitatorUnlocked'] == true;
+      final module = res['currentModule']?.toString();
+      if (unlocked != _facilitatorUnlocked || module != _progressionModule) {
+        setState(() {
+          _facilitatorUnlocked = unlocked;
+          _progressionModule = module;
+        });
+      }
+    } catch (_) {
+      // Keep the last known status; the button simply stays as it was.
+    }
+  }
+
   void _startDecisionPolling() {
     // Poll decision lock state every 5 seconds (website polls every 3s)
     _decisionPollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted && widget.teamId.isNotEmpty) {
+      if (mounted && _routeIsCurrent(context) && widget.teamId.isNotEmpty) {
         ref.read(decisionProvider.notifier).fetchTeamDecisions(
           widget.teamId,
           round: widget.currentRound,
@@ -1947,7 +2255,7 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
     // Poll game state every 5 seconds to pick up facilitator unlock
     // (website polls round-state every 5s; facilitator toggle doesn't broadcast socket)
     _gameStatePollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) {
+      if (mounted && _routeIsCurrent(context)) {
         ref.read(gameStateProvider.notifier).fetchGameState();
       }
     });
@@ -1957,27 +2265,34 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
   void dispose() {
     _decisionPollTimer?.cancel();
     _gameStatePollTimer?.cancel();
+    _progressionPollTimer?.cancel();
     super.dispose();
   }
 
+<<<<<<< Updated upstream
+=======
+  /// Facilitator unlock covers this tab's module (website ScenarioPanel canAdvance).
+  bool get _advanceUnlocked =>
+      _facilitatorUnlocked &&
+      (_progressionModule == null || _progressionModule == widget.moduleKey);
+
+>>>>>>> Stashed changes
   Future<void> _unlockDecisions() async {
     if (_unlocking || widget.teamId.isEmpty) return;
     setState(() => _unlocking = true);
     try {
       final api = ref.read(apiClientProvider);
-      await api.post(ApiEndpoints.decisionsUnlock, data: {
+      final res = await api.post(ApiEndpoints.decisionsUnlock, data: {
         'teamId': widget.teamId,
         'module': widget.moduleKey,
         'round': widget.currentRound,
       });
-      // Broadcast unlock via socket so teammates get notified
-      final socketMgr = ref.read(socketManagerProvider);
-      socketMgr.sendDecision({
-        'teamId': widget.teamId,
-        'module': widget.moduleKey,
-        'round': widget.currentRound,
-        'decisions': {'unlocked': true},
-      });
+      // ApiClient.post returns 4xx bodies instead of throwing.
+      if (res['success'] == false || (res['success'] != true && res['error'] != null)) {
+        throw Exception((res['message'] ?? res['error']).toString());
+      }
+      // No client broadcast: /decisions/unlock sends decision:updated { unlocked: true }
+      // to the team room itself.
       // Refresh game state + team decisions to pick up new lock status
       ref.read(gameStateProvider.notifier).fetchGameState();
       ref.read(decisionProvider.notifier).fetchTeamDecisions(
@@ -2024,8 +2339,14 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
     }
   }
 
+  /// "Move to Next Decisions" / "Move to Team Dashboard": POST
+  /// /team-progression/advance/{teamId} (no body), website ScenarioPanel. The server is the
+  /// authority: 403 while the facilitator has not unlocked this decision, 400 "Decisions
+  /// not confirmed", and { action: 'completed_all_modules' } after Operating. The tab only
+  /// moves on success; a refusal shows the server's own message.
   Future<void> _advanceToNextModule() async {
     if (_advancing || widget.teamId.isEmpty) return;
+<<<<<<< Updated upstream
 
     // Check facilitator unlock first (like website)
     final gameState = ref.read(gameStateProvider);
@@ -2052,6 +2373,17 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
     }
 
     final s = ref.read(stringsProvider);
+=======
+    final s = ref.read(stringsProvider);
+
+    if (!_advanceUnlocked) {
+      _showAdvanceError(s.tr(
+          'Decisions confirmed - waiting for your facilitator to unlock the move to the next decisions.',
+          'تم تأكيد القرارات - بانتظار أن يفتح الميسّر الانتقال إلى القرارات التالية.'));
+      return;
+    }
+
+>>>>>>> Stashed changes
     setState(() => _advancing = true);
     try {
       // POST /team-progression/advance/{teamId}, as the website does: the
@@ -2063,6 +2395,7 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
       final res = await api.post(
         '${ApiEndpoints.teamProgressionAdvance}/${Uri.encodeComponent(widget.teamId)}',
       );
+<<<<<<< Updated upstream
       if (res['success'] != true) {
         throw Exception(res['message'] ??
             res['error'] ??
@@ -2082,46 +2415,87 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
           ? s.tr('Ready for Investing!', 'جاهز للاستثمار!')
           : s.tr('Ready for Operating!', 'جاهز للتشغيل!');
       // Switch tab locally
+=======
+      if (!mounted) return;
+      if (res['success'] != true) {
+        final msg = (res['message'] ?? res['error'])?.toString();
+        _showAdvanceError(msg != null && msg.isNotEmpty
+            ? msg
+            : s.tr('Failed to advance to the next stage.', 'تعذّر الانتقال إلى المرحلة التالية.'));
+        _fetchProgressionStatus();
+        return;
+      }
+
+      ref.read(gameStateProvider.notifier).fetchGameState();
+      setState(() => _facilitatorUnlocked = false); // the unlock was spent on this move
+
+      final nextModule = res['nextModule']?.toString();
+      // Keep the cached team's module in step even if the socket push never arrives.
+      final team = ref.read(teamProvider).selectedTeam;
+      if (team != null && nextModule != null && team.id == widget.teamId) {
+        ref
+            .read(teamProvider.notifier)
+            .updateTeamFromSocket(team.copyWith(currentModule: nextModule).toJson());
+      }
+      if (res['action'] == 'completed_all_modules' || nextModule == 'dashboard') {
+        _showAdvanceSuccess(s.tr('Complete! Moving to Team Dashboard...',
+            'اكتمل! جارٍ الانتقال إلى لوحة الفريق...'));
+        widget.onRoundComplete();
+        return;
+      }
+
+      final label = nextModule == 'operating'
+          ? s.tr('Ready for Operating! Moving to Operating Decisions...',
+              'جاهز للتشغيل! جارٍ الانتقال إلى قرارات التشغيل...')
+          : s.tr('Ready for Investing! Moving to Investing Decisions...',
+              'جاهز للاستثمار! جارٍ الانتقال إلى قرارات الاستثمار...');
+>>>>>>> Stashed changes
       widget.onMoveNextTab();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(child: Text(s.tr('$toastTitle Moving to ${nextModule[0].toUpperCase()}${nextModule.substring(1)} Decisions...',
-                    '$toastTitle جارٍ الانتقال إلى قرارات ${nextModule[0].toUpperCase()}${nextModule.substring(1)}...'))),
-              ],
-            ),
-            backgroundColor: const Color(0xFF16A34A),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      _showAdvanceSuccess(label);
     } catch (e) {
-      if (mounted) {
-        final errorMsg = e.toString().replaceAll('Exception: ', '');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(child: Text('${ref.read(stringsProvider).tr('Cannot Advance', 'تعذّر التقدّم')}: $errorMsg')),
-              ],
-            ),
-            backgroundColor: const Color(0xFFDC2626),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-      }
+      if (mounted) _showAdvanceError(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _advancing = false);
     }
+  }
+
+  void _showAdvanceSuccess(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text(text)),
+          ],
+        ),
+        backgroundColor: const Color(0xFF16A34A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showAdvanceError(String message) {
+    if (!mounted) return;
+    final s = ref.read(stringsProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Expanded(child: Text('${s.tr('Cannot Advance', 'تعذّر التقدّم')}: $message')),
+          ],
+        ),
+        backgroundColor: const Color(0xFFDC2626),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 5),
+      ),
+    );
   }
 
   void _showBaselineSheet() {
@@ -2237,16 +2611,10 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
     // existingDecision?.isLocked || isConfirmed || isTimerExpired || gameState.lockModule
     final effectiveLocked = widget.isDecisionLockedInDb || widget.isLocked || widget.isTimerExpired;
 
-    // "Move to Next" enabled when: locked AND facilitator unlocked (like website)
-    // Website: disabled={!isLocked || !isNextDecisionsUnlocked}
-    final gameState = ref.watch(gameStateProvider);
-    final nextDecisionsUnlocked = gameState.whenData((g) => g.nextDecisionsUnlocked).value ?? false;
-    final canMoveNext = effectiveLocked && nextDecisionsUnlocked;
-    // Debug: trace Move to Next conditions
-    // ignore: avoid_print
-    print('[DEBUG] canMoveNext=$canMoveNext effectiveLocked=$effectiveLocked '
-        'nextDecisionsUnlocked=$nextDecisionsUnlocked '
-        'dbLock=${widget.isDecisionLockedInDb} gsLock=${widget.isLocked} timer=${widget.isTimerExpired}');
+    // "Move to Next" enabled when: locked AND the facilitator's unlock covers this
+    // team's module (website: disabled={!isLocked || !canAdvance}, canAdvance from
+    // /team-progression/status — not the global round-state flag).
+    final canMoveNext = effectiveLocked && _advanceUnlocked;
     final isOperating = widget.moduleKey == 'operating';
     final moveNextLabel = isOperating ? s.tr('Move to Team Dashboard', 'الانتقال إلى لوحة الفريق') : s.tr('Move to Next Decisions', 'الانتقال إلى القرارات التالية');
 
@@ -2293,8 +2661,12 @@ class _DecisionStatusBarState extends ConsumerState<_DecisionStatusBar> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
+<<<<<<< Updated upstream
                 // Connected badge - the live socket to the server (the server
                 // has no Excel integration any more, so that is the only link).
+=======
+                // Connected badge - real-time socket connection
+>>>>>>> Stashed changes
                 _StatusChipSmall(
                   icon: Icons.wifi_rounded,
                   label: isSocketConnected ? s.tr('Connected', 'متصل') : s.tr('Disconnected', 'غير متصل'),
@@ -2499,22 +2871,40 @@ class _RoundBadge extends ConsumerWidget {
   }
 }
 
-class _TeamBadge extends StatelessWidget {
+class _TeamBadge extends ConsumerWidget {
   final dynamic team;
   const _TeamBadge({required this.team});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final color = AppColors.teamColor(team.teamNumber - 1);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        team.name,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+    // Team roles (advisory, website TeamRoleBadge): my role beside the team name; tap for
+    // the whole team's roles.
+    final myRole = ref.watch(myTeamRoleProvider);
+    return GestureDetector(
+      onTap: () => showTeamRolesSheet(context, team.id as String, team.name as String),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                team.name,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+              ),
+            ),
+            if (myRole != null) ...[
+              const SizedBox(width: 6),
+              TeamRoleBadge(role: myRole),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -2646,6 +3036,8 @@ class _ModuleContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
+    final decisions = ref.watch(decisionProvider).teamDecisions;
+    final teamId = isSelfPaced ? null : ref.watch(teamProvider).selectedTeam?.id;
     if (scenarioState.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -2695,6 +3087,11 @@ class _ModuleContent extends ConsumerWidget {
         ...scenarioState.scenarios.asMap().entries.map((entry) {
           final scenario = entry.value;
           final isSelected = scenarioState.selectedScenarioIds.contains(scenario.id);
+          // The module this card really belongs to (all three tabs share one scenario list).
+          final cardModule = scenario.module.isNotEmpty ? scenario.module : moduleKey;
+          final confirmedInDb = !isSelfPaced &&
+              decisions.any((d) =>
+                  d.module == cardModule && d.roundNum == scenario.round && d.isLocked);
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: _ScenarioCard(
@@ -2703,6 +3100,10 @@ class _ModuleContent extends ConsumerWidget {
               isLocked: isLocked,
               moduleColor: moduleColor,
               moduleKey: moduleKey,
+              impactModule: cardModule,
+              teamId: teamId,
+              showRecommendations: !isSelfPaced,
+              recommendationsLocked: isLocked || confirmedInDb,
               effectiveAmount: scenarioState.amountFor(scenario),
               customInputValues: customInputValues[scenario.id] ?? {},
               onCustomInputChanged: (fieldName, value) =>
@@ -3349,48 +3750,64 @@ class _FinLine extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 // ───────────────────────────────────────────────────────────────────────────
-// Sign-convention affordance (parity with website ScenarioCard)
+// Sign-convention affordance (parity with website ScenarioCard, 7ca73e3)
 //
 // A positive vs negative amount means opposite things, and the meaning differs
-// by module. `_signPolicyFor` mirrors the website's getSignPolicy / handleSave
-// validation EXACTLY so the on-card legend can never drift from what the editor
-// will actually accept (e.g. IPO must be positive; dividends/divestitures must
-// be negative, so fixed-asset pools can't be over-divested into the negative).
+// by card. The scenarios API now resolves each card's allowed direction and its
+// legend words server-side (catalog value from the Model Editor, or the shared
+// defaults): `direction`, `plusLabel`, `minusLabel`. The card legend and the
+// amount validation both read the same resolved values, so what the legend
+// promises is what the editor accepts. When a scenario arrives without them
+// (older server / offline data), the app's previous built-in rules apply.
 // ───────────────────────────────────────────────────────────────────────────
 enum _SignPolicy { positive, negative, both }
 
-_SignPolicy _signPolicyFor(String module, String scenarioId, String? title) {
-  final id = scenarioId;
-  if (module == 'operating') {
-    if ((title ?? '').toLowerCase().contains('inventory')) return _SignPolicy.negative;
-    return ['5', '6', '7', '8'].contains(id) ? _SignPolicy.negative : _SignPolicy.both;
+_SignPolicy _signPolicyFor(String module, Scenario sc) {
+  switch (sc.direction) {
+    case 'positive':
+      return _SignPolicy.positive;
+    case 'negative':
+      return _SignPolicy.negative;
+    case 'both':
+      return _SignPolicy.both;
   }
-  if (module == 'financing') {
-    if (['5', '7'].contains(id)) return _SignPolicy.positive; // IPO, Rights Issue — raise only
-    if (['6', '8', '9'].contains(id)) return _SignPolicy.negative; // Use RE, Dividends, Reserves — outflow only
-    return _SignPolicy.both;
-  }
-  // investing: building / expanding / intangible / acquisition are buy-only (negative)
-  return ['2', '3', '4', '5', '8', '9'].contains(id) ? _SignPolicy.negative : _SignPolicy.both;
+  return _defaultSignPolicy(module, sc.id, sc.title);
 }
 
-/// Plain-language verbs for what +/- means in each module: (positive, negative).
-(String, String) _directionVerbs(AppStrings s, String module) {
-  switch (module) {
-    case 'financing':
-      return (s.tr('Raise / Borrow', 'جمع / اقتراض'), s.tr('Repay / Return', 'سداد / إرجاع'));
-    case 'investing':
-      return (s.tr('Sell / Divest', 'بيع / تصفية'), s.tr('Buy / Invest', 'شراء / استثمار'));
-    default: // operating
-      return (s.tr('Save / Cut cost', 'توفير / خفض التكلفة'), s.tr('Spend / Expand', 'إنفاق / توسّع'));
+/// Built-in fallback used only when the API sent no `direction` (shared/scenario-defaults.ts).
+_SignPolicy _defaultSignPolicy(String module, String scenarioId, String? title) {
+  switch (defaultDirection(module, scenarioId, title)) {
+    case AmountDirection.positive:
+      return _SignPolicy.positive;
+    case AmountDirection.negative:
+      return _SignPolicy.negative;
+    case AmountDirection.both:
+      return _SignPolicy.both;
   }
 }
+
+/// Plain-language words for what +/- means on this card: (positive, negative).
+///
+/// The server's `plusLabel` / `minusLabel` are English (catalog text). In English they
+/// are shown as sent. In Arabic, labels the server marked as its generic defaults use
+/// the app's translated module verbs; facilitator-authored labels are shown as written.
+(String, String) _directionVerbs(AppStrings s, String module, Scenario sc) {
+  final (posFallback, negFallback) = _moduleDirectionVerbs(s, module);
+  final plus = sc.plusLabel?.trim() ?? '';
+  final minus = sc.minusLabel?.trim() ?? '';
+  final useServer = !s.ar || sc.labelsAreDefault == false;
+  return (
+    useServer && plus.isNotEmpty ? plus : posFallback,
+    useServer && minus.isNotEmpty ? minus : negFallback,
+  );
+}
+
+(String, String) _moduleDirectionVerbs(AppStrings s, String module) => moduleDirectionVerbs(s, module);
 
 /// Returns a localized error if the amount's sign is invalid for this scenario,
 /// otherwise null. Mirrors the website's per-scenario validation.
-String? _validateAmountSign(
-    AppStrings s, String module, String scenarioId, String? title, double amount) {
-  switch (_signPolicyFor(module, scenarioId, title)) {
+String? _validateAmountSign(AppStrings s, String module, Scenario sc, double amount) {
+  switch (_signPolicyFor(module, sc)) {
     case _SignPolicy.positive:
       if (amount < 0) {
         return s.tr('This amount must be positive or zero.',
@@ -3412,19 +3829,17 @@ String? _validateAmountSign(
 class _SignGuide extends StatelessWidget {
   final AppStrings s;
   final String module;
-  final String scenarioId;
-  final String? title;
+  final Scenario scenario;
   const _SignGuide({
     required this.s,
     required this.module,
-    required this.scenarioId,
-    this.title,
+    required this.scenario,
   });
 
   @override
   Widget build(BuildContext context) {
-    final policy = _signPolicyFor(module, scenarioId, title);
-    final (posVerb, negVerb) = _directionVerbs(s, module);
+    final policy = _signPolicyFor(module, scenario);
+    final (posVerb, negVerb) = _directionVerbs(s, module, scenario);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     Widget chip(String sign, String verb, String flow, Color color) {
@@ -3498,6 +3913,13 @@ class _ScenarioCard extends ConsumerWidget {
   final bool isLocked;
   final Color moduleColor;
   final String moduleKey; // 'financing' | 'investing' | 'operating'
+  // Module the card's amount books under, for the impact panel and recommendations.
+  final String impactModule;
+  // Corporate team ("Team N"); null in self-paced. Used by the reserves/retained-earnings cards.
+  final String? teamId;
+  // Corporate teams: the member-recommendations block (it renders nothing unless enabled).
+  final bool showRecommendations;
+  final bool recommendationsLocked;
   final double effectiveAmount; // user-edited amount overrides the backend value
   final Map<String, String> customInputValues;
   final void Function(String fieldName, String value) onCustomInputChanged;
@@ -3512,6 +3934,10 @@ class _ScenarioCard extends ConsumerWidget {
     this.isLocked = false,
     required this.moduleColor,
     required this.moduleKey,
+    required this.impactModule,
+    this.teamId,
+    this.showRecommendations = false,
+    this.recommendationsLocked = false,
     required this.effectiveAmount,
     required this.customInputValues,
     required this.onCustomInputChanged,
@@ -3698,8 +4124,7 @@ class _ScenarioCard extends ConsumerWidget {
                 onEdit: () => _openAmountEditor(context, ref, str),
                 onClear: effectiveAmount != 0
                     ? () {
-                        final err = _validateAmountSign(
-                            str, moduleKey, scenario.id, scenario.title, 0);
+                        final err = _validateAmountSign(str, moduleKey, scenario, 0);
                         if (err == null) onAmountChanged!(0);
                       }
                     : null,
@@ -3743,14 +4168,23 @@ class _ScenarioCard extends ConsumerWidget {
                 ),
               ),
 
+            // Live explanation of what the amount does: accounts, statements, meaning
+            // (website DecisionImpactPanel; members see the leader's synced amount).
+            DecisionImpactPanel(
+              module: impactModule,
+              engineRow: s.engineRow,
+              amount: effectiveAmount,
+              round: s.round,
+              teamId: teamId,
+            ),
+
             // Sign-convention legend: makes +/- (buy/sell, cash in/out) unambiguous.
             if (canEditAmount) ...[
               const SizedBox(height: 6),
               _SignGuide(
                 s: str,
                 module: moduleKey,
-                scenarioId: scenario.id,
-                title: scenario.title,
+                scenario: scenario,
               ),
               const SizedBox(height: 8),
             ],
@@ -3983,6 +4417,16 @@ class _ScenarioCard extends ConsumerWidget {
                   ],
                 ),
               ),
+
+            // Pre-decision member recommendations (corporate + facilitator flag only).
+            if (showRecommendations && teamId != null)
+              MemberRecommendationsBlock(
+                key: ValueKey('rec-$teamId-$impactModule-${s.round}-${s.id}'),
+                teamId: teamId!,
+                scenarioId: s.id,
+                module: impactModule,
+                moduleLocked: recommendationsLocked,
+              ),
           ],
         ),
       ),
@@ -4003,7 +4447,7 @@ class _ScenarioCard extends ConsumerWidget {
   /// updates state, persists to the backend, and broadcasts to teammates.
   void _openAmountEditor(BuildContext context, WidgetRef ref, AppStrings str) {
     final Scenario sc = scenario as Scenario;
-    final policy = _signPolicyFor(moduleKey, sc.id, sc.title);
+    final policy = _signPolicyFor(moduleKey, sc);
     final controller = TextEditingController(
       text: effectiveAmount != 0
           ? (effectiveAmount == effectiveAmount.roundToDouble()
@@ -4024,7 +4468,7 @@ class _ScenarioCard extends ConsumerWidget {
             void submit() {
               final raw = controller.text.trim().replaceAll(',', '');
               final value = raw.isEmpty ? 0.0 : (double.tryParse(raw) ?? 0.0);
-              final err = _validateAmountSign(str, moduleKey, sc.id, sc.title, value);
+              final err = _validateAmountSign(str, moduleKey, sc, value);
               if (err != null) {
                 setSheetState(() => errorText = err);
                 return;
@@ -4041,7 +4485,10 @@ class _ScenarioCard extends ConsumerWidget {
                   color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                child: Column(
+                // Scrollable: the live impact panel can make the sheet taller than the
+                // space left above the keyboard.
+                child: SingleChildScrollView(
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -4063,7 +4510,7 @@ class _ScenarioCard extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    _SignGuide(s: str, module: moduleKey, scenarioId: sc.id, title: sc.title),
+                    _SignGuide(s: str, module: moduleKey, scenario: sc),
                     const SizedBox(height: 16),
                     TextField(
                       controller: controller,
@@ -4084,6 +4531,17 @@ class _ScenarioCard extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: moduleColor, width: 1.5),
                         ),
+                      ),
+                    ),
+                    // Live explanation while typing: the same panel as the card.
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: controller,
+                      builder: (_, value, _) => DecisionImpactPanel(
+                        module: impactModule,
+                        engineRow: sc.engineRow,
+                        amount: double.tryParse(value.text.trim().replaceAll(',', '')) ?? 0,
+                        round: sc.round,
+                        teamId: teamId,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -4125,6 +4583,7 @@ class _ScenarioCard extends ConsumerWidget {
                       ],
                     ),
                   ],
+                  ),
                 ),
               ),
             );

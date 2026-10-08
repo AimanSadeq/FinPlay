@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Temporary copy written by tool/generators/gen_impact.mts
+tool/generators/decision-impact.copy.mts

@@ -4,6 +4,7 @@ import '../../core/services/cache_service.dart';
 import '../models/game_state.dart';
 import '../models/team.dart';
 import '../models/financial_data.dart';
+import 'self_paced_repository.dart' show SubscriptionRequiredException;
 
 class GameRepository {
   final ApiClient _api;
@@ -100,7 +101,16 @@ class GameRepository {
             'currentRound': effectiveRound,
             'previousRound': effectiveRound > 1 ? effectiveRound - 1 : 0,
           });
-    await _cache.set(cacheKey, response);
+    // A lapsed self-paced learner gets 402 SUBSCRIPTION_REQUIRED; surface it so the
+    // dashboard can show the access-ended view instead of an empty set of statements.
+    if (selfPaced && SubscriptionRequiredException.matches(response)) {
+      throw const SubscriptionRequiredException();
+    }
+    // Never cache an error body (ApiClient.get returns 4xx bodies instead of throwing):
+    // it would be served back for two minutes after access or the session is restored.
+    if (response[httpStatusKey] == null && response['data'] is Map) {
+      await _cache.set(cacheKey, response);
+    }
     return _parseDashboardResponse(response, teamId, effectiveRound);
   }
 
@@ -108,7 +118,7 @@ class GameRepository {
     final data = response['data'] as Map<String, dynamic>? ?? {};
     final currentRound = data['currentRound'] as Map<String, dynamic>? ?? {};
 
-    // Each sub-key (income, balance, cashflow, ratios) has same format as /sheets/results/round
+    // Each sub-key (income, balance, cashflow, ratios) has same format as /game/results/round
     var merged = FinancialData(teamId: teamId, roundNum: round);
     for (final key in ['income', 'balance', 'cashflow', 'ratios']) {
       final stmtData = currentRound[key] as Map<String, dynamic>?;
@@ -224,8 +234,12 @@ class GameRepository {
     return _api.get(ApiEndpoints.health);
   }
 
+<<<<<<< Updated upstream
+=======
+  /// Clears this device's cache. The server cache is cleared by the facilitator
+  /// (POST /cache/clear with the password, FacilitatorRepository.clearServerCache).
+>>>>>>> Stashed changes
   Future<void> clearCache() async {
     await _cache.clearAll();
-    await _api.get(ApiEndpoints.cacheClear);
   }
 }

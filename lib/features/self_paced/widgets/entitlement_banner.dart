@@ -4,11 +4,29 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../data/models/entitlement.dart';
 import '../../../providers/self_paced_provider.dart';
+import '../../auth/providers/self_paced_plan_provider.dart';
+
+/// Someone who had prepaid (voucher) or paid (self_paced) access never had a
+/// "free trial" to end, so their lapsed notice speaks of the access period
+/// (website home.tsx, d7b7752).
+bool hadPaidAccess(String? plan) => plan == 'voucher' || plan == 'self_paced';
+
+/// Prepaid (voucher) access is dated too, but its learners are reminded only in
+/// the last two weeks — not on every visit of a year-long grant (website).
+bool isVoucherEnding(Entitlement ent, String? plan) =>
+    ent.reason == 'subscription' &&
+    plan == 'voucher' &&
+    ent.accessUntil != null &&
+    ent.daysRemaining <= 14;
 
 /// Reflects self-paced access state and offers to subscribe (in-app MamoPay checkout):
 ///   • on trial  → a countdown ("N days left") + a Subscribe button
-///   • lapsed     → an "access ended" notice + a Subscribe button
+///   • voucher in its last 14 days → "Your access ends in N days" + Subscribe
+///   • lapsed     → an "access ended" notice + a Subscribe button (worded for the
+///                  access period, not the free trial, when the learner had paid
+///                  or prepaid access)
 ///   • otherwise  → nothing (active subscription / student / comp / enforcement off)
 class EntitlementBanner extends ConsumerWidget {
   const EntitlementBanner({super.key});
@@ -16,29 +34,38 @@ class EntitlementBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ent = ref.watch(selfPacedProvider).entitlement;
+    final plan = ref.watch(selfPacedPlanProvider);
     final s = ref.watch(stringsProvider);
 
     if (ent.isLapsed) {
-      return _AccessEndedCard(strings: s);
+      return _AccessEndedCard(strings: s, paidAccess: hadPaidAccess(plan));
     }
     if (ent.isTrial && ent.enforced) {
       return _TrialCountdownCard(strings: s, days: ent.daysRemaining);
+    }
+    if (ent.enforced && isVoucherEnding(ent, plan)) {
+      return _TrialCountdownCard(strings: s, days: ent.daysRemaining, voucher: true);
     }
     return const SizedBox.shrink();
   }
 }
 
 class _TrialCountdownCard extends StatelessWidget {
-  const _TrialCountdownCard({required this.strings, required this.days});
+  const _TrialCountdownCard({required this.strings, required this.days, this.voucher = false});
   final AppStrings strings;
   final int days;
+  final bool voucher; // prepaid access ending, not a free trial
 
   @override
   Widget build(BuildContext context) {
     final urgent = days <= 1;
     final accent = urgent ? const Color(0xFFDC2626) : const Color(0xFFD97706);
 
-    final headline = days <= 0
+    final headline = voucher
+        // Website wording: "Your access ends in N day(s). Subscribe to keep full access."
+        ? strings.tr('Your access ends in $days day${days == 1 ? '' : 's'}.',
+            'تنتهي فترة وصولك خلال $days ${days == 1 ? 'يوم' : 'أيام'}.')
+        : days <= 0
         ? strings.tr('Your free trial has ended', 'انتهت تجربتك المجانية')
         : days == 1
             ? strings.tr('1 day left in your free trial', 'يتبقى يوم واحد من تجربتك المجانية')
@@ -71,7 +98,9 @@ class _TrialCountdownCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  strings.tr('Subscribe to keep full access', 'اشترك للحفاظ على وصولك الكامل'),
+                  voucher
+                      ? strings.tr('Subscribe to keep full access.', 'اشترك للاحتفاظ بالوصول الكامل.')
+                      : strings.tr('Subscribe to keep full access', 'اشترك للحفاظ على وصولك الكامل'),
                   style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
                 ),
               ],
@@ -86,8 +115,9 @@ class _TrialCountdownCard extends StatelessWidget {
 }
 
 class _AccessEndedCard extends StatelessWidget {
-  const _AccessEndedCard({required this.strings});
+  const _AccessEndedCard({required this.strings, required this.paidAccess});
   final AppStrings strings;
+  final bool paidAccess;
 
   @override
   Widget build(BuildContext context) {
@@ -109,8 +139,12 @@ class _AccessEndedCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Website wording (home.tsx): the access period for a learner who
+                // had prepaid or paid access, the free trial otherwise.
                 Text(
-                  strings.tr('Your access has ended', 'انتهى وصولك'),
+                  paidAccess
+                      ? strings.tr('Your access period has ended', 'انتهت فترة وصولك')
+                      : strings.tr('Your free trial has ended', 'انتهت تجربتك المجانية'),
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -119,7 +153,7 @@ class _AccessEndedCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  strings.tr('Subscribe to continue learning', 'اشترك لمواصلة التعلّم'),
+                  strings.tr('Subscribe to keep learning.', 'اشترك لمواصلة التعلّم.'),
                   style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
                 ),
               ],
@@ -165,6 +199,7 @@ class AccessEndedView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
+    final paidAccess = hadPaidAccess(ref.watch(selfPacedPlanProvider));
     const accent = Color(0xFFDC2626);
 
     return Center(
@@ -194,10 +229,11 @@ class AccessEndedView extends ConsumerWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              s.tr(
-                'Your free trial or subscription is no longer active. Subscribe to continue learning.',
-                'لم تعد تجربتك المجانية أو اشتراكك نشطاً. اشترك لمواصلة التعلّم.',
-              ),
+              paidAccess
+                  ? s.tr('Your access period has ended - subscribe to keep learning.',
+                      'انتهت فترة وصولك - اشترك لمواصلة التعلّم.')
+                  : s.tr('Your free trial has ended - subscribe to keep learning.',
+                      'انتهت تجربتك المجانية - اشترك لمواصلة التعلّم.'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context), height: 1.5),
             ),

@@ -9,6 +9,7 @@ import '../widgets/module_kit.dart';
 import '../../../providers/game_metrics_provider.dart';
 import '../../../shared/widgets/trend_line_chart.dart';
 import '../../../app/i18n/app_strings.dart';
+import 'credit_rating_screen.dart' show CreditRatingScale;
 
 /// WACC — Weighted Average Cost of Capital.
 /// WACC = (E/V)·Re + (D/V)·Rd·(1−T)
@@ -28,14 +29,16 @@ class _WaccScreenState extends ConsumerState<WaccScreen> {
   double _debt = 400000;
 
   // Costs / assumptions (percent)
-  double _costEquity = 12; // Re (used when CAPM inputs are collapsed)
-  double _costDebt = 6; // Rd (manual)
-  double _taxRate = 15; // Tc
+  // Defaults as on the website (server/routes/wacc.ts DEFAULTS): Rf 4% + ERP 7% = Re 11%,
+  // cost-of-debt fallback 5%, tax-rate fallback 20%.
+  double _costEquity = 11; // Re (used when CAPM inputs are collapsed)
+  double _costDebt = 5; // Rd (manual)
+  double _taxRate = 20; // Tc
 
   // CAPM breakdown: Re = Rf + ERP. Off by default (single Re slider).
   bool _useRfErp = false;
   double _riskFree = 4; // Rf
-  double _erp = 8; // Equity risk premium (Rf + ERP = 12 = default Re)
+  double _erp = 7; // Equity risk premium (Rf + ERP = 11 = default Re)
 
   // Use a credit-rating-implied cost of debt (derived from leverage) instead of
   // the manual Rd slider, mirroring the website's rating linkage.
@@ -48,9 +51,16 @@ class _WaccScreenState extends ConsumerState<WaccScreen> {
   /// Cost of equity — from Rf + ERP when the CAPM breakdown is enabled.
   double get _re => _useRfErp ? _riskFree + _erp : _costEquity;
 
-  /// Rating-implied pre-tax cost of debt: a base spread over the risk-free rate
-  /// that widens as the firm takes on more leverage (D/V).
-  double get _ratingImpliedRd => _riskFree + 1.5 + _debtWeight * 6;
+  // Inputs for the rating-implied cost of debt (website wacc.ts cross-module feedback):
+  // the synthetic credit rating from Debt/EBITDA and EBITDA/Interest sets the spread.
+  double _ebitda = 300000;
+  double _interest = 25000;
+
+  int get _ratingIdx =>
+      CreditRatingScale.rate(debt: _debt, ebitda: _ebitda, interest: _interest);
+
+  /// Rating-implied pre-tax cost of debt = Rf + the rating band's spread (percent).
+  double get _ratingImpliedRd => _riskFree + CreditRatingScale.spreads[_ratingIdx] * 100;
   double get _rd => _useRatingImpliedRd ? _ratingImpliedRd : _costDebt;
 
   double get _afterTaxRd => _rd * (1 - _taxRate / 100);
@@ -411,9 +421,30 @@ class _WaccScreenState extends ConsumerState<WaccScreen> {
                 _useRatingImpliedRd,
                 (v) => setState(() => _useRatingImpliedRd = v),
               ),
-              if (_useRatingImpliedRd)
-                _derivedRow(s.tr('Rd (rating-implied from leverage)', 'Rd (مستنتجة من التصنيف بناءً على الرافعة)'), '${_rd.toStringAsFixed(1)}%')
-              else
+              if (_useRatingImpliedRd) ...[
+                SliderRow(
+                  label: s.tr('EBITDA', 'الأرباح قبل الفوائد والضرائب والإهلاك (EBITDA)'),
+                  value: _ebitda,
+                  min: 0,
+                  max: 2000000,
+                  prefix: 'SAR ',
+                  divisions: 40,
+                  onChanged: (v) => setState(() => _ebitda = v),
+                ),
+                SliderRow(
+                  label: s.tr('Interest Expense', 'مصروف الفائدة'),
+                  value: _interest,
+                  min: 0,
+                  max: 300000,
+                  prefix: 'SAR ',
+                  divisions: 60,
+                  onChanged: (v) => setState(() => _interest = v),
+                ),
+                _derivedRow(
+                    s.tr('Rd (rating-implied: ${CreditRatingScale.letters[_ratingIdx]})',
+                        'Rd (مستنتجة من التصنيف: ${CreditRatingScale.letters[_ratingIdx]})'),
+                    '${_rd.toStringAsFixed(2)}%'),
+              ] else
                 SliderRow(
                   label: s.tr('Cost of Debt (Rd)', 'تكلفة الدين (Rd)'),
                   value: _costDebt,

@@ -9,6 +9,50 @@ import '../../../providers/game_metrics_provider.dart';
 import '../../../shared/widgets/trend_line_chart.dart';
 import '../../../app/i18n/app_strings.dart';
 
+/// Dividend metrics, computed as the website's server/routes/dividends.ts and
+/// client/src/pages/dividends.tsx (1fb94ba) do.
+///
+///   payout    = dividends / net income when NI > 0; 0 when NI and dividends are both 0;
+///               otherwise undefined (null)
+///   retention = 1 − payout
+///   ROE       = net income / total equity (null unless equity > 0)
+///   SGR       = retention × ROE — with zero dividends retention is 100%, so SGR = ROE
+class DividendMetrics {
+  final double? payout;
+  final double? retention;
+  final double? roe;
+  final double? sgr;
+
+  /// Website policy classification: no-policy, reinvestment, growth, balanced, mature,
+  /// cash-return.
+  final String classification;
+
+  const DividendMetrics._(this.payout, this.retention, this.roe, this.sgr, this.classification);
+
+  static String classify(double? payout) {
+    if (payout == null) return 'no-policy';
+    if (payout <= 0) return 'reinvestment';
+    if (payout < 0.2) return 'growth';
+    if (payout < 0.4) return 'balanced';
+    if (payout < 0.7) return 'mature';
+    return 'cash-return';
+  }
+
+  factory DividendMetrics.compute({
+    required double netIncome,
+    required double dividends,
+    required double totalEquity,
+  }) {
+    final d = dividends.abs();
+    final double? payout =
+        netIncome > 0 ? d / netIncome : (netIncome == 0 && d == 0 ? 0 : null);
+    final retention = payout == null ? null : 1 - payout;
+    final double? roe = totalEquity > 0 ? netIncome / totalEquity : null;
+    final sgr = roe == null || retention == null ? null : retention * roe;
+    return DividendMetrics._(payout, retention, roe, sgr, classify(payout));
+  }
+}
+
 /// Dividend Policy — payout ratio, retention rate and policy classification.
 class DividendsScreen extends ConsumerStatefulWidget {
   const DividendsScreen({super.key});
@@ -29,10 +73,12 @@ class _DividendsScreenState extends ConsumerState<DividendsScreen> {
 
   double _netIncome = 200000;
   double _dividends = 60000;
+  double _equity = 1000000;
 
-  double get _payout =>
-      _netIncome > 0 ? (_dividends / _netIncome).clamp(0, 2) : 0;
-  double get _retention => 1 - _payout;
+  DividendMetrics get _m =>
+      DividendMetrics.compute(netIncome: _netIncome, dividends: _dividends, totalEquity: _equity);
+  double get _payout => _m.payout ?? 0;
+  double get _retention => _m.retention ?? 0;
   double get _retainedEarnings => _netIncome - _dividends;
 
   @override
@@ -47,39 +93,39 @@ class _DividendsScreenState extends ConsumerState<DividendsScreen> {
   List<double?> _netIncomeSeries(GameMetricsState m) =>
       m.series((fd) => fd.netIncome);
 
+  /// Labels and bands as on the website (server/routes/dividends.ts POLICY_LABEL).
   _Policy _policyOf(AppStrings s) {
-    if (_dividends <= 0) {
-      return _Policy(s.tr('No Dividend', 'بدون توزيعات'),
-          s.tr('All earnings reinvested — no cash returned to shareholders.',
-              'إعادة استثمار كل الأرباح — لا نقد يُعاد إلى المساهمين.'),
-          AppColors.darkTextSecondary);
-    }
-    final p = _payout;
-    if (p <= 0.10) {
-      return _Policy(s.tr('Reinvestment', 'إعادة الاستثمار'),
-          s.tr('Almost all earnings retained to fund growth.',
-              'الاحتفاظ بمعظم الأرباح تقريبًا لتمويل النمو.'),
-          AppColors.primaryLight);
-    } else if (p <= 0.30) {
-      return _Policy(s.tr('Growth', 'النمو'),
-          s.tr('Modest payout; most earnings reinvested for expansion.',
-              'توزيع متواضع؛ إعادة استثمار معظم الأرباح للتوسّع.'),
-          AppColors.secondaryLight);
-    } else if (p <= 0.50) {
-      return _Policy(s.tr('Balanced', 'متوازن'),
-          s.tr('A balance between rewarding shareholders and reinvesting.',
-              'توازن بين مكافأة المساهمين وإعادة الاستثمار.'),
-          AppColors.info);
-    } else if (p <= 0.70) {
-      return _Policy(s.tr('Mature', 'ناضج'),
-          s.tr('Majority of earnings paid out — typical of stable, mature firms.',
-              'توزيع غالبية الأرباح — نموذجي للشركات الناضجة المستقرة.'),
-          AppColors.accentLight);
-    } else {
-      return _Policy(s.tr('Cash-Return', 'إعادة النقد'),
-          s.tr('Returning most or all earnings — limited reinvestment.',
-              'إعادة معظم الأرباح أو كلها — إعادة استثمار محدودة.'),
-          AppColors.warning);
+    switch (_m.classification) {
+      case 'no-policy':
+        return _Policy(s.tr('No Earnings', 'لا أرباح'),
+            s.tr('No net income this period - dividend policy undefined.',
+                'لا يوجد صافي دخل في هذه الفترة - سياسة التوزيعات غير محددة.'),
+            AppColors.darkTextSecondary);
+      case 'reinvestment':
+        return _Policy(s.tr('Full Reinvestment', 'إعادة استثمار كاملة'),
+            s.tr('All earnings reinvested. Signals high growth opportunities or capital needs.',
+                'إعادة استثمار كل الأرباح. يشير إلى فرص نمو مرتفعة أو احتياجات رأسمالية.'),
+            AppColors.primaryLight);
+      case 'growth':
+        return _Policy(s.tr('Growth-Oriented', 'موجّهة للنمو'),
+            s.tr('Low payout. Most cash reinvested in growth.',
+                'توزيع منخفض. إعادة استثمار معظم النقد في النمو.'),
+            AppColors.secondaryLight);
+      case 'balanced':
+        return _Policy(s.tr('Balanced', 'متوازن'),
+            s.tr('Moderate payout. Mix of returns and reinvestment.',
+                'توزيع معتدل. مزيج من العوائد وإعادة الاستثمار.'),
+            AppColors.info);
+      case 'mature':
+        return _Policy(s.tr('Mature', 'ناضج'),
+            s.tr('High payout. Returns most earnings; limited growth runway.',
+                'توزيع مرتفع. إعادة معظم الأرباح؛ مجال نمو محدود.'),
+            AppColors.accentLight);
+      default:
+        return _Policy(s.tr('Cash-Return Heavy', 'تركيز على إعادة النقد'),
+            s.tr('Very high payout. Signals limited reinvestment opportunities - value play.',
+                'توزيع مرتفع جدًا. يشير إلى فرص إعادة استثمار محدودة - استثمار قيمي.'),
+            AppColors.warning);
     }
   }
 
@@ -157,6 +203,18 @@ class _DividendsScreenState extends ConsumerState<DividendsScreen> {
         ),
         const SizedBox(height: 12),
         ConceptCard(
+          icon: Icons.trending_up_rounded,
+          title: s.tr('Sustainable Growth Rate', 'معدل النمو المستدام'),
+          body: s.tr(
+              'The growth the company can fund without new equity or more leverage. '
+              'With zero dividends retention is 100%, so SGR simply equals ROE.',
+              'النمو الذي تستطيع الشركة تمويله دون حقوق ملكية جديدة أو رافعة إضافية. '
+              'عند عدم توزيع أرباح يكون الاحتجاز 100%، فيساوي معدل النمو المستدام العائد على حقوق الملكية.'),
+          formula: 'SGR = Retention Rate × ROE',
+          color: AppColors.secondaryLight,
+        ),
+        const SizedBox(height: 12),
+        ConceptCard(
           icon: Icons.timeline_rounded,
           title: s.tr('What policy signals', 'ماذا تشير إليه السياسة'),
           body: s.tr(
@@ -227,6 +285,41 @@ class _DividendsScreenState extends ConsumerState<DividendsScreen> {
             ),
           ],
         ).animate().fadeIn(delay: 250.ms),
+        const SizedBox(height: 10),
+
+        // Sustainable Growth Rate (website 1fb94ba).
+        Builder(builder: (context) {
+          final m = _m;
+          String pct(double? v) => v == null ? '-' : '${(v * 100).toStringAsFixed(2)}%';
+          return GlassCard(
+            key: const ValueKey('metric-sgr'),
+            borderColor: AppColors.secondaryLight.withValues(alpha: 0.35),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.tr('Sustainable Growth Rate', 'معدل النمو المستدام'),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                Text('Retention Rate × ROE',
+                    style: TextStyle(
+                        fontSize: 10, fontFamily: 'monospace', color: AppColors.textTertiary(context))),
+                const SizedBox(height: 6),
+                Text(pct(m.sgr),
+                    style: const TextStyle(
+                        fontSize: 26, fontWeight: FontWeight.w800, color: AppColors.secondaryLight)),
+                const SizedBox(height: 4),
+                Text(
+                    s.tr('The growth the company can fund without new equity or more leverage.',
+                        'النمو الذي تستطيع الشركة تمويله دون حقوق ملكية جديدة أو رافعة إضافية.'),
+                    style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary(context))),
+                const SizedBox(height: 2),
+                Text('ROE ${pct(m.roe)} × ${s.tr('Retention', 'الاحتجاز')} ${pct(m.retention)}',
+                    style: TextStyle(
+                        fontSize: 10, fontFamily: 'monospace', color: AppColors.textTertiary(context))),
+              ],
+            ),
+          );
+        }).animate().fadeIn(delay: 275.ms),
         const SizedBox(height: 14),
 
         // Split donut
@@ -332,6 +425,15 @@ class _DividendsScreenState extends ConsumerState<DividendsScreen> {
                   _netIncome = v;
                   if (_dividends > _netIncome) _dividends = _netIncome;
                 }),
+              ),
+              SliderRow(
+                label: s.tr('Total Equity', 'إجمالي حقوق الملكية'),
+                value: _equity,
+                min: 100000,
+                max: 5000000,
+                prefix: 'SAR ',
+                divisions: 49,
+                onChanged: (v) => setState(() => _equity = v),
               ),
               SliderRow(
                 label: s.tr('Dividends Paid', 'التوزيعات المدفوعة'),

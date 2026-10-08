@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,8 +19,21 @@ import '../../../shared/widgets/animated_counter.dart';
 import '../../../shared/widgets/shimmer_loading.dart';
 import '../../../shared/widgets/header_timer.dart';
 import '../../../shared/widgets/active_shocks_display.dart';
-import '../../../core/utils/constants.dart';
+import '../../../core/network/api_client.dart' show httpStatusKey;
+import '../../../core/network/api_endpoints.dart';
+import '../../../data/repositories/self_paced_repository.dart' show isSubscriptionRequiredError;
+import '../../../providers/repository_providers.dart';
+import '../../self_paced/widgets/entitlement_banner.dart' show AccessEndedView;
 import '../widgets/pdf_report_button.dart';
+import '../widgets/round_report_link.dart';
+import '../widgets/statement_compare_table.dart';
+import '../logic/statement_analysis.dart';
+import '../logic/ratio_format.dart';
+import '../logic/covenant_metrics.dart';
+import '../providers/statement_compare_provider.dart';
+import '../providers/realism_flags_provider.dart';
+import '../../debrief/widgets/round_analysis_section.dart';
+import '../../achievements/widgets/performance_index_leaderboard.dart';
 import '../../../app/i18n/app_strings.dart';
 import '../../../shared/widgets/ai_tooltip_button.dart';
 
@@ -37,6 +51,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   final Set<int> _loadedTabs = {0}; // Track which tabs have been loaded
 
+  // "Compare with" choice for the statement tables: null = the round before the one shown
+  // (website d9314e8). Variance and common-size columns, both on by default (b3abe28).
+  int? _compareRound;
+  AnalysisShow _analysisShow = const AnalysisShow();
+
+  // Corporate teams follow the facilitator out of the results page (website e79f66c,
+  // 1224147). A team lands here when its round is over; when the facilitator opens the
+  // next round the team's stored module flips from 'dashboard' to 'financing' (or, for a
+  // team that arrived from the operating screen, the round number goes up). Without this
+  // the team sat on the results page with no way back to its decisions.
+  static const _decisionModules = ['financing', 'investing', 'operating'];
+  Timer? _roundOpenPollTimer;
+  String? _openModule;
+  int? _openRound;
+  bool _openHasConfirmed = false;
+  ({String module, int round})? _lastSeenProgression;
+  bool _leavingForDecisions = false;
+
   @override
   void initState() {
     super.initState();
@@ -45,14 +77,104 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
       ref.read(gameMetricsProvider.notifier).load();
+      _pollTeamProgression();
+      _roundOpenPollTimer =
+          Timer.periodic(const Duration(seconds: 5), (_) => _pollTeamProgression());
     });
   }
 
   @override
   void dispose() {
+    _roundOpenPollTimer?.cancel();
     _stmtTabController.removeListener(_onTabChanged);
     _stmtTabController.dispose();
     super.dispose();
+  }
+
+  /// GET /team-progression/status/{teamId} every 5s while a corporate team is on results.
+  Future<void> _pollTeamProgression() async {
+    final team = ref.read(teamProvider).selectedTeam;
+    if (!mounted || team == null || _leavingForDecisions) return;
+    try {
+      final res = await ref.read(apiClientProvider).get(
+            '${ApiEndpoints.teamProgression}/${Uri.encodeComponent(team.id)}',
+          );
+      if (!mounted || res[httpStatusKey] != null) return;
+      final module = res['currentModule']?.toString();
+      final round = (res['currentRound'] as num?)?.toInt() ?? 0;
+      if (module == null) return;
+      final prev = _lastSeenProgression;
+      _lastSeenProgression = (module: module, round: round);
+      setState(() {
+        _openModule = module;
+        _openRound = round;
+        _openHasConfirmed = res['hasConfirmedDecisions'] == true;
+      });
+      if (prev == null || !_decisionModules.contains(module)) return;
+      // Two ways the facilitator reopens decisions for a team parked here: the module was
+      // 'dashboard' and becomes a decision module, or the round number goes up.
+      if (prev.module == 'dashboard' || round > prev.round) _goToDecisions();
+    } catch (_) {/* keep polling */}
+  }
+
+  /// A team that confirmed its operating decisions is done with the round: its module
+  /// still reads 'operating', but there is nothing left to decide.
+  bool get _decisionsOpen {
+    final module = _openModule;
+    if (module == null || !_decisionModules.contains(module)) return false;
+    return !(module == 'operating' && _openHasConfirmed);
+  }
+
+  void _goToDecisions() {
+    if (!mounted || _leavingForDecisions) return;
+    final team = ref.read(teamProvider).selectedTeam;
+    final module = _openModule;
+    // Seed the cached team so the simulation does not start from a stale module.
+    if (team != null && module != null && _decisionModules.contains(module)) {
+      ref.read(teamProvider.notifier).updateTeamFromSocket(team
+          .copyWith(currentModule: module, currentRound: _openRound)
+          .toJson());
+    }
+    _leavingForDecisions = true;
+    ref.read(gameStateProvider.notifier).fetchGameState();
+    context.go('/simulation');
+  }
+
+  Widget _buildRoundOpenCta(BuildContext context, AppStrings s) {
+    final round = _openRound ?? 1;
+    final module = _openModule ?? 'financing';
+    final moduleLabel = switch (module) {
+      'investing' => s.tr('investing', 'الاستثمار'),
+      'operating' => s.tr('operating', 'التشغيل'),
+      _ => s.tr('financing', 'التمويل'),
+    };
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: GlassCard(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              const Icon(Icons.lock_open_rounded, color: AppColors.secondary, size: 26),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  s.tr('Round $round $moduleLabel is open', 'قرارات $moduleLabel للجولة $round مفتوحة'),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: _goToDecisions,
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                label: Text(s.tr('Go to decisions', 'الذهاب إلى القرارات')),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.secondary),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _onTabChanged() {
@@ -83,7 +205,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   /// Live latest-round value for a card (null when no game data). Returns the
   /// display value and, for covenants, whether the leverage covenant is breached.
-  (String?, bool) _cardMetric(String route, FinancialData? fd) {
+  (String?, bool) _cardMetric(String route, FinancialData? fd, RealismFlags flags) {
     if (fd == null) return (null, false);
     double? currentRatio() {
       for (final r in fd.ratioRows) {
@@ -97,7 +219,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       case '/education/cap-table':
         return ('Equity ${k(fd.totalEquity)}', false);
       case '/education/covenants':
-        return (de == null ? null : 'D/E ${de.toStringAsFixed(2)}', de != null && de > 3.0);
+        // Debt/EBITDA against the facilitator's leverage covenant (default max 4.0x),
+        // derived as the website's covenants route does.
+        final cov = CovenantMetrics.fromFinancials(fd);
+        final dte = cov.debtToEbitda;
+        final breached = cov.leverageBreached(flags.maxDebtToEbitda) ||
+            cov.coverageBreached(flags.minInterestCoverage);
+        return ('Debt/EBITDA ${dte == null ? 'n/m' : '${dte.toStringAsFixed(2)}x'}', breached);
       case '/education/credit-rating':
         return (de == null ? null : 'Lev ${de.toStringAsFixed(2)}', false);
       case '/education/dividends':
@@ -112,9 +240,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     }
   }
 
-  Widget _buildAnalyticsCards() {
+  /// Which realism flag gates each analytics card (website RealismModulesRow).
+  static const _cardFlags = {
+    '/education/cap-table': 'capTableEnabled',
+    '/education/covenants': 'debtCovenantsEnabled',
+    '/education/credit-rating': 'creditRatingEnabled',
+    '/education/dividends': 'dividendPolicyEnabled',
+    '/education/dupont': 'duPontEnabled',
+    '/education/wacc': 'waccEnabled',
+    '/education/working-capital': 'workingCapitalEnabled',
+  };
+
+  Widget _buildAnalyticsCards({required bool selfPaced}) {
     final fd = ref.watch(gameMetricsProvider).latest;
     final s = ref.watch(stringsProvider);
+    // A corporate team sees only the modules the facilitator enabled; a self-paced learner
+    // has no facilitator and sees them all (website use-realism-flag.ts ALL_ON).
+    final flags = selfPaced
+        ? RealismFlags.allOn
+        : ref.watch(corporateRealismFlagsProvider).valueOrNull;
+    if (flags == null) return const SizedBox.shrink();
+    final items = [
+      for (final it in _analyticsItems)
+        if (it.$5 == '/ratios/liquidity'
+            ? flags.anyRatios
+            : flags.isOn(_cardFlags[it.$5] ?? ''))
+          it.$5 == '/ratios/liquidity'
+              ? (it.$1, it.$2, it.$3, it.$4, flags.firstRatiosRoute ?? it.$5)
+              : it,
+    ];
+    if (items.isEmpty) return const SizedBox.shrink();
     String trTitle(String en) => switch (en) {
           'Cap Table' => s.tr('Cap Table', 'جدول الملكية'),
           'Debt Covenants' => s.tr('Debt Covenants', 'تعهدات الدين'),
@@ -157,9 +312,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
             childAspectRatio: 1.9,
-            children: _analyticsItems.map((it) {
+            children: items.map((it) {
               final (title, subtitle, icon, color, route) = it;
-              final (value, breached) = _cardMetric(route, fd);
+              final (value, breached) = _cardMetric(route, fd, flags);
               return GlassCard(
                 onTap: () => context.push(route),
                 padding: const EdgeInsets.all(14),
@@ -215,6 +370,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final auth = ref.read(authProvider);
     // Use selected round, or fall back to active game round
     final round = _selectedRound > 0 ? _selectedRound : _activeRound;
+    ref.invalidate(statementCompareProvider);
     if (team != null) {
       ref.read(financialProvider.notifier).refreshAll(team.id, round: round);
     } else if (auth.user != null && !auth.isFacilitator) {
@@ -366,13 +522,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   /// saved as PDF. Mirrors the website's window.open of the same endpoint.
   Future<void> _openRoundReport(BuildContext context, String teamId) async {
     final s = ref.read(stringsProvider);
-    final raw = _selectedRound > 0 ? _selectedRound : _activeRound;
-    final round = raw < 1 ? 1 : (raw > 3 ? 3 : raw);
-    final uri = Uri.parse(
-      '${AppConstants.baseUrl}${AppConstants.apiPrefix}/reports/round-report/$teamId/$round',
-    );
+    final round = _selectedRound > 0 ? _selectedRound : _activeRound;
     bool ok = false;
     try {
+      // Carries the team-member token as ?token= (website 1cfce67); rounds clamp to 1–3.
+      final uri = await buildRoundReportUri(ref.read(apiClientProvider), teamId, round);
       ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       ok = false;
@@ -398,6 +552,42 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final data = financials.teamFinancials;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final s = ref.watch(stringsProvider);
+
+    // Statement comparison: the round shown against the chosen earlier period, fetched in
+    // one dashboard-data call (website d9314e8). Rounds 1..3 only; baseline has no compare.
+    final displayRound = _selectedRound > 0 ? _selectedRound : _activeRound;
+    final compareRound = resolveCompareRound(displayRound, _compareRound);
+    final StatementComparison? comparison = (data != null &&
+            displayRound >= 1 &&
+            displayRound <= 3 &&
+            (isSelfPaced || team != null))
+        ? ref
+            .watch(statementCompareProvider((
+              selfPaced: isSelfPaced,
+              teamId: team?.id ?? '',
+              round: displayRound,
+              compare: compareRound,
+            )))
+            .valueOrNull
+        : null;
+    final hasComparison = comparison != null && !comparison.current.isEmpty;
+
+    // Lapsed self-paced learner: /self-paced/progress/dashboard-data answers 402
+    // SUBSCRIPTION_REQUIRED. Show the access-ended notice instead of empty statements.
+    if (isSelfPaced &&
+        (isSubscriptionRequiredError(financials.error) ||
+            ref.watch(selfPacedProvider).entitlement.isLapsed)) {
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(gradient: AppColors.backgroundGradient(context)),
+          child: SafeArea(
+            child: AccessEndedView(
+              onBack: () => context.canPop() ? context.pop() : context.go('/self-paced-progress'),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Container(
@@ -449,6 +639,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           tooltip: s.tr('Multi-Round Trends', 'اتجاهات متعددة الجولات'),
                           onPressed: () => context.push('/multi-round-dashboard'),
                         ),
+                        IconButton(
+                          icon: const Icon(Icons.military_tech_rounded),
+                          tooltip: s.tr('Achievements', 'الإنجازات'),
+                          onPressed: () => context.push('/achievements'),
+                        ),
                         if (team != null)
                           IconButton(
                             icon: const Icon(Icons.picture_as_pdf_rounded, size: 20),
@@ -463,6 +658,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 // Self-paced: the round ends here on the dashboard. Once results
                 // are in, this proceeds to the next round (website parity).
                 if (isSelfPaced) _buildSelfPacedContinueCta(context, s),
+
+                // Corporate: the facilitator has opened (or reopened) decisions.
+                if (!isSelfPaced && team != null && _decisionsOpen)
+                  _buildRoundOpenCta(context, s),
 
                 // Feature 1: Round Selector
                 SliverToBoxAdapter(
@@ -502,15 +701,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                 ? (authState.user?.displayName ?? s.tr('Self-Paced', 'التعلّم الذاتي'))
                                 : (team?.name ?? s.tr('Your Team', 'فريقك')),
                             teamColor: team != null ? AppColors.teamColor(team.teamNumber - 1) : AppColors.primaryLight,
+                            showScore: !isSelfPaced,
                           ),
                   ),
                 ),
 
-                // Live Leaderboard (after hero score card)
-                _LiveLeaderboard(
-                  financials: financials,
-                  onRetry: () => ref.read(financialProvider.notifier).fetchLeaderboard(),
-                ),
+                // Performance-index leaderboard (corporate only).
+                if (!isSelfPaced)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: PerformanceIndexLeaderboard(highlightTeamId: team?.id),
+                    ),
+                  ),
 
                 // KPI Row
                 SliverToBoxAdapter(
@@ -553,6 +756,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                   ),
 
+                  if (displayRound >= 1 && displayRound <= 3)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: StatementCompareControls(
+                          currentRound: displayRound,
+                          compareRound: compareRound,
+                          show: _analysisShow,
+                          onCompareChanged: (r) => setState(() => _compareRound = r),
+                          onShowChanged: (v) => setState(() => _analysisShow = v),
+                        ),
+                      ),
+                    ),
+
                   SliverToBoxAdapter(
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -589,15 +806,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                       height: 420, // Taller to fit real Excel data rows
                       child: TabBarView(
                         controller: _stmtTabController,
-                        children: [
-                          _IncomeStatement(data: data),
-                          _BalanceSheet(data: data), // Feature 3: includes validation
-                          _CashFlowStatement(data: data),
-                          _RatiosView(data: data),
-                        ],
+                        children: hasComparison
+                            ? [
+                                StatementCompareTable(
+                                    kind: StatementKind.income,
+                                    comparison: comparison,
+                                    show: _analysisShow),
+                                StatementCompareTable(
+                                    kind: StatementKind.balance,
+                                    comparison: comparison,
+                                    show: _analysisShow),
+                                StatementCompareTable(
+                                    kind: StatementKind.cashFlow,
+                                    comparison: comparison,
+                                    show: _analysisShow),
+                                RatioCompareTable(comparison: comparison),
+                              ]
+                            : [
+                                _IncomeStatement(data: data),
+                                _BalanceSheet(data: data), // Feature 3: includes validation
+                                _CashFlowStatement(data: data),
+                                _RatiosView(data: data),
+                              ],
                       ),
                     ),
                   ),
+
+                  // Round Analysis: decision impact waterfall + AI debrief coach.
+                  if (displayRound >= 1 && displayRound <= 3 && (isSelfPaced || team != null))
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                        child: RoundAnalysisSection(
+                          key: ValueKey('round-analysis-$displayRound'),
+                          teamId: team?.id ?? '',
+                          round: displayRound,
+                          selfPaced: isSelfPaced,
+                        ),
+                      ),
+                    ),
                 ],
 
                 // Feature 2: All-Teams Ratio Analysis
@@ -613,7 +860,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
                 // Advanced analytics — quick access to the per-team analysis
                 // tools the website surfaces as dashboard cards.
-                SliverToBoxAdapter(child: _buildAnalyticsCards()),
+                SliverToBoxAdapter(child: _buildAnalyticsCards(selfPaced: isSelfPaced)),
 
                 // Revenue Chart
                 if (financials.allTeamFinancials.isNotEmpty)
@@ -831,7 +1078,11 @@ class _HeroScoreCard extends StatelessWidget {
   final String teamName;
   final Color teamColor;
 
-  const _HeroScoreCard({required this.score, required this.rank, this.isScoreLoading = false, required this.teamName, required this.teamColor});
+  /// Self-paced learners have no team score: the website's self-paced dashboard shows
+  /// none, and the corporate 'Team 1' row is not theirs.
+  final bool showScore;
+
+  const _HeroScoreCard({required this.score, required this.rank, this.isScoreLoading = false, required this.teamName, required this.teamColor, this.showScore = true});
 
   @override
   Widget build(BuildContext context) {
@@ -855,7 +1106,10 @@ class _HeroScoreCard extends StatelessWidget {
               children: [
                 Text(teamName, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
                 const SizedBox(height: 4),
-                if (isScoreLoading && score == 0)
+                if (!showScore)
+                  Text(s.tr('Your results', 'نتائجك'),
+                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800))
+                else if (isScoreLoading && score == 0)
                   Row(
                     children: [
                       const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white70)),
@@ -868,12 +1122,14 @@ class _HeroScoreCard extends StatelessWidget {
                     value: score,
                     style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w800),
                   ),
-                const SizedBox(height: 2),
-                Text(s.tr('Total Score', 'النتيجة الإجمالية'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                if (showScore) ...[
+                  const SizedBox(height: 2),
+                  Text(s.tr('Index / 100', 'المؤشر / 100'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                ],
               ],
             ),
           ),
-          if (rank > 0)
+          if (showScore && rank > 0)
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -895,218 +1151,6 @@ class _HeroScoreCard extends StatelessWidget {
   }
 }
 
-// ============================================================
-// Live Leaderboard (receives data from parent to avoid nested ConsumerWidget)
-// ============================================================
-class _LiveLeaderboard extends StatelessWidget {
-  final FinancialState financials;
-  final VoidCallback? onRetry;
-  const _LiveLeaderboard({required this.financials, this.onRetry});
-
-  String _fmtMoney(double v) {
-    final abs = v.abs();
-    final sign = v < 0 ? '-' : '';
-    if (abs >= 1000000) return '$sign\$${(abs / 1000000).toStringAsFixed(1)}M';
-    if (abs >= 1000) return '$sign\$${(abs / 1000).toStringAsFixed(1)}k';
-    return '$sign\$${abs.toStringAsFixed(0)}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Use current leaderboard, or fall back to previous while loading
-    final leaderboard = financials.leaderboard.isNotEmpty
-        ? financials.leaderboard
-        : financials.previousLeaderboard;
-
-    // Sort by score descending
-    final sorted = List<LeaderboardEntry>.from(leaderboard);
-    sorted.sort((a, b) => b.score.compareTo(a.score));
-
-    final roundLabel = sorted.isNotEmpty ? 'R${sorted.first.roundNum}' : '';
-
-    return SliverToBoxAdapter(
-      child: Consumer(builder: (context, ref, _) {
-        final s = ref.watch(stringsProvider);
-        return Container(
-        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: GlassCard(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.leaderboard_rounded, size: 18, color: AppColors.accentLight),
-                  const SizedBox(width: 8),
-                  Text(s.tr('Live Leaderboard', 'لوحة الصدارة المباشرة'), style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  const Spacer(),
-                  if (roundLabel.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(roundLabel, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryLight)),
-                    ),
-                  const SizedBox(width: 6),
-                  Container(
-                    width: 8, height: 8,
-                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.secondaryLight),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(s.tr('Live', 'مباشر'), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.secondaryLight)),
-                ],
-              ),
-              const SizedBox(height: 10),
-              if (sorted.isEmpty && financials.leaderboardFailed)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      children: [
-                        Text(s.tr('Failed to load', 'فشل التحميل'), style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context))),
-                        const SizedBox(height: 6),
-                        TextButton.icon(
-                          onPressed: onRetry,
-                          icon: const Icon(Icons.refresh, size: 16),
-                          label: Text(s.tr('Retry', 'إعادة المحاولة'), style: const TextStyle(fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else if (sorted.isEmpty)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
-                  ),
-                )
-              else ...[
-                // Header row
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 30),
-                      Expanded(flex: 3, child: Text(s.tr('Team', 'الفريق'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textTertiary(context)))),
-                      SizedBox(width: 46, child: Text(s.tr('Score', 'النتيجة'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textTertiary(context)), textAlign: TextAlign.center)),
-                      const SizedBox(width: 6),
-                      SizedBox(width: 30, child: Icon(Icons.local_fire_department_rounded, size: 12, color: AppColors.textTertiary(context))),
-                      SizedBox(width: 50, child: Text(s.tr('ROE', 'العائد'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textTertiary(context)), textAlign: TextAlign.right)),
-                      SizedBox(width: 60, child: Text(s.tr('Net Inc.', 'صافي الدخل'), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textTertiary(context)), textAlign: TextAlign.right)),
-                    ],
-                  ),
-                ),
-                Divider(height: 1, color: AppColors.borderColor(context).withValues(alpha: 0.2)),
-                const SizedBox(height: 4),
-                for (final entry in sorted.asMap().entries) _buildTeamRow(context, entry.key, entry.value),
-                const SizedBox(height: 4),
-                Divider(height: 1, color: AppColors.borderColor(context).withValues(alpha: 0.2)),
-                const SizedBox(height: 4),
-                Text(
-                  s.tr('${sorted.length} teams • 30s refresh', '${sorted.length} فرق • تحديث كل 30 ثانية'),
-                  style: TextStyle(fontSize: 10, color: AppColors.textTertiary(context)),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
-      }),
-    );
-  }
-
-  Widget _buildTeamRow(BuildContext context, int index, LeaderboardEntry item) {
-    final name = item.displayName.isNotEmpty ? item.displayName : item.teamName;
-    final teamIdx = int.tryParse(item.teamId.replaceAll(RegExp(r'[^0-9]'), '')) ?? (index + 1);
-    final color = AppColors.teamColor((teamIdx - 1).clamp(0, 6));
-
-    IconData? rankIcon;
-    if (index == 0) {
-      rankIcon = Icons.emoji_events_rounded;
-    } else if (index == 1) {
-      rankIcon = Icons.workspace_premium_rounded;
-    } else if (index == 2) {
-      rankIcon = Icons.military_tech_rounded;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      decoration: BoxDecoration(
-        color: index == 0 ? AppColors.accentLight.withValues(alpha: 0.06) : null,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 30,
-            child: rankIcon != null
-                ? Icon(rankIcon, size: 16, color: index == 0 ? Colors.amber : index == 1 ? Colors.grey.shade400 : Colors.brown.shade300)
-                : Text('#${index + 1}', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textTertiary(context))),
-          ),
-          Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                Container(width: 6, height: 6, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
-                const SizedBox(width: 6),
-                Flexible(child: Text(name, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textPrimary(context)), overflow: TextOverflow.ellipsis)),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 46,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                item.score.toStringAsFixed(1),
-                style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          SizedBox(
-            width: 30,
-            child: item.isCashRich
-                ? const Icon(Icons.check_box_rounded, size: 14, color: AppColors.secondaryLight)
-                : const Icon(Icons.close_rounded, size: 14, color: AppColors.dangerLight),
-          ),
-          SizedBox(
-            width: 50,
-            child: Text(
-              '${item.roe.toStringAsFixed(1)}%',
-              style: GoogleFonts.jetBrainsMono(fontSize: 10, fontWeight: FontWeight.w500, color: AppColors.textSecondary(context)),
-              textAlign: TextAlign.right,
-            ),
-          ),
-          SizedBox(
-            width: 60,
-            child: Text(
-              _fmtMoney(item.netIncome),
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: item.netIncome >= 0 ? AppColors.secondaryLight : AppColors.dangerLight,
-              ),
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================
-// KPI Chip
-// ============================================================
 class _KpiChip extends StatelessWidget {
   final String label;
   final double value;
@@ -1241,20 +1285,21 @@ class _RatiosView extends StatelessWidget {
           case 'Market': color = const Color(0xFF8B5CF6); break;
           default: color = AppColors.primaryLight;
         }
-        // Ratios are displayed as percentages or multiples
-        final isPercent = r.title.contains('Margin') || r.title.contains('Return') || r.title.contains('Ratio');
-        return _StmtRow(r.title, r.value * (isPercent ? 100 : 1), color,
-            suffix: isPercent ? '%' : 'x', bold: r.isHeader,
+        // One ratio formatter shared with the comparison table (website 3b6e645):
+        // percentages, multiples with an x, everything else to one decimal.
+        return _StmtRow(r.title.trim(), r.value, color,
+            display: formatRatio(r.title.trim(), r.rawValue), bold: r.isHeader,
             aiType: r.isHeader ? null : _inferRatioType(r.title));
       }).toList());
     }
-    // Fallback
-    final equity = data.totalEquity > 0 ? data.totalEquity : data.totalAssets * 0.45;
-    final roe = equity > 0 ? (data.netIncome / equity) * 100 : 0.0;
+    // Fallback: ROE from the statements; n/m on zero or negative equity, as the engine does.
+    final double? roe = data.totalEquity > 0 ? data.netIncome / data.totalEquity : null;
     return Consumer(builder: (context, ref, _) {
       final s = ref.watch(stringsProvider);
       return _StatementList(rows: [
-        _StmtRow(s.tr('Return on Equity', 'العائد على حقوق الملكية'), roe, roe >= 0 ? AppColors.secondaryLight : AppColors.dangerLight, suffix: '%', aiType: 'profitability'),
+        _StmtRow(s.tr('Return on Equity', 'العائد على حقوق الملكية'), roe ?? 0,
+            (roe ?? 0) >= 0 ? AppColors.secondaryLight : AppColors.dangerLight,
+            display: formatRatio('Return on Equity', roe), aiType: 'profitability'),
       ]);
     });
   }
@@ -1288,43 +1333,59 @@ class _TeamRatiosTable extends StatelessWidget {
           _ => label,
         };
 
-    // Compute ratios for all teams
-    final ratioData = <_RatioRow>[];
+    // Compute ratios for all teams. Prefer the engine's own ratio rows; otherwise derive
+    // from the statements. Nothing is invented: a ratio that cannot be computed reads "-"
+    // (or "n/m" where the engine voids it), never a placeholder value.
+    double? engineRatio(FinancialData d, bool Function(String t) pick) {
+      for (final r in d.ratioRows) {
+        if (pick(r.title.trim().toLowerCase())) return r.value;
+      }
+      return null;
+    }
 
-    // ROE
-    final roeValues = allTeamFinancials.map((d) {
-      final equity = d.totalEquity > 0 ? d.totalEquity : d.totalAssets * 0.45;
-      return equity > 0 ? (d.netIncome / equity) * 100 : 0.0;
-    }).toList();
-    ratioData.add(_RatioRow('ROE', roeValues, '%'));
-
-    // Profit Margin
-    final pmValues = allTeamFinancials.map((d) {
-      return d.revenue > 0 ? (d.netIncome / d.revenue) * 100 : 0.0;
-    }).toList();
-    ratioData.add(_RatioRow('Profit Margin', pmValues, '%'));
-
-    // Asset Turnover
-    final atValues = allTeamFinancials.map((d) {
-      return d.totalAssets > 0 ? d.revenue / d.totalAssets : 0.0;
-    }).toList();
-    ratioData.add(_RatioRow('Asset Turnover', atValues, 'x'));
-
-    // Current Ratio
-    final crValues = allTeamFinancials.map((d) {
-      final cr = d.ratios?['currentRatio'];
-      if (cr is num) return cr.toDouble();
-      return 1.8;
-    }).toList();
-    ratioData.add(_RatioRow('Current Ratio', crValues, 'x'));
-
-    // Debt-to-Equity
-    final deValues = allTeamFinancials.map((d) {
-      final liab = d.totalLiabilities > 0 ? d.totalLiabilities : d.totalAssets * 0.55;
-      final equity = d.totalEquity > 0 ? d.totalEquity : d.totalAssets * 0.45;
-      return equity > 0 ? liab / equity : 0.0;
-    }).toList();
-    ratioData.add(_RatioRow('Debt/Equity', deValues, 'x'));
+    final ratioData = <_RatioRow>[
+      _RatioRow(
+          'ROE',
+          'Return on Equity (ROE)',
+          allTeamFinancials
+              .map((d) =>
+                  engineRatio(d, (t) => t.contains('return on equity')) ??
+                  (d.totalEquity > 0 ? d.netIncome / d.totalEquity : null))
+              .toList()),
+      _RatioRow(
+          'Profit Margin',
+          'Net Profit Margin',
+          allTeamFinancials
+              .map((d) =>
+                  engineRatio(d, (t) => t.contains('net profit margin')) ??
+                  (d.revenue != 0 ? d.netIncome / d.revenue : null))
+              .toList()),
+      _RatioRow(
+          'Asset Turnover',
+          'Total Asset Turnover',
+          allTeamFinancials
+              .map((d) =>
+                  engineRatio(d, (t) => t.contains('asset turnover')) ??
+                  (d.totalAssets != 0 ? d.revenue / d.totalAssets : null))
+              .toList()),
+      _RatioRow(
+          'Current Ratio',
+          'Current Ratio',
+          allTeamFinancials.map((d) {
+            final engine = engineRatio(d, (t) => t.contains('current ratio'));
+            if (engine != null) return engine;
+            final cr = d.ratios?['currentRatio'];
+            return cr is num ? cr.toDouble() : null;
+          }).toList()),
+      _RatioRow(
+          'Debt/Equity',
+          'Debt to Equity Ratio',
+          allTeamFinancials
+              .map((d) =>
+                  engineRatio(d, (t) => t.contains('debt to equity')) ??
+                  (d.totalEquity > 0 ? d.totalLiabilities / d.totalEquity : null))
+              .toList()),
+    ];
 
     return GlassCard(
       padding: const EdgeInsets.all(16),
@@ -1366,13 +1427,12 @@ class _TeamRatiosTable extends StatelessWidget {
               rows: ratioData.map((ratio) {
                 // Find best performer index
                 final isLowerBetter = ratio.label == 'Debt/Equity';
-                int bestIdx = 0;
-                for (int i = 1; i < ratio.values.length; i++) {
-                  if (isLowerBetter) {
-                    if (ratio.values[i] < ratio.values[bestIdx]) bestIdx = i;
-                  } else {
-                    if (ratio.values[i] > ratio.values[bestIdx]) bestIdx = i;
-                  }
+                int bestIdx = -1;
+                for (int i = 0; i < ratio.values.length; i++) {
+                  final v = ratio.values[i];
+                  if (v == null) continue;
+                  final best = bestIdx < 0 ? null : ratio.values[bestIdx];
+                  if (best == null || (isLowerBetter ? v < best : v > best)) bestIdx = i;
                 }
 
                 return DataRow(
@@ -1392,7 +1452,7 @@ class _TeamRatiosTable extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            '${ratio.values[i].toStringAsFixed(1)}${ratio.suffix}',
+                            formatRatio(ratio.formatName, ratio.values[i]),
                             style: GoogleFonts.jetBrainsMono(
                               fontSize: 11,
                               fontWeight: i == bestIdx ? FontWeight.w700 : FontWeight.w400,
@@ -1416,229 +1476,15 @@ class _TeamRatiosTable extends StatelessWidget {
 
 class _RatioRow {
   final String label;
-  final List<double> values;
-  final String suffix;
-  _RatioRow(this.label, this.values, this.suffix);
+
+  /// The engine's ratio name, which decides the format (percent / multiple / number).
+  final String formatName;
+  final List<double?> values;
+  _RatioRow(this.label, this.formatName, this.values);
 }
 
 // ============================================================
-// Features 4 & 5: Leaderboard Entry with Rank Change + Expandable Metrics
-// ============================================================
-class _LeaderboardEntryTile extends StatefulWidget {
-  final LeaderboardEntry entry;
-  final int index;
-  final bool isMe;
-  final int selectedRound;
-  final List<LeaderboardEntry> previousLeaderboard;
-
-  const _LeaderboardEntryTile({
-    required this.entry,
-    required this.index,
-    required this.isMe,
-    required this.selectedRound,
-    required this.previousLeaderboard,
-  });
-
-  @override
-  State<_LeaderboardEntryTile> createState() => _LeaderboardEntryTileState();
-}
-
-class _LeaderboardEntryTileState extends State<_LeaderboardEntryTile> {
-  bool _expanded = false;
-
-  int? _previousRank() {
-    if (widget.previousLeaderboard.isEmpty) return null;
-    final prev = widget.previousLeaderboard
-        .where((e) => e.teamId == widget.entry.teamId)
-        .firstOrNull;
-    if (prev == null) return null;
-    // Find rank by position in sorted list
-    final idx = widget.previousLeaderboard.indexOf(prev);
-    return prev.rank > 0 ? prev.rank : idx + 1;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final item = widget.entry;
-    final medals = ['\u{1F947}', '\u{1F948}', '\u{1F949}']; // gold, silver, bronze
-    final currentRank = widget.index + 1;
-    final prevRank = _previousRank();
-
-    return GestureDetector(
-      onTap: () => setState(() => _expanded = !_expanded),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: widget.isMe ? AppColors.primary.withValues(alpha: 0.08) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: widget.isMe ? Border.all(color: AppColors.primary.withValues(alpha: 0.2)) : null,
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                // Rank
-                SizedBox(
-                  width: 28,
-                  child: widget.index < 3
-                      ? Text(medals[widget.index], style: const TextStyle(fontSize: 18))
-                      : Text('#$currentRank', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textTertiary(context))),
-                ),
-                const SizedBox(width: 4),
-
-                // Feature 4: Rank change indicator
-                SizedBox(
-                  width: 36,
-                  child: _buildRankChange(context, currentRank, prevRank),
-                ),
-                const SizedBox(width: 4),
-
-                // Team avatar
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.teamColor(widget.index % 7).withValues(alpha: 0.2),
-                  child: Text(item.teamName.split(' ').first, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.teamColor(widget.index % 7))),
-                ),
-                const SizedBox(width: 10),
-                Expanded(child: Text(item.teamName, style: Theme.of(context).textTheme.titleSmall)),
-                AnimatedCounter(
-                  value: item.score,
-                  style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.accentLight),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                  size: 18,
-                  color: AppColors.textTertiary(context),
-                ),
-              ],
-            ),
-
-            // Feature 5: Expandable metrics
-            AnimatedCrossFade(
-              firstChild: const SizedBox.shrink(),
-              secondChild: _buildExpandedMetrics(context, item),
-              crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 200),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRankChange(BuildContext context, int currentRank, int? prevRank) {
-    // Round 1 or no previous data
-    if (widget.selectedRound <= 1 && widget.previousLeaderboard.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        decoration: BoxDecoration(
-          color: AppColors.info.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: const Text(
-          'NEW',
-          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: AppColors.info),
-        ),
-      );
-    }
-
-    if (prevRank == null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-        decoration: BoxDecoration(
-          color: AppColors.info.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: const Text(
-          'NEW',
-          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: AppColors.info),
-        ),
-      );
-    }
-
-    final diff = prevRank - currentRank; // positive = improved
-    if (diff == 0) {
-      return Text(
-        '--',
-        style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
-        textAlign: TextAlign.center,
-      );
-    }
-
-    final improved = diff > 0;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          improved ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-          size: 12,
-          color: improved ? AppColors.secondaryLight : AppColors.dangerLight,
-        ),
-        Text(
-          '${diff.abs()}',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: improved ? AppColors.secondaryLight : AppColors.dangerLight,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildExpandedMetrics(BuildContext context, LeaderboardEntry item) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10, left: 32),
-      child: Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: [
-          _metricChip(context, 'Net Income', '\$${_fmtVal(item.netIncome)}', AppColors.primaryLight),
-          _metricChip(context, 'Revenue', '\$${_fmtVal(item.revenue)}', AppColors.secondaryLight),
-          _metricChip(context, 'Assets', '\$${_fmtVal(item.totalAssets)}', AppColors.accentLight),
-          _metricChip(context, 'ROE', '${item.roe.toStringAsFixed(1)}%', item.roe >= 0 ? AppColors.secondaryLight : AppColors.dangerLight),
-          _metricChip(context, 'Asset Turn.', '${item.assetTurnover.toStringAsFixed(2)}x', AppColors.info),
-        ],
-      ),
-    );
-  }
-
-  Widget _metricChip(BuildContext context, String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label, style: TextStyle(fontSize: 9, color: AppColors.textTertiary(context), fontWeight: FontWeight.w500)),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _fmtVal(double value) {
-    final abs = value.abs();
-    final sign = value < 0 ? '-' : '';
-    if (abs >= 1000000) return '$sign${(abs / 1000000).toStringAsFixed(1)}M';
-    if (abs >= 1000) return '$sign${(abs / 1000).toStringAsFixed(1)}k';
-    return '$sign${abs.toStringAsFixed(0)}';
-  }
-}
-
-// ============================================================
-// Statement list helper
+// Statement checks, rows and list
 // ============================================================
 
 /// Balance-sheet "Balanced?" check plus a cash-flow vs balance-sheet
@@ -1739,14 +1585,16 @@ class _StmtRow {
   final double value;
   final Color color;
   final bool bold;
-  final String? suffix;
 
   /// When non-null, an AI tooltip button is shown for this row (ratio rows).
   /// Holds the inferred ratio category ('liquidity'/'solvency'/etc.).
   final String? aiType;
 
+  /// Preformatted value text (ratio rows); amounts are formatted as currency otherwise.
+  final String? display;
+
   _StmtRow(this.label, this.value, this.color,
-      {this.bold = false, this.suffix, this.aiType});
+      {this.bold = false, this.aiType, this.display});
 }
 
 /// Infers a loose ratio category from a ratio title (matches the website's
@@ -1802,9 +1650,7 @@ class _StatementList extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  row.suffix != null
-                      ? '${row.value.toStringAsFixed(1)}${row.suffix}'
-                      : '\$${_formatValue(row.value)}',
+                  row.display ?? _formatValue(row.value),
                   style: GoogleFonts.jetBrainsMono(
                     fontSize: 13,
                     fontWeight: row.bold ? FontWeight.w700 : FontWeight.w500,
@@ -1815,10 +1661,15 @@ class _StatementList extends StatelessWidget {
                   const SizedBox(width: 8),
                   AiTooltipButton(
                     term: row.label,
+<<<<<<< Updated upstream
                     type: row.aiType!,
                     value: row.suffix != null
                         ? '${row.value.toStringAsFixed(1)}${row.suffix}'
                         : row.value.toStringAsFixed(2),
+=======
+                    type: row.aiType,
+                    value: row.display ?? row.value.toStringAsFixed(2),
+>>>>>>> Stashed changes
                     color: row.color,
                   ),
                 ],
@@ -1830,11 +1681,13 @@ class _StatementList extends StatelessWidget {
     );
   }
 
+  /// Negative amounts carry their sign ahead of the currency: -$120.0k, not $-120.0k
+  /// (website 3b6e645).
   String _formatValue(double value) {
     final abs = value.abs();
     final sign = value < 0 ? '-' : '';
-    if (abs >= 1000000) return '$sign${(abs / 1000000).toStringAsFixed(1)}M';
-    if (abs >= 1000) return '$sign${(abs / 1000).toStringAsFixed(1)}k';
-    return '$sign${abs.toStringAsFixed(0)}';
+    if (abs >= 1000000) return '$sign\$${(abs / 1000000).toStringAsFixed(1)}M';
+    if (abs >= 1000) return '$sign\$${(abs / 1000).toStringAsFixed(1)}k';
+    return '$sign\$${abs.toStringAsFixed(0)}';
   }
 }

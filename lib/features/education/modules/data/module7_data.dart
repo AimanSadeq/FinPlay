@@ -1,1054 +1,279 @@
+// GENERATED from the website's bilingual education content
+// (finance-gamification client/src/data/education-modules, module7-*.ts) by the
+// FinPlay module generator. Do not hand-edit: regenerate so the app stays a faithful
+// port of the website (slides, key terms, and every Practice / Games / Sim activity).
+// ignore_for_file: lines_longer_than_80_chars
+import '../case_scenario_data.dart';
 import '../education_module_data.dart';
 
 const module7Data = EducationModuleContent(
   id: 7,
   title: 'IFRS vs IPSAS Standards',
-  gameTitle: 'Match IPSAS Standards',
-  gameDescription: 'Match each IPSAS standard with its topic.',
-  gameType: GameType.memoryMatch,
+  titleAr: 'معايير IFRS مقابل IPSAS',
   slides: [
-    // Slide 7.1 - IFRS vs IPSAS: An Overview
-    {
-      'title': '7.1 IFRS vs IPSAS: An Overview',
-      'content':
-          'IFRS (International Financial Reporting Standards) and IPSAS (International Public Sector Accounting Standards) are the two dominant global accounting frameworks. IFRS is developed by the International Accounting Standards Board (IASB) and serves private-sector companies listed on capital markets. IPSAS is developed by the International Public Sector Accounting Standards Board (IPSASB) and serves government entities and public-sector organizations.\n\n'
-          'IPSAS was deliberately built on the foundation of IFRS. Where a private-sector standard can be applied to the public sector without modification, IPSAS adopts the same treatment and references the equivalent IFRS. This "IFRS convergence" approach ensures that the two frameworks share a common technical language and measurement philosophy wherever possible.\n\n'
-          'However, the public sector has transactions and accountability requirements that simply do not exist in the private sector. Governments collect taxes, distribute social benefits, manage heritage assets, and are accountable to citizens rather than shareholders. These realities demand standards that go beyond what IFRS provides.\n\n'
-          'This module is organized into two parts. Part 1 examines the similarities \u2014 areas where IPSAS mirrors IFRS in measurement, recognition, presentation, and group accounting. Part 2 explores the differences \u2014 areas where IPSAS deliberately diverges to address public-sector realities. Understanding both is essential for anyone working at the intersection of public and private finance.',
-      'keyPoint':
-          'IFRS serves private sector; IPSAS serves public sector \u2022 IPSAS is built on IFRS \u2014 convergence by design \u2022 Public sector realities require standards beyond IFRS \u2022 This module covers both similarities and differences',
-    },
-    // Slide 7.2 - Similarities: Measurement & Valuation
-    {
-      'title': '7.2 Similarities: Measurement & Valuation',
-      'content':
-          'When it comes to measuring and valuing assets, IFRS and IPSAS adopt the same approaches across four major categories. This alignment is intentional \u2014 if a measurement technique works for private-sector assets, it generally works for public-sector assets too.\n\n'
-          'Property, Plant & Equipment (PP&E): Both IAS 16 and IPSAS 17 allow entities to choose between the cost model (carry at cost minus accumulated depreciation) and the revaluation model (carry at fair value with periodic revaluations). The recognition criteria, component depreciation, and derecognition rules are virtually identical.\n\n'
-          'Investment Property: IAS 40 and IPSAS 16 both permit the cost model or the fair value model for property held for rental income or capital appreciation. Changes in fair value flow through surplus/profit or loss under both frameworks.\n\n'
-          'Financial Instruments: IFRS 9 and IPSAS 41 share the same three-bucket classification \u2014 Amortized Cost, Fair Value through Other Comprehensive Income (FVOCI), and Fair Value through Profit or Loss (FVTPL). Both use the Expected Credit Loss (ECL) impairment model, which recognizes credit losses before they actually occur.\n\n'
-          'Biological Assets: IAS 41 and IPSAS 27 both require measurement at fair value less costs to sell, with changes recognized in surplus or profit or loss. This covers agricultural assets such as livestock, crops, and forestry.',
-      'keyPoint':
-          'PP&E: Cost model or revaluation model (IAS 16 / IPSAS 17) \u2022 Investment Property: Cost or fair value model (IAS 40 / IPSAS 16) \u2022 Financial Instruments: Same classification + ECL model (IFRS 9 / IPSAS 41) \u2022 Biological Assets: Fair value less costs to sell (IAS 41 / IPSAS 27)',
-    },
-    // Slide 7.3 - Similarities: Recognition
-    {
-      'title': '7.3 Similarities: Recognition',
-      'content':
-          'Recognition \u2014 deciding when to record a transaction in the financial statements \u2014 follows the same principles under both IFRS and IPSAS across five key areas.\n\n'
-          'Accrual Basis: Both frameworks require accrual-basis accounting. Transactions are recognized when they occur, not when cash changes hands. This is the foundational principle that makes both frameworks comparable and complete.\n\n'
-          'Leases: Under IFRS 16 and IPSAS 43, lessees recognize a right-of-use (ROU) asset and a corresponding lease liability for nearly all leases. This eliminates off-balance-sheet financing and gives a truer picture of obligations. The measurement of the ROU asset and liability follows the same present-value approach.\n\n'
-          'Employee Benefits: IAS 19 and IPSAS 39 both use the projected unit credit method for defined benefit pension plans. Remeasurements (actuarial gains and losses) are recognized through Other Comprehensive Income (OCI) or net assets, not through surplus/profit or loss. This prevents pension volatility from distorting operating performance.\n\n'
-          'Provisions: Under IAS 37 and IPSAS 19, a provision is recognized when three conditions are met: (1) a present obligation exists from a past event, (2) an outflow of resources is probable, and (3) a reliable estimate can be made. The conditions are identical in both frameworks.\n\n'
-          'Foreign Currency: IAS 21 and IPSAS 4 share the functional currency concept. Transactions are initially recorded at the exchange rate on the transaction date, and monetary items are retranslated at the closing rate, with exchange differences recognized in surplus or profit or loss.',
-      'keyPoint':
-          'Accrual basis is foundational to both frameworks \u2022 Leases: ROU asset + lease liability (IFRS 16 / IPSAS 43) \u2022 Provisions: Same 3-condition test (IAS 37 / IPSAS 19) \u2022 Employee benefits: Same actuarial method (IAS 19 / IPSAS 39) \u2022 Foreign currency: Same functional currency approach (IAS 21 / IPSAS 4)',
-    },
-    // Slide 7.4 - Similarities: Presentation, Disclosure & Groups
-    {
-      'title': '7.4 Similarities: Presentation, Disclosure & Groups',
-      'content':
-          'Beyond measurement and recognition, IFRS and IPSAS also align on how financial information is presented, how changes and errors are handled, and how group entities are accounted for.\n\n'
-          'Cash Flow Statement: IAS 7 and IPSAS 2 both require the same three categories \u2014 operating, investing, and financing activities. The direct and indirect methods are both permitted. This consistency allows cross-sector comparison of how entities generate and use cash.\n\n'
-          'Accounting Policy Changes & Errors: Under IAS 8 and IPSAS 3, voluntary policy changes and correction of prior-period errors are applied retrospectively \u2014 meaning prior-period comparatives are restated as if the new policy (or correct treatment) had always been applied. This maintains comparability over time.\n\n'
-          'Events After the Reporting Date: IAS 10 and IPSAS 14 make the same distinction between adjusting events (conditions existed at reporting date \u2014 adjust the statements) and non-adjusting events (arose after reporting date \u2014 disclose only). This ensures statements reflect information available at the reporting date.\n\n'
-          'Joint Arrangements: IFRS 11 and IPSAS 37 distinguish joint operations (account for assets, liabilities, revenues, expenses directly) from joint ventures (equity method). Associates: IAS 28 and IPSAS 36 both use the equity method to account for entities where the investor has significant influence but not control.\n\n'
-          'These shared presentation and group accounting rules mean that the structure and logic of financial statements are recognizable across both sectors \u2014 a powerful benefit for professionals who work in both worlds.',
-      'keyPoint':
-          'Cash flow: Same 3 categories (IAS 7 / IPSAS 2) \u2022 Policy changes & errors: Retrospective application (IAS 8 / IPSAS 3) \u2022 Post-reporting events: Adjusting vs non-adjusting (IAS 10 / IPSAS 14) \u2022 Joint arrangements: Same classification (IFRS 11 / IPSAS 37) \u2022 Associates: Equity method (IAS 28 / IPSAS 36)',
-    },
-    // Slide 7.5 - Why IPSAS Diverges: The Public Sector Context
-    {
-      'title': '7.5 Why IPSAS Diverges: The Public Sector Context',
-      'content':
-          'Before examining the specific differences, it is essential to understand why IPSAS needs to diverge from IFRS at all. The answer lies in three fundamental distinctions between the public and private sectors.\n\n'
-          'Different Users, Different Needs: IFRS is designed for investors, lenders, and creditors who make capital allocation decisions. IPSAS is designed for citizens, legislators, donors, and oversight bodies who evaluate whether public resources are being used responsibly. An investor asks "Will I get a return?" A citizen asks "Are my taxes being used well?"\n\n'
-          'Service Potential vs Economic Benefits: Under IFRS, an asset must generate future economic benefits \u2014 cash inflows \u2014 to be recognized. But many government assets (roads, parks, hospitals, military equipment) do not generate cash. They generate service potential \u2014 the ability to deliver public services. IPSAS recognizes this broader concept.\n\n'
-          'Accountability vs Profitability: The private sector measures success through profit. The public sector measures success through stewardship \u2014 the responsible management and accountability for resources entrusted by citizens. This shifts the entire orientation of financial reporting from "How much did we earn?" to "How well did we manage public resources?"\n\n'
-          'These three differences \u2014 different users, service potential, and stewardship focus \u2014 are the root cause of every technical difference you will see in the following slides. When you encounter a difference between IFRS and IPSAS, trace it back to one of these three drivers.',
-      'keyPoint':
-          'IFRS users: investors and creditors; IPSAS users: citizens and legislators \u2022 IFRS: future economic benefits; IPSAS: also service potential \u2022 Private sector: profitability focus; Public sector: stewardship focus \u2022 These 3 drivers explain every IFRS/IPSAS difference',
-    },
-    // Slide 7.6 - Differences: Conceptual & Framework
-    {
-      'title': '7.6 Differences: Conceptual & Framework',
-      'content':
-          'The most fundamental differences between IFRS and IPSAS sit at the conceptual framework level. These are not minor technical tweaks \u2014 they reflect entirely different purposes for financial reporting.\n\n'
-          'Primary Users: Under the IFRS Conceptual Framework, the primary users are existing and potential investors, lenders, and other creditors. Under the IPSAS Conceptual Framework, the primary users are citizens, their elected representatives (legislators), donors, lenders, and oversight bodies. This difference drives what information gets priority in the statements.\n\n'
-          'Performance Measure: IFRS uses "Profit or Loss" as the bottom-line performance measure (IAS 1). IPSAS uses "Surplus or Deficit" (IPSAS 1). While the calculation is similar, the terminology reflects the fact that governments do not exist to make a profit \u2014 a surplus means resources exceeded spending, not that the entity was "profitable."\n\n'
-          'Asset Recognition Concept: Under IFRS, an asset is recognized when it is expected to generate future economic benefits \u2014 essentially future cash inflows. Under IPSAS 17, an asset can also be recognized if it has service potential \u2014 the capacity to provide services that contribute to the entity\'s objectives, even if it never generates cash. This is why roads, parks, and military assets qualify as assets under IPSAS but would face challenges under a strict IFRS interpretation.',
-      'keyPoint':
-          'Users: Investors & creditors (IFRS) vs Citizens & legislators (IPSAS) \u2022 Bottom line: Profit or Loss (IFRS) vs Surplus or Deficit (IPSAS) \u2022 Assets: Economic benefits only (IFRS) vs Also service potential (IPSAS) \u2022 These framework differences drive all specific technical differences',
-    },
-    // Slide 7.7 - Differences: Revenue & Income
-    {
-      'title': '7.7 Differences: Revenue & Income',
-      'content':
-          'Revenue recognition is where IFRS and IPSAS diverge most visibly. The private sector earns revenue from selling goods and services. The public sector receives much of its income without providing something of equal value in return \u2014 taxes, grants, fines, and donations.\n\n'
-          'Exchange Revenue: Under IFRS 15, revenue from contracts with customers follows a five-step model based on performance obligations. Under IPSAS 9, exchange revenue (fees for services, sales) uses a simpler model \u2014 revenue is recognized when it is probable that economic benefits or service potential will flow to the entity and the amount can be reliably measured.\n\n'
-          'Non-Exchange Revenue: This is the single biggest gap. IFRS has no equivalent \u2014 all transactions are assumed to be exchange-based. IPSAS 23 is a dedicated standard for non-exchange revenue: taxes, grants, fines, bequests, and donations. Revenue is recognized when conditions are met and the entity has control over the asset. The standard distinguishes between conditions (must be returned if not met) and restrictions (limit use but do not affect recognition).\n\n'
-          'Grants: Under IAS 20, government grants are recognized systematically to match related costs. Under IPSAS 23, grants with conditions create a liability until the conditions are fulfilled. Grants with restrictions only (no return obligation) are recognized as revenue immediately upon receipt.\n\n'
-          'Social Benefits: IFRS does not address social benefits at all \u2014 they are outside scope. IPSAS 42 specifically addresses welfare payments, public pensions, and healthcare obligations, recognizing them when eligibility criteria are met by the beneficiary. This is one of the most significant public-sector-only standards.',
-      'keyPoint':
-          'Exchange revenue: IFRS 15 five-step model vs IPSAS 9 simpler model \u2022 Non-exchange revenue: IPSAS 23 (no IFRS equivalent) \u2022 Grants: Conditions \u2192 liability (IPSAS 23) vs matching costs (IAS 20) \u2022 Social benefits: IPSAS 42 (outside IFRS scope entirely)',
-    },
-    // Slide 7.8 - Differences: Assets & Impairment
-    {
-      'title': '7.8 Differences: Assets & Impairment',
-      'content':
-          'Governments hold assets that the private sector rarely encounters \u2014 heritage buildings, national monuments, military equipment, and inventories meant for free distribution. These unique assets require unique accounting treatment.\n\n'
-          'Heritage Assets: Under IFRS, there is no specific guidance \u2014 heritage assets default to general PP&E rules (IAS 16). Under IPSAS 17, heritage assets are explicitly addressed. Recognition is encouraged but not required when reliable measurement is impossible (how do you value the Pyramids?). However, disclosure is always required, ensuring transparency even when recognition is not feasible.\n\n'
-          'Inventories for Free Distribution: Under IAS 2, all inventories are measured at the lower of cost and net realizable value (NRV). Under IPSAS 12, inventories held for free distribution or for a nominal charge are measured at the lower of cost and current replacement cost. NRV is irrelevant because the entity does not intend to sell the items.\n\n'
-          'Impairment: IFRS has a single impairment standard \u2014 IAS 36 \u2014 which measures recoverable amount based on expected cash flows. IPSAS has two standards: IPSAS 26 for cash-generating assets (similar to IAS 36) and IPSAS 21 for non-cash-generating assets, where impairment is measured by the decline in remaining service potential rather than cash flows.\n\n'
-          'Assets Held for Sale: IFRS 5 provides a separate classification for non-current assets held for sale \u2014 depreciation stops and the asset is measured at fair value less costs to sell. IPSAS has no direct equivalent. General measurement principles continue to apply.',
-      'keyPoint':
-          'Heritage assets: IPSAS explicitly addresses; IFRS has no specific guidance \u2022 Inventories for distribution: Replacement cost (IPSAS 12) vs NRV (IAS 2) \u2022 Impairment: Two IPSAS standards (cash + non-cash) vs one IFRS (IAS 36) \u2022 Assets held for sale: IFRS 5 separate class; no IPSAS equivalent',
-    },
-    // Slide 7.9 - Differences: Liabilities & Costs
-    {
-      'title': '7.9 Differences: Liabilities & Costs',
-      'content':
-          'Governments often engage in transactions that have no private-sector equivalent \u2014 lending money at below-market rates to support social objectives, or leasing property for a nominal amount to promote community use. These transactions create unique accounting challenges.\n\n'
-          'Borrowing Costs: Under IAS 23, entities must capitalize borrowing costs directly attributable to the acquisition, construction, or production of a qualifying asset. There is no choice \u2014 capitalization is mandatory. Under IPSAS 5, entities have a policy choice: they can capitalize borrowing costs or expense them immediately. This flexibility acknowledges that public-sector infrastructure projects may have different financing structures.\n\n'
-          'Concessionary Loans: These are loans made at below-market rates (e.g., a government lending to a social housing organization at 1% when the market rate is 5%). Under IFRS 9, there is no specific guidance for below-market loans. Under IPSAS 41, the day-one difference between the loan proceeds and its fair value is recognized as an expense reflecting the subsidy element. This makes the true cost of the concessionary policy transparent.\n\n'
-          'Peppercorn / Nominal Leases: Governments sometimes lease property at a token amount (e.g., SAR 1 per year) to support community organizations. Under IFRS 16, there is no specific guidance for such arrangements. Under IPSAS 43, the right-of-use asset is measured at fair value, and the difference between the fair value and the nominal payment is recognized as a day-one gain, reflecting the concessionary element received.',
-      'keyPoint':
-          'Borrowing costs: Must capitalize (IAS 23) vs Policy choice (IPSAS 5) \u2022 Concessionary loans: No specific IFRS guidance vs Day-one expense (IPSAS 41) \u2022 Peppercorn leases: No specific IFRS guidance vs Fair value ROU (IPSAS 43) \u2022 All three reflect unique public-sector financing arrangements',
-    },
-    // Slide 7.10 - Differences: Presentation & Disclosure
-    {
-      'title': '7.10 Differences: Presentation & Disclosure',
-      'content':
-          'While the underlying structure of financial statements is similar, IFRS and IPSAS differ significantly in what must be presented and disclosed \u2014 reflecting different accountability requirements.\n\n'
-          'Budget Reporting: This is perhaps the most distinctive IPSAS requirement. Under IPSAS 24, entities must present a comparison of budget versus actual amounts, with explanations for material variances. IFRS has no equivalent. Budgets are central to public-sector governance \u2014 legislatures approve spending through budgets, so reporting against them is fundamental to accountability.\n\n'
-          'Related Party Disclosures: Under IAS 24, related parties include key management personnel and their close family. Under IPSAS 20, the scope is much broader \u2014 it includes ministers, elected officials, senior political appointees, and their close family members. This broader scope reflects the unique concentration of power in the public sector.\n\n'
-          'Segment Reporting: Under IFRS 8, operating segments are based on how internal management reports to the chief operating decision maker. Under IPSAS 18, segments are defined by service type (education, health, defense) or geographic area, reflecting public accountability rather than internal management structure.\n\n'
-          'Interim Reporting: IAS 34 sets minimum content requirements for interim financial reports. IPSAS has no direct equivalent standard for interim reporting.\n\n'
-          'Earnings Per Share: IAS 33 requires disclosure of EPS for public companies. Under IPSAS, this concept is not applicable \u2014 governments do not have shareholders or traded shares.',
-      'keyPoint':
-          'Budget reporting: Mandatory under IPSAS 24; not required under IFRS \u2022 Related parties: Much broader scope under IPSAS 20 than IAS 24 \u2022 Segments: Service/geographic (IPSAS 18) vs management-based (IFRS 8) \u2022 No IPSAS equivalent for interim reporting (IAS 34) or EPS (IAS 33)',
-    },
-    // Slide 7.11 - Differences: Group Accounting & Combinations
-    {
-      'title': '7.11 Differences: Group Accounting & Combinations',
-      'content':
-          'Governments often control entities not through ownership of shares, but through legislation, regulation, or executive authority. This creates a fundamentally different concept of "control" that affects consolidation, combinations, and public-private partnerships.\n\n'
-          'Consolidation \u2014 Control Concept: Under IFRS 10, an investor controls an investee when it has power over the investee, exposure to variable returns, and the ability to use its power to affect those returns. Under IPSAS 35, control is broader \u2014 it includes control obtained through legislation, regulation, or binding administrative agreements. A ministry that sets the policy for an agency and can appoint its leadership has control, even without a single share.\n\n'
-          'Business Combinations: Under IFRS 3, acquisitions use the acquisition method and typically result in goodwill (the excess of purchase price over net assets). Under IPSAS 40, the standard covers amalgamations and restructurings that are common in government \u2014 merging two ministries or creating a new entity from parts of others. Goodwill is rare because these transactions often occur under common control without a purchase price.\n\n'
-          'Service Concessions / PPPs: IFRIC 12 addresses service concession arrangements from the operator\'s perspective \u2014 the private company that builds and operates the infrastructure. IPSAS 32 addresses the same arrangements from the government\'s (grantor\'s) perspective \u2014 recognizing the asset and the related liability or revenue. This is critical for public-private partnerships like toll roads and hospital management contracts.',
-      'keyPoint':
-          'Control: Power + returns (IFRS 10) vs Also legislation/regulation (IPSAS 35) \u2022 Combinations: Acquisition method + goodwill (IFRS 3) vs Amalgamations (IPSAS 40) \u2022 PPPs: Operator view (IFRIC 12) vs Grantor view (IPSAS 32) \u2022 Government control often comes from authority, not share ownership',
-    },
-    // Slide 7.12 - Differences: Transition & Adoption
-    {
-      'title': '7.12 Differences: Transition & Adoption',
-      'content':
-          'The path to adopting IFRS and IPSAS for the first time is different \u2014 reflecting the reality that many governments are transitioning from cash-basis accounting, a challenge that rarely exists in the private sector.\n\n'
-          'First-Time Adoption: Under IFRS 1, first-time adoption provides a set of mandatory exceptions and optional exemptions to ease the transition to IFRS. The expectation is that the entity was already using some form of accrual accounting under a national framework. Under IPSAS 33, first-time adoption provides a generous 3-year transitional relief period for entities moving from cash basis to accrual basis. During this period, entities are exempt from certain recognition and measurement requirements as they build systems and capacity.\n\n'
-          'Cash Basis Accounting: Under IFRS, cash-basis accounting is simply not permitted. All entities must use accrual accounting. IPSAS takes a more pragmatic approach \u2014 it provides a standalone Cash Basis IPSAS standard specifically for governments that are not yet ready for full accrual. This standard establishes minimum reporting requirements under the cash basis and serves as a stepping stone toward eventual accrual adoption.\n\n'
-          'This dual-track approach is one of the most practical differences between the frameworks. IPSAS acknowledges that many governments, especially in developing countries, need a gradual transition path. The journey typically follows three stages: (1) Cash Basis IPSAS \u2192 (2) Modified Accrual during transition \u2192 (3) Full Accrual IPSAS within the 3-year relief window of IPSAS 33.',
-      'keyPoint':
-          'IFRS 1: Mandatory exceptions + optional exemptions for first-time adopters \u2022 IPSAS 33: 3-year transitional relief from cash to accrual \u2022 Cash basis: Not permitted under IFRS; standalone standard under IPSAS \u2022 Transition path: Cash Basis \u2192 Modified Accrual \u2192 Full Accrual IPSAS',
-    },
-    // Slide 7.13 - Key Takeaways
-    {
-      'title': '7.13 Key Takeaways',
-      'content':
-          'IPSAS is largely derived from IFRS \u2014 the similarities are by design. Wherever a private-sector standard can apply to the public sector, IPSAS adopts the same treatment. This is true for PP&E measurement, financial instruments, leases, provisions, cash flow presentation, and many other areas.\n\n'
-          'The key differences stem from public sector realities that IFRS was never designed to address. Non-exchange revenue (taxes, grants), heritage assets, budget accountability, social benefits, concessionary loans, and broader definitions of control all require standards that go beyond what IFRS provides.\n\n'
-          'IFRS focuses on investor decision-making \u2014 helping capital markets allocate resources efficiently. IPSAS focuses on public accountability and stewardship \u2014 helping citizens evaluate whether their government is using public resources responsibly. The bottom line shifts from "profit" to "surplus/deficit," and the asset test shifts from "cash generation" to "service potential."\n\n'
-          'Both frameworks promote transparency, consistency, and comparability in financial reporting. A professional who understands IFRS has a strong foundation for understanding IPSAS, and vice versa. The differences are driven by purpose, not by arbitrary preference.\n\n'
-          'For governments transitioning from cash-basis accounting, IPSAS provides a practical path through Cash Basis IPSAS and the 3-year transitional relief of IPSAS 33. The destination is the same: high-quality, accrual-based financial reporting that serves the needs of all stakeholders.',
-      'keyPoint':
-          'Similarities are by design \u2014 IPSAS builds on IFRS wherever possible \u2022 Differences stem from public-sector realities, not arbitrary choices \u2022 IFRS = investor focus; IPSAS = public accountability focus \u2022 Both promote transparency, consistency, and comparability \u2022 Cash Basis IPSAS provides a transition path for developing governments',
-    },
+    {'id': 'section-7-1', 'number': '8.1', 'title': '8.1 IFRS vs IPSAS: An Overview', 'titleAr': '8.1 IFRS مقابل IPSAS: نظرة عامة', 'content': 'IFRS (International Financial Reporting Standards) and IPSAS (International Public Sector Accounting Standards) are the two dominant global accounting frameworks. IFRS is developed by the International Accounting Standards Board (IASB) and serves private-sector companies listed on capital markets. IPSAS is developed by the International Public Sector Accounting Standards Board (IPSASB) and serves government entities and public-sector organizations.\n\nIPSAS was deliberately built on the foundation of IFRS. Where a private-sector standard can be applied to the public sector without modification, IPSAS adopts the same treatment and references the equivalent IFRS. This "IFRS convergence" approach ensures that the two frameworks share a common technical language and measurement philosophy wherever possible.\n\nHowever, the public sector has transactions and accountability requirements that simply do not exist in the private sector. Governments collect taxes, distribute social benefits, manage heritage assets, and are accountable to citizens rather than shareholders. These realities demand standards that go beyond what IFRS provides.\n\nThis module is organized into two parts. Part 1 examines the similarities - areas where IPSAS mirrors IFRS in measurement, recognition, presentation, and group accounting. Part 2 explores the differences - areas where IPSAS deliberately diverges to address public-sector realities. Understanding both is essential for anyone working at the intersection of public and private finance.', 'contentAr': 'المعايير الدولية لإعداد التقارير المالية (IFRS) والمعايير المحاسبية الدولية للقطاع العام (IPSAS) هما الإطاران المحاسبيان العالميان المهيمنان. يطور IFRS مجلس معايير المحاسبة الدولية (IASB) ويخدم شركات القطاع الخاص المدرجة في أسواق المال. أما IPSAS فيطوره مجلس معايير المحاسبة الدولية للقطاع العام (IPSASB) ويخدم الجهات الحكومية ومنظمات القطاع العام.\n\nبُني IPSAS عمداً على أساس IFRS. حيث يمكن تطبيق معيار القطاع الخاص على القطاع العام دون تعديل، يتبنى IPSAS نفس المعاملة ويشير إلى معيار IFRS المكافئ. يضمن نهج "التقارب مع IFRS" هذا أن يتشارك الإطاران لغة فنية ومنهجية قياس مشتركة حيثما أمكن.\n\nومع ذلك، يواجه القطاع العام معاملات ومتطلبات مساءلة لا وجود لها في القطاع الخاص. فالحكومات تجمع الضرائب وتوزع المنافع الاجتماعية وتدير الأصول التراثية وتخضع للمساءلة أمام المواطنين لا المساهمين. تتطلب هذه الحقائق معايير تتجاوز ما يقدمه IFRS.\n\nتنقسم هذه الوحدة إلى جزأين. الجزء الأول يدرس أوجه التشابه - المجالات التي يعكس فيها IPSAS معايير IFRS في القياس والاعتراف والعرض والمحاسبة الجماعية. الجزء الثاني يستكشف الاختلافات - المجالات التي يتباعد فيها IPSAS عمداً لمعالجة واقع القطاع العام.', 'keyPoint': 'IFRS serves private sector; IPSAS serves public sector • IPSAS is built on IFRS - convergence by design • Public sector realities require standards beyond IFRS • This module covers both similarities and differences', 'keyPointAr': 'IFRS يخدم القطاع الخاص؛ IPSAS يخدم القطاع العام • IPSAS مبني على IFRS - تقارب بالتصميم • واقع القطاع العام يتطلب معايير تتجاوز IFRS • تغطي هذه الوحدة أوجه التشابه والاختلاف معاً', 'highlightType': 'info', 'highlight': 'IPSAS is derived from IFRS - so understanding one framework gives you a head start on the other.', 'highlightAr': 'IPSAS مشتق من IFRS - لذا فهم أحد الإطارين يمنحك بداية قوية في الآخر.', 'keyTerms': 'ifrs,ipsas,public-sector'},
+    {'id': 'section-7-2', 'number': '8.2', 'title': '8.2 Similarities: Measurement & Valuation', 'titleAr': '8.2 أوجه التشابه: القياس والتقييم', 'content': 'When it comes to measuring and valuing assets, IFRS and IPSAS adopt the same approaches across four major categories. This alignment is intentional - if a measurement technique works for private-sector assets, it generally works for public-sector assets too.\n\nProperty, Plant & Equipment (PP&E): Both IAS 16 and IPSAS 17 allow entities to choose between the cost model (carry at cost minus accumulated depreciation) and the revaluation model (carry at fair value with periodic revaluations). The recognition criteria, component depreciation, and derecognition rules are virtually identical.\n\nInvestment Property: IAS 40 and IPSAS 16 both permit the cost model or the fair value model for property held for rental income or capital appreciation. Changes in fair value flow through surplus/profit or loss under both frameworks.\n\nFinancial Instruments: IFRS 9 and IPSAS 41 share the same three-bucket classification - Amortized Cost, Fair Value through Other Comprehensive Income (FVOCI), and Fair Value through Profit or Loss (FVTPL). Both use the Expected Credit Loss (ECL) impairment model, which recognizes credit losses before they actually occur.\n\nBiological Assets: IAS 41 and IPSAS 27 both require measurement at fair value less costs to sell, with changes recognized in surplus or profit or loss. This covers agricultural assets such as livestock, crops, and forestry.', 'contentAr': 'عندما يتعلق الأمر بقياس وتقييم الأصول، يتبنى IFRS و IPSAS نفس المناهج عبر أربع فئات رئيسية. هذا التوافق مقصود - إذا نجحت تقنية قياس مع أصول القطاع الخاص، فإنها تنجح عموماً مع أصول القطاع العام أيضاً.\n\nالممتلكات والمصانع والمعدات (PP&E): يسمح كل من IAS 16 و IPSAS 17 للمنشآت بالاختيار بين نموذج التكلفة (الترحيل بالتكلفة ناقص الاستهلاك المتراكم) ونموذج إعادة التقييم (الترحيل بالقيمة العادلة مع إعادة تقييم دورية).\n\nالعقارات الاستثمارية: يسمح IAS 40 و IPSAS 16 بنموذج التكلفة أو نموذج القيمة العادلة للعقارات المحتفظ بها لدخل الإيجار أو ارتفاع رأس المال.\n\nالأدوات المالية: يتشارك IFRS 9 و IPSAS 41 نفس التصنيف الثلاثي - التكلفة المطفأة، والقيمة العادلة من خلال الدخل الشامل الآخر، والقيمة العادلة من خلال الربح أو الخسارة. كلاهما يستخدم نموذج خسائر الائتمان المتوقعة.\n\nالأصول البيولوجية: يتطلب IAS 41 و IPSAS 27 القياس بالقيمة العادلة ناقص تكاليف البيع، مع الاعتراف بالتغييرات في الفائض أو الربح أو الخسارة.', 'keyPoint': 'PP&E: Cost model or revaluation model (IAS 16 / IPSAS 17) • Investment Property: Cost or fair value model (IAS 40 / IPSAS 16) • Financial Instruments: Same classification + ECL model (IFRS 9 / IPSAS 41) • Biological Assets: Fair value less costs to sell (IAS 41 / IPSAS 27)', 'keyPointAr': 'PP&E: نموذج التكلفة أو إعادة التقييم (IAS 16 / IPSAS 17) • العقارات الاستثمارية: نموذج التكلفة أو القيمة العادلة (IAS 40 / IPSAS 16) • الأدوات المالية: نفس التصنيف + نموذج ECL (IFRS 9 / IPSAS 41) • الأصول البيولوجية: القيمة العادلة ناقص تكاليف البيع (IAS 41 / IPSAS 27)', 'highlightType': 'tip', 'highlight': 'If you know IAS 16 for PP&E, you already know IPSAS 17 - the measurement rules are the same.', 'highlightAr': 'إذا كنت تعرف IAS 16 للممتلكات والمعدات، فأنت تعرف بالفعل IPSAS 17 - قواعد القياس متطابقة.', 'keyTerms': 'fair-value,ppe,financial-instruments'},
+    {'id': 'section-7-3', 'number': '8.3', 'title': '8.3 Similarities: Recognition', 'titleAr': '8.3 أوجه التشابه: الاعتراف', 'content': 'Recognition - deciding when to record a transaction in the financial statements - follows the same principles under both IFRS and IPSAS across five key areas.\n\nAccrual Basis: Both frameworks require accrual-basis accounting. Transactions are recognized when they occur, not when cash changes hands. This is the foundational principle that makes both frameworks comparable and complete.\n\nLeases: Under IFRS 16 and IPSAS 43, lessees recognize a right-of-use (ROU) asset and a corresponding lease liability for nearly all leases. This eliminates off-balance-sheet financing and gives a truer picture of obligations. The measurement of the ROU asset and liability follows the same present-value approach.\n\nEmployee Benefits: IAS 19 and IPSAS 39 both use the projected unit credit method for defined benefit pension plans. Remeasurements (actuarial gains and losses) are recognized through Other Comprehensive Income (OCI) or net assets, not through surplus/profit or loss. This prevents pension volatility from distorting operating performance.\n\nProvisions: Under IAS 37 and IPSAS 19, a provision is recognized when three conditions are met: (1) a present obligation exists from a past event, (2) an outflow of resources is probable, and (3) a reliable estimate can be made. The conditions are identical in both frameworks.\n\nForeign Currency: IAS 21 and IPSAS 4 share the functional currency concept. Transactions are initially recorded at the exchange rate on the transaction date, and monetary items are retranslated at the closing rate, with exchange differences recognized in surplus or profit or loss.', 'contentAr': 'الاعتراف - تحديد متى يتم تسجيل المعاملة في القوائم المالية - يتبع نفس المبادئ في كل من IFRS و IPSAS عبر خمسة مجالات رئيسية.\n\nأساس الاستحقاق: يتطلب كلا الإطارين محاسبة أساس الاستحقاق. يُعترف بالمعاملات عند حدوثها، وليس عند تبادل النقد. هذا هو المبدأ الأساسي الذي يجعل كلا الإطارين قابلين للمقارنة وشاملين.\n\nالإيجارات: بموجب IFRS 16 و IPSAS 43، يعترف المستأجرون بأصل حق الاستخدام والتزام إيجار مقابل لجميع الإيجارات تقريباً. هذا يلغي التمويل خارج الميزانية ويعطي صورة أصدق للالتزامات.\n\nمزايا الموظفين: يستخدم كل من IAS 19 و IPSAS 39 طريقة وحدة الائتمان المتوقعة لخطط المنافع المحددة. يُعترف بإعادة القياس من خلال الدخل الشامل الآخر أو صافي الأصول.\n\nالمخصصات: بموجب IAS 37 و IPSAS 19، يُعترف بالمخصص عند استيفاء ثلاثة شروط: (1) وجود التزام حالي من حدث سابق، (2) احتمال تدفق موارد للخارج، (3) إمكانية تقدير موثوق.\n\nالعملة الأجنبية: يتشارك IAS 21 و IPSAS 4 مفهوم العملة الوظيفية. تُسجل المعاملات بسعر الصرف في تاريخ المعاملة، وتُعاد ترجمة البنود النقدية بسعر الإقفال.', 'keyPoint': 'Accrual basis is foundational to both frameworks • Leases: ROU asset + lease liability (IFRS 16 / IPSAS 43) • Provisions: Same 3-condition test (IAS 37 / IPSAS 19) • Employee benefits: Same actuarial method (IAS 19 / IPSAS 39) • Foreign currency: Same functional currency approach (IAS 21 / IPSAS 4)', 'keyPointAr': 'أساس الاستحقاق أساسي لكلا الإطارين • الإيجارات: أصل حق الاستخدام + التزام إيجار (IFRS 16 / IPSAS 43) • المخصصات: نفس اختبار الشروط الثلاثة (IAS 37 / IPSAS 19) • مزايا الموظفين: نفس الطريقة الاكتوارية (IAS 19 / IPSAS 39) • العملة الأجنبية: نفس نهج العملة الوظيفية (IAS 21 / IPSAS 4)', 'highlightType': 'info', 'highlight': 'Accrual accounting is the single most important similarity - it underpins everything else in both frameworks.', 'highlightAr': 'المحاسبة على أساس الاستحقاق هي أهم تشابه - فهي تدعم كل شيء آخر في كلا الإطارين.', 'keyTerms': 'accrual-basis,provisions,leases'},
+    {'id': 'section-7-4', 'number': '8.4', 'title': '8.4 Similarities: Presentation, Disclosure & Groups', 'titleAr': '8.4 أوجه التشابه: العرض والإفصاح والمجموعات', 'content': 'Beyond measurement and recognition, IFRS and IPSAS also align on how financial information is presented, how changes and errors are handled, and how group entities are accounted for.\n\nCash Flow Statement: IAS 7 and IPSAS 2 both require the same three categories - operating, investing, and financing activities. The direct and indirect methods are both permitted. This consistency allows cross-sector comparison of how entities generate and use cash.\n\nAccounting Policy Changes & Errors: Under IAS 8 and IPSAS 3, voluntary policy changes and correction of prior-period errors are applied retrospectively - meaning prior-period comparatives are restated as if the new policy (or correct treatment) had always been applied. This maintains comparability over time.\n\nEvents After the Reporting Date: IAS 10 and IPSAS 14 make the same distinction between adjusting events (conditions existed at reporting date - adjust the statements) and non-adjusting events (arose after reporting date - disclose only). This ensures statements reflect information available at the reporting date.\n\nJoint Arrangements: IFRS 11 and IPSAS 37 distinguish joint operations (account for assets, liabilities, revenues, expenses directly) from joint ventures (equity method). Associates: IAS 28 and IPSAS 36 both use the equity method to account for entities where the investor has significant influence but not control.\n\nThese shared presentation and group accounting rules mean that the structure and logic of financial statements are recognizable across both sectors - a powerful benefit for professionals who work in both worlds.', 'contentAr': 'بالإضافة إلى القياس والاعتراف، يتوافق IFRS و IPSAS أيضاً في كيفية عرض المعلومات المالية ومعالجة التغييرات والأخطاء ومحاسبة كيانات المجموعة.\n\nقائمة التدفقات النقدية: يتطلب IAS 7 و IPSAS 2 نفس الفئات الثلاث - الأنشطة التشغيلية والاستثمارية والتمويلية. يُسمح بالطريقتين المباشرة وغير المباشرة.\n\nتغييرات السياسات المحاسبية والأخطاء: بموجب IAS 8 و IPSAS 3، تُطبق التغييرات الطوعية وتصحيح أخطاء الفترات السابقة بأثر رجعي - أي تُعاد صياغة المقارنات.\n\nالأحداث بعد تاريخ التقرير: يميز IAS 10 و IPSAS 14 بين الأحداث المعدلة (ظروف قائمة في تاريخ التقرير - تعديل القوائم) والأحداث غير المعدلة (نشأت بعد التقرير - إفصاح فقط).\n\nالترتيبات المشتركة: يميز IFRS 11 و IPSAS 37 بين العمليات المشتركة والمشاريع المشتركة. الشركات الزميلة: يستخدم IAS 28 و IPSAS 36 طريقة حقوق الملكية.\n\nتعني قواعد العرض والمحاسبة الجماعية المشتركة هذه أن هيكل ومنطق القوائم المالية يمكن التعرف عليهما عبر كلا القطاعين.', 'keyPoint': 'Cash flow: Same 3 categories (IAS 7 / IPSAS 2) • Policy changes & errors: Retrospective application (IAS 8 / IPSAS 3) • Post-reporting events: Adjusting vs non-adjusting (IAS 10 / IPSAS 14) • Joint arrangements: Same classification (IFRS 11 / IPSAS 37) • Associates: Equity method (IAS 28 / IPSAS 36)', 'keyPointAr': 'التدفقات النقدية: نفس الفئات الثلاث (IAS 7 / IPSAS 2) • تغييرات السياسات: تطبيق بأثر رجعي (IAS 8 / IPSAS 3) • أحداث ما بعد التقرير: معدلة مقابل غير معدلة (IAS 10 / IPSAS 14) • الترتيبات المشتركة: نفس التصنيف (IFRS 11 / IPSAS 37) • الشركات الزميلة: طريقة حقوق الملكية (IAS 28 / IPSAS 36)', 'highlightType': 'tip', 'highlight': 'The three-category cash flow structure (operating, investing, financing) is universal - it works the same in both IFRS and IPSAS.', 'highlightAr': 'هيكل التدفقات النقدية ذو الفئات الثلاث (تشغيلي، استثماري، تمويلي) عالمي - يعمل بنفس الطريقة في IFRS و IPSAS.', 'keyTerms': 'cash-flow-statement,consolidation,equity-method'},
+    {'id': 'section-7-5', 'number': '8.5', 'title': '8.5 Why IPSAS Diverges: The Public Sector Context', 'titleAr': '8.5 لماذا يختلف IPSAS: سياق القطاع العام', 'content': 'Before examining the specific differences, it is essential to understand why IPSAS needs to diverge from IFRS at all. The answer lies in three fundamental distinctions between the public and private sectors.\n\nDifferent Users, Different Needs: IFRS is designed for investors, lenders, and creditors who make capital allocation decisions. IPSAS is designed for citizens, legislators, donors, and oversight bodies who evaluate whether public resources are being used responsibly. An investor asks "Will I get a return?" A citizen asks "Are my taxes being used well?"\n\nService Potential vs Economic Benefits: Under IFRS, an asset must generate future economic benefits - cash inflows - to be recognized. But many government assets (roads, parks, hospitals, military equipment) do not generate cash. They generate service potential - the ability to deliver public services. IPSAS recognizes this broader concept.\n\nAccountability vs Profitability: The private sector measures success through profit. The public sector measures success through stewardship - the responsible management and accountability for resources entrusted by citizens. This shifts the entire orientation of financial reporting from "How much did we earn?" to "How well did we manage public resources?"\n\nThese three differences - different users, service potential, and stewardship focus - are the root cause of every technical difference you will see in the following slides. When you encounter a difference between IFRS and IPSAS, trace it back to one of these three drivers.', 'contentAr': 'قبل فحص الاختلافات المحددة، من الضروري فهم لماذا يحتاج IPSAS للاختلاف عن IFRS أصلاً. الإجابة تكمن في ثلاثة فروق جوهرية بين القطاعين العام والخاص.\n\nمستخدمون مختلفون، احتياجات مختلفة: صُمم IFRS للمستثمرين والمقرضين والدائنين الذين يتخذون قرارات تخصيص رأس المال. صُمم IPSAS للمواطنين والمشرعين والمانحين وهيئات الرقابة الذين يقيّمون ما إذا كانت الموارد العامة تُستخدم بمسؤولية.\n\nالقدرة الخدمية مقابل المنافع الاقتصادية: بموجب IFRS، يجب أن يولّد الأصل منافع اقتصادية مستقبلية - تدفقات نقدية - ليُعترف به. لكن العديد من الأصول الحكومية (الطرق، الحدائق، المستشفيات) لا تولّد نقداً. إنها تولّد قدرة خدمية - القدرة على تقديم خدمات عامة. يعترف IPSAS بهذا المفهوم الأوسع.\n\nالمساءلة مقابل الربحية: يقيس القطاع الخاص النجاح من خلال الربح. يقيس القطاع العام النجاح من خلال الوصاية - الإدارة المسؤولة والمساءلة عن الموارد الموكلة من المواطنين.\n\nهذه الاختلافات الثلاثة - مستخدمون مختلفون، وقدرة خدمية، وتركيز على الوصاية - هي السبب الجذري لكل اختلاف تقني ستراه في الشرائح التالية.', 'keyPoint': 'IFRS users: investors and creditors; IPSAS users: citizens and legislators • IFRS: future economic benefits; IPSAS: also service potential • Private sector: profitability focus; Public sector: stewardship focus • These 3 drivers explain every IFRS/IPSAS difference', 'keyPointAr': 'مستخدمو IFRS: مستثمرون ودائنون؛ مستخدمو IPSAS: مواطنون ومشرعون • IFRS: منافع اقتصادية مستقبلية؛ IPSAS: أيضاً قدرة خدمية • القطاع الخاص: تركيز على الربحية؛ القطاع العام: تركيز على الوصاية • هذه المحركات الثلاثة تفسر كل اختلاف بين IFRS و IPSAS', 'highlightType': 'warning', 'highlight': 'The key question shifts from "Will this asset generate cash?" (IFRS) to "Will this asset deliver public services?" (IPSAS).', 'highlightAr': 'يتحول السؤال الرئيسي من "هل سيولّد هذا الأصل نقداً؟" (IFRS) إلى "هل سيقدم هذا الأصل خدمات عامة؟" (IPSAS).', 'keyTerms': 'service-potential,public-accountability,stewardship'},
+    {'id': 'section-7-6', 'number': '8.6', 'title': '8.6 Differences: Conceptual & Framework', 'titleAr': '8.6 الاختلافات: المفاهيم والإطار', 'content': 'The most fundamental differences between IFRS and IPSAS sit at the conceptual framework level. These are not minor technical tweaks - they reflect entirely different purposes for financial reporting.\n\nPrimary Users: Under the IFRS Conceptual Framework, the primary users are existing and potential investors, lenders, and other creditors. Under the IPSAS Conceptual Framework, the primary users are citizens, their elected representatives (legislators), donors, lenders, and oversight bodies. This difference drives what information gets priority in the statements.\n\nPerformance Measure: IFRS uses "Profit or Loss" as the bottom-line performance measure (IAS 1). IPSAS uses "Surplus or Deficit" (IPSAS 1). While the calculation is similar, the terminology reflects the fact that governments do not exist to make a profit - a surplus means resources exceeded spending, not that the entity was "profitable."\n\nAsset Recognition Concept: Under IFRS, an asset is recognized when it is expected to generate future economic benefits - essentially future cash inflows. Under IPSAS 17, an asset can also be recognized if it has service potential - the capacity to provide services that contribute to the entity\'s objectives, even if it never generates cash. This is why roads, parks, and military assets qualify as assets under IPSAS but would face challenges under a strict IFRS interpretation.', 'contentAr': 'تقع الاختلافات الأكثر جوهرية بين IFRS و IPSAS على مستوى الإطار المفاهيمي. هذه ليست تعديلات تقنية طفيفة - إنها تعكس أغراضاً مختلفة تماماً للتقارير المالية.\n\nالمستخدمون الرئيسيون: بموجب الإطار المفاهيمي لـ IFRS، المستخدمون الرئيسيون هم المستثمرون والمقرضون والدائنون الحاليون والمحتملون. بموجب الإطار المفاهيمي لـ IPSAS، المستخدمون الرئيسيون هم المواطنون وممثلوهم المنتخبون والمانحون والمقرضون وهيئات الرقابة.\n\nمقياس الأداء: يستخدم IFRS "الربح أو الخسارة" كمقياس أداء أساسي (IAS 1). يستخدم IPSAS "الفائض أو العجز" (IPSAS 1). المصطلحات تعكس أن الحكومات لا تهدف لتحقيق ربح.\n\nمفهوم الاعتراف بالأصول: بموجب IFRS، يُعترف بالأصل عندما يُتوقع أن يولّد منافع اقتصادية مستقبلية. بموجب IPSAS 17، يمكن أيضاً الاعتراف بالأصل إذا كانت له قدرة خدمية - القدرة على تقديم خدمات. لهذا تؤهل الطرق والحدائق والأصول العسكرية كأصول بموجب IPSAS.', 'keyPoint': 'Users: Investors & creditors (IFRS) vs Citizens & legislators (IPSAS) • Bottom line: Profit or Loss (IFRS) vs Surplus or Deficit (IPSAS) • Assets: Economic benefits only (IFRS) vs Also service potential (IPSAS) • These framework differences drive all specific technical differences', 'keyPointAr': 'المستخدمون: مستثمرون ودائنون (IFRS) مقابل مواطنون ومشرعون (IPSAS) • المحصلة: ربح أو خسارة (IFRS) مقابل فائض أو عجز (IPSAS) • الأصول: منافع اقتصادية فقط (IFRS) مقابل أيضاً قدرة خدمية (IPSAS) • اختلافات الإطار هذه تقود جميع الاختلافات التقنية المحددة', 'highlightType': 'warning', 'highlight': 'A highway has no cash-generating ability - but immense service potential. IPSAS recognizes it; IFRS would struggle.', 'highlightAr': 'الطريق السريع لا يولّد نقداً - لكن له قدرة خدمية هائلة. IPSAS يعترف به؛ IFRS سيواجه صعوبة.', 'keyTerms': 'surplus-deficit,service-potential,conceptual-framework'},
+    {'id': 'section-7-7', 'number': '8.7', 'title': '8.7 Differences: Revenue & Income', 'titleAr': '8.7 الاختلافات: الإيرادات والدخل', 'content': 'Revenue recognition is where IFRS and IPSAS diverge most visibly. The private sector earns revenue from selling goods and services. The public sector receives much of its income without providing something of equal value in return - taxes, grants, fines, and donations.\n\nExchange Revenue: Under IFRS 15, revenue from contracts with customers follows a five-step model based on performance obligations. Under IPSAS 9, exchange revenue (fees for services, sales) uses a simpler model - revenue is recognized when it is probable that economic benefits or service potential will flow to the entity and the amount can be reliably measured.\n\nNon-Exchange Revenue: This is the single biggest gap. IFRS has no equivalent - all transactions are assumed to be exchange-based. IPSAS 23 is a dedicated standard for non-exchange revenue: taxes, grants, fines, bequests, and donations. Revenue is recognized when conditions are met and the entity has control over the asset. The standard distinguishes between conditions (must be returned if not met) and restrictions (limit use but do not affect recognition).\n\nGrants: Under IAS 20, government grants are recognized systematically to match related costs. Under IPSAS 23, grants with conditions create a liability until the conditions are fulfilled. Grants with restrictions only (no return obligation) are recognized as revenue immediately upon receipt.\n\nSocial Benefits: IFRS does not address social benefits at all - they are outside scope. IPSAS 42 specifically addresses welfare payments, public pensions, and healthcare obligations, recognizing them when eligibility criteria are met by the beneficiary. This is one of the most significant public-sector-only standards.', 'contentAr': 'الاعتراف بالإيرادات هو المجال الذي يختلف فيه IFRS و IPSAS بشكل أكثر وضوحاً. القطاع الخاص يكسب الإيرادات من بيع السلع والخدمات. القطاع العام يتلقى الكثير من دخله دون تقديم شيء ذي قيمة مساوية في المقابل.\n\nإيرادات التبادل: بموجب IFRS 15، تتبع الإيرادات من العقود مع العملاء نموذجاً من خمس خطوات. بموجب IPSAS 9، تستخدم إيرادات التبادل نموذجاً أبسط.\n\nالإيرادات غير التبادلية: هذه أكبر فجوة. IFRS لا يملك معادلاً. IPSAS 23 معيار مخصص للإيرادات غير التبادلية: الضرائب والمنح والغرامات والتبرعات. يُعترف بالإيرادات عند استيفاء الشروط. يميز المعيار بين الشروط (يجب الإرجاع إذا لم تُستوف) والقيود (تحد من الاستخدام لكن لا تؤثر على الاعتراف).\n\nالمنح: بموجب IAS 20، تُعترف المنح لمطابقة التكاليف ذات الصلة. بموجب IPSAS 23، المنح ذات الشروط تنشئ التزاماً حتى استيفاء الشروط. المنح ذات القيود فقط تُعترف فوراً.\n\nالمنافع الاجتماعية: IFRS لا يعالج المنافع الاجتماعية. IPSAS 42 يعالج تحديداً مدفوعات الرعاية والمعاشات العامة والتزامات الرعاية الصحية.', 'keyPoint': 'Exchange revenue: IFRS 15 five-step model vs IPSAS 9 simpler model • Non-exchange revenue: IPSAS 23 (no IFRS equivalent) • Grants: Conditions → liability (IPSAS 23) vs matching costs (IAS 20) • Social benefits: IPSAS 42 (outside IFRS scope entirely)', 'keyPointAr': 'إيرادات التبادل: نموذج IFRS 15 ذو الخمس خطوات مقابل نموذج IPSAS 9 الأبسط • الإيرادات غير التبادلية: IPSAS 23 (لا معادل في IFRS) • المنح: شروط → التزام (IPSAS 23) مقابل مطابقة التكاليف (IAS 20) • المنافع الاجتماعية: IPSAS 42 (خارج نطاق IFRS تماماً)', 'highlightType': 'warning', 'highlight': 'Non-exchange revenue (IPSAS 23) has no IFRS equivalent - it is the most distinctly public-sector standard.', 'highlightAr': 'الإيرادات غير التبادلية (IPSAS 23) لا معادل لها في IFRS - إنه أكثر المعايير تميزاً بالقطاع العام.', 'keyTerms': 'non-exchange-revenue,exchange-transactions,social-benefits'},
+    {'id': 'section-7-8', 'number': '8.8', 'title': '8.8 Differences: Assets & Impairment', 'titleAr': '8.8 الاختلافات: الأصول وانخفاض القيمة', 'content': 'Governments hold assets that the private sector rarely encounters - heritage buildings, national monuments, military equipment, and inventories meant for free distribution. These unique assets require unique accounting treatment.\n\nHeritage Assets: Under IFRS, there is no specific guidance - heritage assets default to general PP&E rules (IAS 16). Under IPSAS 17, heritage assets are explicitly addressed. Recognition is encouraged but not required when reliable measurement is impossible (how do you value the Pyramids?). However, disclosure is always required, ensuring transparency even when recognition is not feasible.\n\nInventories for Free Distribution: Under IAS 2, all inventories are measured at the lower of cost and net realizable value (NRV). Under IPSAS 12, inventories held for free distribution or for a nominal charge are measured at the lower of cost and current replacement cost. NRV is irrelevant because the entity does not intend to sell the items.\n\nImpairment: IFRS has a single impairment standard - IAS 36 - which measures recoverable amount based on expected cash flows. IPSAS has two standards: IPSAS 26 for cash-generating assets (similar to IAS 36) and IPSAS 21 for non-cash-generating assets, where impairment is measured by the decline in remaining service potential rather than cash flows.\n\nAssets Held for Sale: IFRS 5 provides a separate classification for non-current assets held for sale - depreciation stops and the asset is measured at fair value less costs to sell. IPSAS has no direct equivalent. General measurement principles continue to apply.', 'contentAr': 'تمتلك الحكومات أصولاً نادراً ما يواجهها القطاع الخاص - مباني تراثية، معالم وطنية، معدات عسكرية، ومخزون مخصص للتوزيع المجاني.\n\nالأصول التراثية: بموجب IFRS، لا توجد إرشادات محددة. بموجب IPSAS 17، تُعالج الأصول التراثية صراحةً. يُشجع الاعتراف لكنه غير مطلوب عندما يستحيل القياس الموثوق. لكن الإفصاح مطلوب دائماً.\n\nالمخزون للتوزيع المجاني: بموجب IAS 2، جميع المخزونات تُقاس بأقل التكلفة وصافي القيمة القابلة للتحقق. بموجب IPSAS 12، المخزون للتوزيع المجاني يُقاس بأقل التكلفة وتكلفة الاستبدال الحالية.\n\nانخفاض القيمة: IFRS لديه معيار واحد - IAS 36. IPSAS لديه معياران: IPSAS 26 للأصول المولدة للنقد و IPSAS 21 للأصول غير المولدة للنقد حيث يُقاس الانخفاض بتراجع القدرة الخدمية المتبقية.\n\nالأصول المحتفظ بها للبيع: IFRS 5 يوفر تصنيفاً منفصلاً. IPSAS لا يملك معادلاً مباشراً.', 'keyPoint': 'Heritage assets: IPSAS explicitly addresses; IFRS has no specific guidance • Inventories for distribution: Replacement cost (IPSAS 12) vs NRV (IAS 2) • Impairment: Two IPSAS standards (cash + non-cash) vs one IFRS (IAS 36) • Assets held for sale: IFRS 5 separate class; no IPSAS equivalent', 'keyPointAr': 'الأصول التراثية: IPSAS يعالجها صراحةً؛ IFRS بلا إرشادات محددة • مخزون التوزيع: تكلفة الاستبدال (IPSAS 12) مقابل NRV (IAS 2) • انخفاض القيمة: معياران IPSAS (نقدي + غير نقدي) مقابل واحد IFRS (IAS 36) • أصول محتفظ بها للبيع: IFRS 5 فئة منفصلة؛ لا معادل IPSAS', 'highlightType': 'info', 'highlight': 'IPSAS uses TWO impairment standards because government assets serve two different purposes: generating cash and delivering services.', 'highlightAr': 'يستخدم IPSAS معيارين لانخفاض القيمة لأن الأصول الحكومية تخدم غرضين: توليد النقد وتقديم الخدمات.', 'keyTerms': 'heritage-assets,impairment,inventories'},
+    {'id': 'section-7-9', 'number': '8.9', 'title': '8.9 Differences: Liabilities & Costs', 'titleAr': '8.9 الاختلافات: الالتزامات والتكاليف', 'content': 'Governments often engage in transactions that have no private-sector equivalent - lending money at below-market rates to support social objectives, or leasing property for a nominal amount to promote community use. These transactions create unique accounting challenges.\n\nBorrowing Costs: Under IAS 23, entities must capitalize borrowing costs directly attributable to the acquisition, construction, or production of a qualifying asset. There is no choice - capitalization is mandatory. Under IPSAS 5, entities have a policy choice: they can capitalize borrowing costs or expense them immediately. This flexibility acknowledges that public-sector infrastructure projects may have different financing structures.\n\nConcessionary Loans: These are loans made at below-market rates (e.g., a government lending to a social housing organization at 1% when the market rate is 5%). Under IFRS 9, there is no specific guidance for below-market loans. Under IPSAS 41, the day-one difference between the loan proceeds and its fair value is recognized as an expense reflecting the subsidy element. This makes the true cost of the concessionary policy transparent.\n\nPeppercorn / Nominal Leases: Governments sometimes lease property at a token amount (e.g., SAR 1 per year) to support community organizations. Under IFRS 16, there is no specific guidance for such below-market arrangements - the lease is simply measured from the nominal payments, so the subsidy element stays invisible. The IPSASB treats these "concessionary leases" as a distinct public-sector issue: IPSAS 43 was deliberately issued without prescribing a special measurement for them, and the IPSASB has developed dedicated proposals (exposure draft amendments to IPSAS 43 and IPSAS 23) aimed at recognizing and disclosing the benefit granted or received beyond the nominal payments.', 'contentAr': 'غالباً ما تشارك الحكومات في معاملات لا معادل لها في القطاع الخاص - الإقراض بأسعار أقل من السوق لدعم الأهداف الاجتماعية، أو تأجير العقارات بمبلغ رمزي لتعزيز الاستخدام المجتمعي.\n\nتكاليف الاقتراض: بموجب IAS 23، يجب رسملة تكاليف الاقتراض المنسوبة مباشرة لأصل مؤهل. بموجب IPSAS 5، يوجد خيار سياسة: الرسملة أو المصروفات الفورية.\n\nالقروض الميسرة: هذه قروض بأسعار أقل من السوق. بموجب IFRS 9، لا توجد إرشادات محددة. بموجب IPSAS 41، يُعترف بالفرق بين عائدات القرض وقيمته العادلة كمصروف يعكس عنصر الدعم.\n\nالإيجارات بمبلغ رمزي: تؤجر الحكومات أحياناً عقارات بمبلغ رمزي. بموجب IFRS 16، لا توجد إرشادات محددة لهذه الترتيبات دون سعر السوق - إذ يُقاس عقد الإيجار من المدفوعات الرمزية فحسب، فيبقى عنصر الدعم غير مرئي. ويعامل مجلس IPSASB هذه "الإيجارات الميسرة" بوصفها قضية متميزة خاصة بالقطاع العام: فقد صدر IPSAS 43 عمداً دون فرض قياس خاص لها، وطوّر المجلس مقترحات مخصصة (مسودة تعديلات على IPSAS 43 و IPSAS 23) تهدف إلى الاعتراف بالمنفعة الممنوحة أو المستلمة بما يتجاوز المدفوعات الرمزية والإفصاح عنها.', 'keyPoint': 'Borrowing costs: Must capitalize (IAS 23) vs Policy choice (IPSAS 5) • Concessionary loans: No specific IFRS guidance vs Day-one expense (IPSAS 41) • Peppercorn leases: Invisible under IFRS 16 vs dedicated IPSASB concessionary-lease proposals • All three reflect unique public-sector financing arrangements', 'keyPointAr': 'تكاليف الاقتراض: يجب الرسملة (IAS 23) مقابل خيار سياسة (IPSAS 5) • القروض الميسرة: لا إرشادات IFRS محددة مقابل مصروف اليوم الأول (IPSAS 41) • الإيجارات الرمزية: غير مرئية في IFRS 16 مقابل مقترحات IPSASB المخصصة للإيجارات الميسرة • الثلاثة تعكس ترتيبات تمويل فريدة للقطاع العام', 'highlightType': 'tip', 'highlight': 'A concessionary loan reveals a hidden subsidy - IPSAS makes the true cost visible on day one.', 'highlightAr': 'القرض الميسّر يكشف عن دعم خفي - IPSAS يجعل التكلفة الحقيقية مرئية من اليوم الأول.', 'keyTerms': 'borrowing-costs,concessionary-loan,peppercorn-lease'},
+    {'id': 'section-7-10', 'number': '8.10', 'title': '8.10 Differences: Presentation & Disclosure', 'titleAr': '8.10 الاختلافات: العرض والإفصاح', 'content': 'While the underlying structure of financial statements is similar, IFRS and IPSAS differ significantly in what must be presented and disclosed - reflecting different accountability requirements.\n\nBudget Reporting: This is perhaps the most distinctive IPSAS requirement. Under IPSAS 24, entities must present a comparison of budget versus actual amounts, with explanations for material variances. IFRS has no equivalent. Budgets are central to public-sector governance - legislatures approve spending through budgets, so reporting against them is fundamental to accountability.\n\nRelated Party Disclosures: Under IAS 24, related parties include key management personnel and their close family. Under IPSAS 20, the scope is much broader - it includes ministers, elected officials, senior political appointees, and their close family members. This broader scope reflects the unique concentration of power in the public sector.\n\nSegment Reporting: Under IFRS 8, operating segments are based on how internal management reports to the chief operating decision maker. Under IPSAS 18, segments are defined by service type (education, health, defense) or geographic area, reflecting public accountability rather than internal management structure.\n\nInterim Reporting: IAS 34 sets minimum content requirements for interim financial reports. IPSAS has no direct equivalent standard for interim reporting.\n\nEarnings Per Share: IAS 33 requires disclosure of EPS for public companies. Under IPSAS, this concept is not applicable - governments do not have shareholders or traded shares.', 'contentAr': 'بينما يتشابه الهيكل الأساسي للقوائم المالية، يختلف IFRS و IPSAS بشكل كبير فيما يجب عرضه والإفصاح عنه.\n\nالتقارير الموازنية: هذا ربما أكثر متطلبات IPSAS تميزاً. بموجب IPSAS 24، يجب تقديم مقارنة بين الموازنة والفعلي مع تفسيرات الفروقات الجوهرية. IFRS لا يملك معادلاً.\n\nإفصاحات الأطراف ذات العلاقة: بموجب IAS 24، تشمل الأطراف ذات العلاقة الإدارة الرئيسية وعائلاتهم. بموجب IPSAS 20، النطاق أوسع بكثير - يشمل الوزراء والمسؤولين المنتخبين وكبار المعينين السياسيين وعائلاتهم.\n\nتقارير القطاعات: بموجب IFRS 8، تعتمد القطاعات على التقارير الإدارية الداخلية. بموجب IPSAS 18، تُحدد القطاعات حسب نوع الخدمة أو المنطقة الجغرافية بناءً على المساءلة العامة.\n\nالتقارير المرحلية: IAS 34 يحدد الحد الأدنى لمتطلبات التقارير المرحلية. IPSAS لا يملك معياراً معادلاً.\n\nربحية السهم: IAS 33 يتطلب الإفصاح عن ربحية السهم. في IPSAS، هذا المفهوم غير قابل للتطبيق.', 'keyPoint': 'Budget reporting: Mandatory under IPSAS 24; not required under IFRS • Related parties: Much broader scope under IPSAS 20 than IAS 24 • Segments: Service/geographic (IPSAS 18) vs management-based (IFRS 8) • No IPSAS equivalent for interim reporting (IAS 34) or EPS (IAS 33)', 'keyPointAr': 'التقارير الموازنية: إلزامية بموجب IPSAS 24؛ غير مطلوبة بموجب IFRS • الأطراف ذات العلاقة: نطاق أوسع بكثير بموجب IPSAS 20 من IAS 24 • القطاعات: خدمة/جغرافي (IPSAS 18) مقابل إداري (IFRS 8) • لا معادل IPSAS للتقارير المرحلية (IAS 34) أو ربحية السهم (IAS 33)', 'highlightType': 'warning', 'highlight': 'Budget vs actual reporting (IPSAS 24) is mandatory - it is the public-sector equivalent of earnings guidance in the private sector.', 'highlightAr': 'تقرير الموازنة مقابل الفعلي (IPSAS 24) إلزامي - إنه المعادل في القطاع العام لتوجيهات الأرباح في القطاع الخاص.', 'keyTerms': 'budget-reporting,related-party,segment-reporting'},
+    {'id': 'section-7-11', 'number': '8.11', 'title': '8.11 Differences: Group Accounting & Combinations', 'titleAr': '8.11 الاختلافات: محاسبة المجموعات والاندماجات', 'content': 'Governments often control entities not through ownership of shares, but through legislation, regulation, or executive authority. This creates a fundamentally different concept of "control" that affects consolidation, combinations, and public-private partnerships.\n\nConsolidation - Control Concept: Under IFRS 10, an investor controls an investee when it has power over the investee, exposure to variable returns, and the ability to use its power to affect those returns. Under IPSAS 35, control is broader - it includes control obtained through legislation, regulation, or binding administrative agreements. A ministry that sets the policy for an agency and can appoint its leadership has control, even without a single share.\n\nBusiness Combinations: Under IFRS 3, acquisitions use the acquisition method and typically result in goodwill (the excess of purchase price over net assets). Under IPSAS 40, the standard covers amalgamations and restructurings that are common in government - merging two ministries or creating a new entity from parts of others. Goodwill is rare because these transactions often occur under common control without a purchase price.\n\nService Concessions / PPPs: IFRIC 12 addresses service concession arrangements from the operator\'s perspective - the private company that builds and operates the infrastructure. IPSAS 32 addresses the same arrangements from the government\'s (grantor\'s) perspective - recognizing the asset and the related liability or revenue. This is critical for public-private partnerships like toll roads and hospital management contracts.', 'contentAr': 'غالباً ما تسيطر الحكومات على الكيانات ليس من خلال ملكية الأسهم، بل من خلال التشريع أو التنظيم أو السلطة التنفيذية. هذا ينشئ مفهوماً مختلفاً جذرياً للسيطرة.\n\nالتوحيد - مفهوم السيطرة: بموجب IFRS 10، يسيطر المستثمر عندما يملك القوة والتعرض لعوائد متغيرة والقدرة على استخدام قوته للتأثير على تلك العوائد. بموجب IPSAS 35، السيطرة أوسع - تشمل السيطرة من خلال التشريع أو التنظيم أو الاتفاقيات الإدارية الملزمة.\n\nاندماجات الأعمال: بموجب IFRS 3، تستخدم عمليات الاستحواذ طريقة الاستحواذ وتنتج عادةً شهرة محل. بموجب IPSAS 40، يغطي المعيار الاندماجات وإعادة الهيكلة الشائعة في الحكومة. الشهرة نادرة لأن هذه المعاملات تحدث غالباً تحت سيطرة مشتركة.\n\nامتيازات الخدمة / الشراكات: يعالج IFRIC 12 ترتيبات امتياز الخدمة من منظور المشغل. يعالج IPSAS 32 نفس الترتيبات من منظور الحكومة (مانح الامتياز).', 'keyPoint': 'Control: Power + returns (IFRS 10) vs Also legislation/regulation (IPSAS 35) • Combinations: Acquisition method + goodwill (IFRS 3) vs Amalgamations (IPSAS 40) • PPPs: Operator view (IFRIC 12) vs Grantor view (IPSAS 32) • Government control often comes from authority, not share ownership', 'keyPointAr': 'السيطرة: قوة + عوائد (IFRS 10) مقابل أيضاً تشريع/تنظيم (IPSAS 35) • الاندماجات: طريقة الاستحواذ + شهرة (IFRS 3) مقابل اندماجات (IPSAS 40) • الشراكات: منظور المشغل (IFRIC 12) مقابل منظور مانح الامتياز (IPSAS 32) • سيطرة الحكومة غالباً من السلطة لا ملكية الأسهم', 'highlightType': 'info', 'highlight': 'A government ministry controls an agency through legislation - no shares needed. IPSAS 35 captures this reality.', 'highlightAr': 'الوزارة الحكومية تسيطر على وكالة من خلال التشريع - لا حاجة لأسهم. IPSAS 35 يلتقط هذا الواقع.', 'keyTerms': 'consolidation,amalgamation,service-concession'},
+    {'id': 'section-7-12', 'number': '8.12', 'title': '8.12 Differences: Transition & Adoption', 'titleAr': '8.12 الاختلافات: الانتقال والتبني', 'content': 'The path to adopting IFRS and IPSAS for the first time is different - reflecting the reality that many governments are transitioning from cash-basis accounting, a challenge that rarely exists in the private sector.\n\nFirst-Time Adoption: Under IFRS 1, first-time adoption provides a set of mandatory exceptions and optional exemptions to ease the transition to IFRS. The expectation is that the entity was already using some form of accrual accounting under a national framework. Under IPSAS 33, first-time adoption provides a generous 3-year transitional relief period for entities moving from cash basis to accrual basis. During this period, entities are exempt from certain recognition and measurement requirements as they build systems and capacity.\n\nCash Basis Accounting: Under IFRS, cash-basis accounting is simply not permitted. All entities must use accrual accounting. IPSAS takes a more pragmatic approach - it provides a standalone Cash Basis IPSAS standard specifically for governments that are not yet ready for full accrual. This standard establishes minimum reporting requirements under the cash basis and serves as a stepping stone toward eventual accrual adoption.\n\nThis dual-track approach is one of the most practical differences between the frameworks. IPSAS acknowledges that many governments, especially in developing countries, need a gradual transition path. The journey typically follows three stages: (1) Cash Basis IPSAS → (2) Modified Accrual during transition → (3) Full Accrual IPSAS within the 3-year relief window of IPSAS 33.', 'contentAr': 'مسار تبني IFRS و IPSAS لأول مرة مختلف - يعكس واقع أن العديد من الحكومات تنتقل من المحاسبة على أساس النقد، وهو تحدٍ نادراً ما يوجد في القطاع الخاص.\n\nالتبني لأول مرة: بموجب IFRS 1، يوفر التبني لأول مرة استثناءات إلزامية وإعفاءات اختيارية. بموجب IPSAS 33، يوفر فترة انتقالية سخية مدتها 3 سنوات للكيانات المنتقلة من الأساس النقدي إلى الاستحقاق.\n\nالمحاسبة على أساس النقد: بموجب IFRS، المحاسبة النقدية غير مسموح بها. IPSAS يأخذ نهجاً أكثر عملية - يوفر معياراً مستقلاً للأساس النقدي خصيصاً للحكومات غير المستعدة للاستحقاق الكامل.\n\nيعترف هذا النهج المزدوج بأن العديد من الحكومات تحتاج مساراً انتقالياً تدريجياً. الرحلة تتبع عادةً ثلاث مراحل: (1) IPSAS على أساس النقد ← (2) استحقاق معدل أثناء الانتقال ← (3) استحقاق كامل IPSAS ضمن نافذة الإعفاء ذات الـ3 سنوات.', 'keyPoint': 'IFRS 1: Mandatory exceptions + optional exemptions for first-time adopters • IPSAS 33: 3-year transitional relief from cash to accrual • Cash basis: Not permitted under IFRS; standalone standard under IPSAS • Transition path: Cash Basis → Modified Accrual → Full Accrual IPSAS', 'keyPointAr': 'IFRS 1: استثناءات إلزامية + إعفاءات اختيارية للمتبنين الجدد • IPSAS 33: إعفاء انتقالي 3 سنوات من النقدي إلى الاستحقاق • الأساس النقدي: غير مسموح في IFRS؛ معيار مستقل في IPSAS • مسار الانتقال: أساس نقدي ← استحقاق معدل ← استحقاق كامل IPSAS', 'highlightType': 'tip', 'highlight': 'Cash Basis IPSAS is a stepping stone, not a destination - the goal is always full accrual adoption.', 'highlightAr': 'IPSAS على الأساس النقدي حجر عبور وليس وجهة - الهدف دائماً التبني الكامل للاستحقاق.', 'keyTerms': 'first-time-adoption,cash-basis-ipsas,transition'},
+    {'id': 'section-7-13', 'number': '8.13', 'title': '8.13 Key Takeaways', 'titleAr': '8.13 النقاط الرئيسية', 'content': 'IPSAS is largely derived from IFRS - the similarities are by design. Wherever a private-sector standard can apply to the public sector, IPSAS adopts the same treatment. This is true for PP&E measurement, financial instruments, leases, provisions, cash flow presentation, and many other areas.\n\nThe key differences stem from public sector realities that IFRS was never designed to address. Non-exchange revenue (taxes, grants), heritage assets, budget accountability, social benefits, concessionary loans, and broader definitions of control all require standards that go beyond what IFRS provides.\n\nIFRS focuses on investor decision-making - helping capital markets allocate resources efficiently. IPSAS focuses on public accountability and stewardship - helping citizens evaluate whether their government is using public resources responsibly. The bottom line shifts from "profit" to "surplus/deficit," and the asset test shifts from "cash generation" to "service potential."\n\nBoth frameworks promote transparency, consistency, and comparability in financial reporting. A professional who understands IFRS has a strong foundation for understanding IPSAS, and vice versa. The differences are driven by purpose, not by arbitrary preference.\n\nFor governments transitioning from cash-basis accounting, IPSAS provides a practical path through Cash Basis IPSAS and the 3-year transitional relief of IPSAS 33. The destination is the same: high-quality, accrual-based financial reporting that serves the needs of all stakeholders.', 'contentAr': 'IPSAS مشتق بشكل كبير من IFRS - أوجه التشابه مقصودة بالتصميم. حيثما يمكن تطبيق معيار القطاع الخاص على القطاع العام، يتبنى IPSAS نفس المعاملة.\n\nالاختلافات الرئيسية تنبع من واقع القطاع العام الذي لم يُصمم IFRS لمعالجته. الإيرادات غير التبادلية، الأصول التراثية، المساءلة الموازنية، المنافع الاجتماعية، القروض الميسرة، وتعريفات أوسع للسيطرة.\n\nيركز IFRS على صنع القرار الاستثماري. يركز IPSAS على المساءلة العامة والوصاية. المحصلة تتحول من "الربح" إلى "الفائض/العجز"، واختبار الأصول من "توليد النقد" إلى "القدرة الخدمية".\n\nكلا الإطارين يعززان الشفافية والاتساق وقابلية المقارنة. المحترف الذي يفهم IFRS لديه أساس قوي لفهم IPSAS والعكس صحيح.\n\nللحكومات المنتقلة من المحاسبة النقدية، يوفر IPSAS مساراً عملياً من خلال معيار الأساس النقدي والإعفاء الانتقالي لمدة 3 سنوات. الوجهة واحدة: تقارير مالية عالية الجودة على أساس الاستحقاق.', 'keyPoint': 'Similarities are by design - IPSAS builds on IFRS wherever possible • Differences stem from public-sector realities, not arbitrary choices • IFRS = investor focus; IPSAS = public accountability focus • Both promote transparency, consistency, and comparability • Cash Basis IPSAS provides a transition path for developing governments', 'keyPointAr': 'أوجه التشابه مقصودة - IPSAS مبني على IFRS حيثما أمكن • الاختلافات تنبع من واقع القطاع العام وليس اختيارات عشوائية • IFRS = تركيز على المستثمرين؛ IPSAS = تركيز على المساءلة العامة • كلاهما يعزز الشفافية والاتساق وقابلية المقارنة • IPSAS على الأساس النقدي يوفر مساراً انتقالياً للحكومات النامية', 'highlightType': 'info', 'highlight': 'Understanding one framework gives you a head start on the other - the differences are meaningful, but the common foundation is strong.', 'highlightAr': 'فهم إطار واحد يمنحك بداية قوية في الآخر - الاختلافات ذات مغزى، لكن الأساس المشترك قوي.', 'keyTerms': 'ifrs,ipsas,transparency,public-accountability'},
+    {'id': 'section-7-14', 'number': '8.14', 'title': '8.14 Grounded in International Frameworks', 'titleAr': '8.14 مُؤسَّس على الأطر الدولية', 'content': 'This module compares the two authoritative reporting frameworks by name. IFRS Accounting Standards are issued by the International Accounting Standards Board (IASB), which operates under the IFRS Foundation. IFRS is the default reporting world for the corporate audience of this platform - it underpins the financial statements of listed companies and most private-sector entities you will analyze or prepare.\n\nIPSAS are issued by the International Public Sector Accounting Standards Board (IPSASB), an independent standard-setting board operating under the auspices of the International Federation of Accountants (IFAC). IPSAS is the public-sector counterpart you will encounter when working with ministries, agencies, and other government entities. IPSAS is largely converged with IFRS by design, then adapted where public-sector realities demand it.\n\nThe genuinely distinctive public-sector points taught in this module are anchored in specific pronouncements: the accrual-basis IPSAS suite alongside the standalone Cash Basis IPSAS for governments in transition; IPSAS 24 (Presentation of Budget Information in Financial Statements) for mandatory budget-versus-actual reporting; IPSAS 23 (Revenue from Non-Exchange Transactions - Taxes and Transfers), which has no IFRS equivalent; and the concept of service potential in asset definitions from the IPSASB Conceptual Framework.\n\nOne scope point completes the picture: public-sector entities with a commercial mandate - historically termed Government Business Enterprises (GBEs) - are directed to apply IFRS, not IPSAS. So even inside government groups, the commercial arms report in the same IFRS world as this platform\'s core audience.', 'contentAr': 'تقارن هذه الوحدة بين الإطارين المرجعيين للتقارير المالية بالاسم. فمعايير المحاسبة الدولية IFRS يصدرها مجلس معايير المحاسبة الدولية (IASB) العامل تحت مظلة مؤسسة IFRS. و IFRS هو عالم التقارير الافتراضي للجمهور المؤسسي لهذه المنصة - فهو الأساس الذي تقوم عليه القوائم المالية للشركات المدرجة ومعظم منشآت القطاع الخاص التي ستحللها أو تعدها.\n\nأما معايير IPSAS فيصدرها مجلس معايير المحاسبة الدولية للقطاع العام (IPSASB)، وهو مجلس مستقل لوضع المعايير يعمل تحت رعاية الاتحاد الدولي للمحاسبين (IFAC). و IPSAS هو النظير الخاص بالقطاع العام الذي ستقابله عند العمل مع الوزارات والهيئات والجهات الحكومية الأخرى. و IPSAS متقارب إلى حد كبير مع IFRS بحكم التصميم، ثم يُكيَّف حيثما يقتضي واقع القطاع العام ذلك.\n\nوالنقاط المتميزة فعلاً الخاصة بالقطاع العام في هذه الوحدة مُرسَّخة في إصدارات محددة: منظومة IPSAS على أساس الاستحقاق إلى جانب معيار IPSAS المستقل على الأساس النقدي للحكومات في مرحلة الانتقال؛ و IPSAS 24 (عرض معلومات الموازنة في القوائم المالية) للتقرير الإلزامي عن الموازنة مقابل الفعلي؛ و IPSAS 23 (الإيرادات من المعاملات غير التبادلية - الضرائب والتحويلات) الذي لا نظير له في IFRS؛ ومفهوم القدرة الخدمية في تعريفات الأصول من الإطار المفاهيمي لمجلس IPSASB.\n\nوتكتمل الصورة بنقطة نطاق واحدة: منشآت القطاع العام ذات التفويض التجاري - التي كانت تُسمى تاريخياً منشآت الأعمال الحكومية (GBEs) - مُوجَّهة إلى تطبيق IFRS لا IPSAS. فحتى داخل المجموعات الحكومية، تُعِد الأذرع التجارية تقاريرها في عالم IFRS ذاته الذي يعمل فيه جمهور هذه المنصة الأساسي.', 'keyPoint': 'IFRS Accounting Standards - issued by the IASB under the IFRS Foundation; the default private-sector framework • IPSAS - issued by the IPSASB, operating under the auspices of IFAC; the public-sector counterpart • IPSAS 24 (budget vs actual) and IPSAS 23 (non-exchange revenue) - distinctive standards with no IFRS equivalent • Cash Basis IPSAS and the IPSASB Conceptual Framework (service potential) - transition path and asset concept • Commercial public-sector entities (historically GBEs) apply IFRS, not IPSAS', 'keyPointAr': 'معايير IFRS - يصدرها مجلس IASB تحت مظلة مؤسسة IFRS؛ الإطار الافتراضي للقطاع الخاص • معايير IPSAS - يصدرها مجلس IPSASB العامل تحت رعاية الاتحاد الدولي للمحاسبين IFAC؛ النظير الخاص بالقطاع العام • IPSAS 24 (الموازنة مقابل الفعلي) و IPSAS 23 (الإيرادات غير التبادلية) - معياران متميزان لا نظير لهما في IFRS • IPSAS على الأساس النقدي والإطار المفاهيمي لمجلس IPSASB (القدرة الخدمية) - مسار الانتقال ومفهوم الأصل • منشآت القطاع العام التجارية (GBEs تاريخياً) تطبق IFRS لا IPSAS', 'highlightType': 'info', 'highlight': 'This module is aligned with the pronouncements of the IASB and the IPSASB to ensure objective, verifiable knowledge transfer.', 'highlightAr': 'هذه الوحدة متوائمة مع إصدارات مجلس IASB ومجلس IPSASB لضمان نقل معرفة موضوعية قابلة للتحقق.', 'keyTerms': 'ifrs,ipsas,ipsasb,service-potential'},
   ],
-  quizQuestions: [
-    // ── Combined Practice Quiz (20 questions from module7-quiz.ts) ──
-    // Q1 - from Quiz 1
-    {
-      'question': 'What does IFRS stand for?',
-      'options': [
-        'International Finance Regulatory System',
-        'International Financial Reporting Standards',
-        'Internal Fiscal Review Standards',
-        'Integrated Financial Record System',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IFRS stands for International Financial Reporting Standards, developed by the IASB for private sector financial reporting.',
-    },
-    // Q2 - from Quiz 1
-    {
-      'question':
-          'Under both IFRS and IPSAS, PP&E can be measured using which models?',
-      'options': [
-        'Only fair value model',
-        'Cost model or revaluation model',
-        'Only historical cost model',
-        'Replacement cost model only',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'Both IAS 16 (IFRS) and IPSAS 17 allow PP&E to be measured using the cost model or the revaluation model after initial recognition.',
-    },
-    // Q3 - from Quiz 1
-    {
-      'question': 'Both frameworks use which accounting basis?',
-      'options': [
-        'Cash basis',
-        'Modified cash basis',
-        'Tax basis',
-        'Accrual basis',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'Both IFRS and IPSAS (accrual-basis standards) use accrual accounting, recognizing transactions when they occur rather than when cash changes hands.',
-    },
-    // Q4 - from Quiz 1
-    {
-      'question': 'Under IFRS 16 and IPSAS 43, lessees recognize:',
-      'options': [
-        'Only rental expense on a straight-line basis',
-        'A right-of-use asset and a lease liability',
-        'Only a lease liability with no asset',
-        'An operating lease disclosure only',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'Both IFRS 16 and IPSAS 43 require lessees to recognize a right-of-use asset and a corresponding lease liability on the balance sheet.',
-    },
-    // Q5 - from Quiz 1
-    {
-      'question': 'IFRS primarily serves which stakeholders?',
-      'options': [
-        'Government budget offices',
-        'Investors, creditors, and capital markets',
-        'Citizens and taxpayers',
-        'International aid agencies',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IFRS is designed for capital market participants -- investors, lenders, and creditors who need information for economic decisions.',
-    },
-    // Q6 - from Quiz 1
-    {
-      'question': 'The concept of "service potential" is unique to:',
-      'options': [
-        'IFRS',
-        'US GAAP',
-        'IPSAS',
-        'Both IFRS and IPSAS equally',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Service potential is a concept unique to IPSAS, recognizing that many public sector assets exist to deliver services rather than generate cash flows.',
-    },
-    // Q7 - from Quiz 1
-    {
-      'question': 'Why was IPSAS created separately from IFRS?',
-      'options': [
-        'Because IFRS had too many standards',
-        'Because public sector has unique transactions like taxes, grants, and non-exchange revenue not covered by IFRS',
-        'Because IFRS was only available in English',
-        'Because governments wanted cheaper standards',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IPSAS was created because public sector entities have unique transactions (non-exchange revenue, social benefits, heritage assets) that IFRS does not address.',
-    },
-    // Q8 - from Quiz 2
-    {
-      'question':
-          'Under IFRS, the primary performance measure is profit or loss. Under IPSAS, it is:',
-      'options': [
-        'Earnings per share',
-        'Revenue growth',
-        'Surplus or deficit',
-        'Net asset value',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS uses "surplus or deficit" instead of "profit or loss" because public sector entities do not operate for profit.',
-    },
-    // Q9 - from Quiz 2
-    {
-      'question':
-          'IPSAS distinguishes between exchange and non-exchange revenue. Which is an example of non-exchange revenue?',
-      'options': [
-        'Consulting fees charged by a government agency',
-        'Sale of government surplus equipment',
-        'Tax revenue collected from citizens',
-        'Rent charged for government-owned buildings',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Tax revenue is a non-exchange transaction because the government receives value (taxes) without providing equivalent direct value in return to the individual taxpayer.',
-    },
-    // Q10 - from Quiz 2
-    {
-      'question':
-          'Heritage assets (e.g., national monuments, artworks) are specifically addressed by:',
-      'options': [
-        'IFRS only',
-        'Neither IFRS nor IPSAS',
-        'IPSAS 17 (with special guidance)',
-        'IAS 16 exclusively',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS 17 provides specific guidance for heritage assets, which governments may not need to depreciate. IFRS has no specific heritage asset guidance.',
-    },
-    // Q11 - from Quiz 2
-    {
-      'question':
-          'IPSAS has two impairment standards (IPSAS 21 and IPSAS 26) instead of one. The split is based on:',
-      'options': [
-        'Size of the asset',
-        'Whether the asset is cash-generating or non-cash-generating',
-        'Age of the asset',
-        'Location of the asset',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IPSAS 21 covers non-cash-generating assets (held for service delivery) and IPSAS 26 covers cash-generating assets. IFRS has only IAS 36 for all impairment.',
-    },
-    // Q12 - from Quiz 2
-    {
-      'question':
-          'IPSAS 24 requires budget-to-actual comparison reporting. Why does IFRS have no equivalent?',
-      'options': [
-        'Private companies do not prepare budgets',
-        'IFRS considers budgets irrelevant',
-        'Budget comparisons are too complex to disclose',
-        'Budgets are not publicly approved documents in the private sector',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'Government budgets are publicly approved and legally binding documents. Budget-to-actual reporting is essential for public accountability. Private sector budgets are internal and not subject to public disclosure.',
-    },
-    // Q13 - from Quiz 2
-    {
-      'question':
-          'IPSAS defines "control" for consolidation purposes differently from IFRS 10. In the public sector, control often comes from:',
-      'options': [
-        'Majority share ownership',
-        'Contractual agreements only',
-        'Market share dominance',
-        'Legislation, regulation, or executive authority rather than equity ownership',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'In the public sector, control often arises from legislation, regulations, or executive orders rather than equity ownership, which is the typical control basis under IFRS 10.',
-    },
-    // Q14 - from Quiz 2
-    {
-      'question':
-          'IPSAS 33 (First-Time Adoption) provides transitional relief not found in IFRS 1, such as:',
-      'options': [
-        'Exemption from all disclosure requirements permanently',
-        'Permission to use any accounting framework',
-        'No comparative information ever required',
-        'A three-year transitional exemption period for recognizing certain assets and liabilities',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'IPSAS 33 provides a three-year transitional exemption period, recognizing that governments transitioning from cash to accrual accounting need more time to identify and measure all assets and liabilities.',
-    },
-    // Q15 - from Quiz 3
-    {
-      'question':
-          'A municipality receives SAR 10 million in property tax payments. Which standard applies for recognition?',
-      'options': [
-        'IFRS 15 (Revenue from Contracts with Customers)',
-        'IAS 20 (Government Grants)',
-        'IPSAS 23 (Revenue from Non-Exchange Transactions)',
-        'IPSAS 9 (Revenue from Exchange Transactions)',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Tax revenue is a non-exchange transaction because citizens do not receive individually proportionate services in return. IPSAS 23 governs this recognition.',
-    },
-    // Q16 - from Quiz 3
-    {
-      'question':
-          'A government gives a SAR 5 million loan to a university at 1% interest when the market rate is 5%. How does IPSAS treat the difference?',
-      'options': [
-        'The full SAR 5 million is recognized as a financial asset at face value',
-        'The interest difference is ignored under both frameworks',
-        'Only the interest income is recorded',
-        'The loan is measured at fair value; the difference between proceeds and fair value is recognized as a grant expense',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'Under IPSAS, concessionary loans are initially measured at fair value. The difference between the loan proceeds and the present value at market rates represents a subsidy/grant expense to be recognized.',
-    },
-    // Q17 - from Quiz 3
-    {
-      'question':
-          'A ministry builds a road costing SAR 200 million with a 30-year useful life. Under IPSAS, the asset is impaired when:',
-      'options': [
-        'Its market value drops below book value (IAS 36 approach)',
-        'Annual depreciation is missed',
-        'Its service potential declines significantly, since roads are non-cash-generating assets (IPSAS 21)',
-        'The budget for maintenance is cut',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Roads are non-cash-generating assets. Under IPSAS 21, impairment is assessed based on decline in service potential (e.g., damage, obsolescence), not market value as under IAS 36.',
-    },
-    // Q18 - from Quiz 3
-    {
-      'question':
-          'A government budget shows planned spending of SAR 500 million but actual spending was SAR 480 million. Under which standard must this comparison be disclosed?',
-      'options': [
-        'IAS 1',
-        'IFRS 8',
-        'IPSAS 24 (Presentation of Budget Information)',
-        'IAS 34',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS 24 requires entities that make their budgets publicly available to present a comparison of budget and actual amounts in their financial statements. There is no IFRS equivalent.',
-    },
-    // Q19 - from Quiz 3
-    {
-      'question':
-          'A company reports "profit" of SAR 2 million under IFRS. If the same entity were a government body using IPSAS, what terminology would change?',
-      'options': [
-        'Nothing -- both use "profit"',
-        '"Profit" would become "surplus" and "loss" would become "deficit"',
-        '"Profit" would become "revenue"',
-        '"Profit" would become "net assets"',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IPSAS uses "surplus" instead of "profit" and "deficit" instead of "loss" to reflect that governments operate for public service, not for profit.',
-    },
-    // Q20 - from Quiz 3
-    {
-      'question':
-          'A newly independent country with no existing accounting framework seeks international credibility. What should it adopt for its government accounts?',
-      'options': [
-        'IFRS, because it is more widely known',
-        'No standards -- create custom local rules',
-        'IPSAS, starting with Cash Basis IPSAS and transitioning to accrual IPSAS over time',
-        'US GAAP for governments',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'For government accounts, IPSAS is the appropriate framework. Starting with Cash Basis IPSAS provides an achievable first step, with IPSAS 33 providing a pathway to full accrual adoption.',
-    },
-    // ── Quiz 1: Similarities (20 questions from module7-quiz1.ts) ──
-    // Q1_1
-    {
-      'question': 'Who develops IPSAS?',
-      'options': [
-        'The World Bank',
-        'The United Nations',
-        'The International Public Sector Accounting Standards Board (IPSASB)',
-        'The International Monetary Fund',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS is developed by the IPSASB, which operates under the International Federation of Accountants (IFAC).',
-    },
-    // Q1_2
-    {
-      'question': 'Which framework serves public sector entities?',
-      'options': [
-        'IFRS',
-        'US GAAP',
-        'UK GAAP',
-        'IPSAS',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'IPSAS (International Public Sector Accounting Standards) was specifically created for government and public sector entities.',
-    },
-    // Q1_3
-    {
-      'question':
-          'Which IPSAS standard mirrors IAS 16 for Property, Plant, and Equipment?',
-      'options': [
-        'IPSAS 1',
-        'IPSAS 23',
-        'IPSAS 17',
-        'IPSAS 39',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS 17 mirrors IAS 16 and covers the recognition, measurement, and disclosure of Property, Plant, and Equipment in the public sector.',
-    },
-    // Q1_4
-    {
-      'question':
-          'Financial instruments classification (AC, FVOCI, FVTPL) is similar under:',
-      'options': [
-        'IFRS 9 and IPSAS 41',
-        'IFRS 15 and IPSAS 23',
-        'IFRS 16 and IPSAS 43',
-        'IAS 1 and IPSAS 1',
-      ],
-      'correctIndex': 0,
-      'explanation':
-          'IFRS 9 (Financial Instruments) and IPSAS 41 share the same three-category classification model: amortized cost, FVOCI, and FVTPL.',
-    },
-    // Q1_5
-    {
-      'question':
-          'Provisions are recognized when there is a present obligation and:',
-      'options': [
-        'The entity wants to set aside funds',
-        'Management approves them quarterly',
-        'A reliable estimate can be made and an outflow is probable',
-        'The auditor recommends it',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Under both IAS 37 and IPSAS 19, provisions are recognized when there is a present obligation, an outflow is probable, and a reliable estimate can be made.',
-    },
-    // Q1_6
-    {
-      'question':
-          'Cash flow categories are the same under IAS 7 and IPSAS 2: operating, investing, and:',
-      'options': [
-        'Administrative',
-        'Financing',
-        'Regulatory',
-        'Budgetary',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'Both IAS 7 and IPSAS 2 classify cash flows into three categories: operating, investing, and financing activities.',
-    },
-    // Q1_7
-    {
-      'question':
-          'Retrospective application applies to accounting policy changes under both:',
-      'options': [
-        'IAS 2 and IPSAS 12',
-        'IAS 16 and IPSAS 17',
-        'IFRS 15 and IPSAS 9',
-        'IAS 8 and IPSAS 3',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'IAS 8 (Accounting Policies, Changes in Estimates and Errors) and IPSAS 3 both require retrospective application when changing accounting policies.',
-    },
-    // Q1_8
-    {
-      'question':
-          'Joint arrangements are handled similarly under IFRS 11 and:',
-      'options': [
-        'IPSAS 17',
-        'IPSAS 37',
-        'IPSAS 1',
-        'IPSAS 23',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IPSAS 37 mirrors IFRS 11, covering joint arrangements including joint operations and joint ventures in the public sector.',
-    },
-    // Q1_9
-    {
-      'question': 'IPSAS focuses on accountability to:',
-      'options': [
-        'Shareholders only',
-        'Bank regulators',
-        'Citizens, taxpayers, and resource providers',
-        'Corporate boards',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS emphasizes accountability to citizens, taxpayers, donors, and other resource providers who fund public services.',
-    },
-    // Q1_10
-    {
-      'question':
-          'IAS 41 and IPSAS 27 both address which type of assets?',
-      'options': [
-        'Financial instruments',
-        'Intangible assets',
-        'Investment property',
-        'Biological assets (agriculture)',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'Both IAS 41 and IPSAS 27 deal with agriculture and biological assets, requiring fair value measurement for living plants and animals.',
-    },
-    // Q1_11
-    {
-      'question':
-          'Employee benefits under IAS 19 and IPSAS 39 use which actuarial method?',
-      'options': [
-        'Aggregate cost method',
-        'Entry age normal method',
-        'Projected unit credit method',
-        'Individual level premium method',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Both IAS 19 and IPSAS 39 require the Projected Unit Credit method for measuring defined benefit obligations.',
-    },
-    // Q1_12
-    {
-      'question':
-          'The equity method for associates is shared between IAS 28 and:',
-      'options': [
-        'IPSAS 36',
-        'IPSAS 17',
-        'IPSAS 1',
-        'IPSAS 23',
-      ],
-      'correctIndex': 0,
-      'explanation':
-          'IPSAS 36 mirrors IAS 28 and requires the equity method for investments in associates and joint ventures.',
-    },
-    // Q1_13
-    {
-      'question':
-          'Which of the following is NOT a similarity between IFRS and IPSAS?',
-      'options': [
-        'Both use accrual accounting',
-        'Both require a complete set of financial statements',
-        'Both address non-exchange revenue from taxation',
-        'Both classify cash flows into operating, investing, and financing',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Non-exchange revenue from taxation is addressed only by IPSAS (IPSAS 23). IFRS does not have a specific standard for tax revenue because private sector entities do not collect taxes.',
-    },
-    // ── Quiz 2: Differences (20 questions from module7-quiz2.ts) ──
-    // Q2_1
-    {
-      'question':
-          'IFRS defines an asset based on expected future economic benefits. IPSAS adds which additional concept?',
-      'options': [
-        'Market liquidity',
-        'Service potential',
-        'Dividend yield',
-        'Credit rating',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IPSAS recognizes that public sector assets may have "service potential" -- the capacity to deliver services -- even if they do not generate economic benefits.',
-    },
-    // Q2_2
-    {
-      'question':
-          'The primary users of IFRS financial statements are capital market participants. Who are the primary users under IPSAS?',
-      'options': [
-        'Shareholders and analysts',
-        'Bond traders and hedge funds',
-        'Insurance companies',
-        'Service recipients, taxpayers, and oversight bodies',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'IPSAS identifies service recipients, taxpayers, donors, legislators, and oversight bodies as primary users of public sector financial reports.',
-    },
-    // Q2_3
-    {
-      'question':
-          'Under IFRS 15, revenue is recognized based on performance obligations. IPSAS uses a different model for non-exchange revenue because:',
-      'options': [
-        'IPSAS does not recognize revenue at all',
-        'There is no contract with a customer in taxation',
-        'IFRS 15 is too old',
-        'IPSAS only uses cash accounting',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IFRS 15 is built on a five-step customer contract model. Non-exchange transactions like taxes have no customer contract, so IPSAS 23 uses a different recognition approach.',
-    },
-    // Q2_4
-    {
-      'question':
-          'Government grants received with conditions attached are recognized under IPSAS 23 as:',
-      'options': [
-        'Immediate revenue',
-        'An expense',
-        'Equity contribution',
-        'A liability until conditions are met',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'When a grant has conditions (e.g., return if not used for the specified purpose), the recipient recognizes a liability until the conditions are satisfied.',
-    },
-    // Q2_5
-    {
-      'question':
-          'Social benefits (e.g., pensions, welfare) are addressed by IPSAS but have no equivalent in IFRS because:',
-      'options': [
-        'Private sector companies do not provide social welfare programs to the public',
-        'IFRS does not cover any liabilities',
-        'Social benefits are always immaterial',
-        'IFRS already covers them under IAS 19',
-      ],
-      'correctIndex': 0,
-      'explanation':
-          'Social benefits like state pensions, unemployment benefits, and public healthcare are uniquely governmental. IFRS has no equivalent standard because private companies do not provide these societal programs.',
-    },
-    // Q2_6
-    {
-      'question':
-          'Under IPSAS, government inventories may include items not found in private sector inventories, such as:',
-      'options': [
-        'Finished goods for retail',
-        'Raw materials for manufacturing',
-        'Work in progress',
-        'Strategic reserves and emergency supplies',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'Government inventories under IPSAS 12 can include strategic reserves (oil, food, medical supplies) and emergency stockpiles not typically found in the private sector.',
-    },
-    // Q2_7
-    {
-      'question':
-          'Concessionary loans (below-market-rate loans) receive special treatment under IPSAS because:',
-      'options': [
-        'Governments never borrow money',
-        'All government loans are interest-free',
-        'The below-market element represents a subsidy or social benefit component',
-        'IFRS already covers them adequately',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Concessionary loans have a below-market interest component that represents a subsidy. IPSAS requires the difference between fair value and proceeds to be recognized separately.',
-    },
-    // Q2_8
-    {
-      'question':
-          'Peppercorn (nominal-rent) leases are uniquely addressed in IPSAS 43 because:',
-      'options': [
-        'Governments often receive or grant leases at below-market rates for policy objectives',
-        'They do not exist in the private sector',
-        'IFRS 16 prohibits below-market leases',
-        'They only involve agricultural land',
-      ],
-      'correctIndex': 0,
-      'explanation':
-          'Public sector entities commonly enter leases at below-market rates to support social objectives. IPSAS 43 provides specific guidance for measuring and disclosing these arrangements.',
-    },
-    // Q2_9
-    {
-      'question':
-          'Under IFRS, borrowing costs for qualifying assets must be capitalized (IAS 23). Under IPSAS 5, entities:',
-      'options': [
-        'Must always capitalize borrowing costs',
-        'Must always expense borrowing costs',
-        'Have a choice to capitalize or expense borrowing costs',
-        'Cannot incur borrowing costs',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS 5 allows a choice: entities can either capitalize borrowing costs (like IFRS) or expense them immediately. IFRS mandates capitalization for qualifying assets.',
-    },
-    // Q2_10
-    {
-      'question':
-          'IPSAS 20 defines related parties more broadly than IAS 24. In the public sector, related parties can include:',
-      'options': [
-        'Only subsidiaries',
-        'Only commercial suppliers',
-        'Ministers, senior officials, and their close family members',
-        'Only foreign governments',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS 20 includes ministers, key management personnel, and their close family members as related parties, reflecting the public sector governance structure.',
-    },
-    // Q2_11
-    {
-      'question':
-          'Earnings per share (EPS) is required under IFRS (IAS 33). Under IPSAS, EPS:',
-      'options': [
-        'Is equally required',
-        'Is optional',
-        'Does not exist because public sector entities do not issue shares to public markets',
-        'Is calculated differently',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'There is no IPSAS equivalent to IAS 33 (EPS) because government entities do not issue traded equity shares and therefore have no earnings per share to report.',
-    },
-    // Q2_12
-    {
-      'question':
-          'Public-Private Partnerships (PPPs) are addressed specifically in IPSAS 32. Under IFRS, they are covered by:',
-      'options': [
-        'A dedicated PPP standard',
-        'IFRIC 12, which addresses only the private sector operator side',
-        'IFRS 16 only',
-        'PPPs are not covered by any framework',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IFRIC 12 covers PPPs only from the private operator perspective. IPSAS 32 provides guidance from the government grantor side, filling a gap in public sector accounting.',
-    },
-    // Q2_13
-    {
-      'question':
-          'The Cash Basis IPSAS is a standard that has no IFRS equivalent because:',
-      'options': [
-        'IFRS never mentions cash',
-        'All IFRS entities already use accrual basis; the Cash Basis IPSAS serves as a stepping stone for developing countries transitioning to accrual',
-        'Cash basis is superior to accrual basis',
-        'Only three countries use IFRS',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'The Cash Basis IPSAS exists as a transitional standard for governments that have not yet moved to accrual accounting. IFRS does not need this because all IFRS entities already use accrual basis.',
-    },
-    // ── Quiz 3: Integration (20 questions from module7-quiz3.ts) ──
-    // Q3_1
-    {
-      'question':
-          'A government acquires a collection of heritage artwork valued at SAR 50 million. Under IFRS, this would be treated as PP&E. Under IPSAS, how does the treatment differ?',
-      'options': [
-        'It is expensed immediately under IPSAS',
-        'IPSAS does not permit recognition of artwork',
-        'Treatment is identical under both frameworks',
-        'IPSAS 17 allows recognition as a heritage asset with optional depreciation and special disclosure',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'IPSAS 17 provides specific heritage asset guidance allowing optional depreciation (heritage assets may have indefinite useful lives) and requiring additional disclosures about preservation and significance.',
-    },
-    // Q3_2
-    {
-      'question':
-          'An entity transitions from cash basis to accrual IPSAS. What relief does IPSAS 33 provide that IFRS 1 does not?',
-      'options': [
-        'Permanent exemption from financial statement preparation',
-        'Permission to skip external audits',
-        'A three-year transitional period to recognize and measure assets, liabilities, and revenue',
-        'Automatic adoption without any adjustments',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'IPSAS 33 uniquely provides a three-year grace period for first-time adopters to progressively recognize assets and liabilities, acknowledging the massive data gaps governments face when moving from cash to accrual.',
-    },
-    // Q3_3
-    {
-      'question':
-          'A state-owned enterprise (SOE) listed on the stock exchange should report using:',
-      'options': [
-        'IPSAS only, because it is government-owned',
-        'IFRS, because it is a listed entity with public investors',
-        'Neither -- it is exempt from all standards',
-        'Any local standard it chooses',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'Listed SOEs typically use IFRS because they have public market investors. IPSAS is designed for public sector entities that are not publicly traded.',
-    },
-    // Q3_4
-    {
-      'question':
-          'A public hospital charges patients SAR 50 per visit while the actual cost is SAR 300. This is an example of:',
-      'options': [
-        'A peppercorn/subsidized service delivery with non-exchange revenue elements',
-        'An exchange transaction at market rates',
-        'A loss-making transaction that should not be recognized',
-        'A capital transaction',
-      ],
-      'correctIndex': 0,
-      'explanation':
-          'When public entities provide services at below cost, the fee is not an exchange transaction at market rates. The subsidy element is a unique public sector characteristic addressed by IPSAS.',
-    },
-    // Q3_5
-    {
-      'question':
-          'Under IFRS, consolidation is based on equity ownership and IFRS 10. A government consolidates a regulatory body that it controls through legislation. This is possible under IPSAS because:',
-      'options': [
-        'IPSAS ignores the concept of control',
-        'All government bodies are automatically consolidated',
-        'Consolidation is optional in the public sector',
-        'IPSAS 35 defines control more broadly to include power from legislation, regulation, or binding agreements',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'IPSAS 35 broadens the concept of control beyond equity ownership to include legislative power, regulatory authority, and binding administrative arrangements.',
-    },
-    // Q3_6
-    {
-      'question':
-          'A developing country uses cash-basis accounting and wants to adopt IPSAS. What is the recommended transition path?',
-      'options': [
-        'Immediately adopt full accrual IPSAS without any transitional steps',
-        'Skip IPSAS and adopt IFRS instead',
-        'Continue with cash basis indefinitely',
-        'Start with Cash Basis IPSAS, then progressively move to accrual IPSAS using IPSAS 33 transitional provisions',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'The recommended path is to start with Cash Basis IPSAS to establish basic financial reporting discipline, then use IPSAS 33 transitional provisions to progressively adopt accrual-basis IPSAS.',
-    },
-    // Q3_7
-    {
-      'question':
-          'Both IAS 16 and IPSAS 17 allow the revaluation model. However, applying revaluation to government infrastructure differs because:',
-      'options': [
-        'Government assets always increase in value',
-        'IPSAS prohibits revaluation for infrastructure',
-        'Many government assets have no active market, making fair value determination challenging and requiring depreciated replacement cost approaches',
-        'The revaluation model is identical in practice',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Government infrastructure (dams, highways, pipelines) often has no comparable market transactions. IPSAS guidance permits depreciated replacement cost as a valuation technique when no active market exists.',
-    },
-    // Q3_8
-    {
-      'question':
-          'A government minister awards a contract to a company owned by her spouse. Under which IPSAS standard must this be disclosed?',
-      'options': [
-        'IPSAS 1 (Presentation)',
-        'IPSAS 20 (Related Party Disclosures)',
-        'IPSAS 24 (Budget Information)',
-        'IPSAS 14 (Events After Reporting Date)',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'IPSAS 20 requires disclosure of related party transactions. Ministers and their close family members are defined as related parties, making this contract a required disclosure.',
-    },
-    // Q3_9
-    {
-      'question':
-          'A government signs a 25-year PPP contract for a toll road where a private company builds and operates the road. Under IPSAS 32, the government:',
-      'options': [
-        'Does not recognize any asset because the private operator manages it',
-        'Records only rental income',
-        'Recognizes the road as an asset because it controls the service and retains residual interest',
-        'Uses IFRS 16 for the arrangement',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Under IPSAS 32, if the grantor (government) controls the services and residual interest in the asset, it recognizes the PPP asset even though the private operator built and operates it.',
-    },
-    // Q3_10
-    {
-      'question':
-          'Employee defined-benefit pension obligations are measured using the Projected Unit Credit method under both IAS 19 and IPSAS 39. What additional challenge exists for governments?',
-      'options': [
-        'Government pension schemes are typically much larger, unfunded, and involve multi-employer plans across the entire civil service',
-        'Governments do not offer pensions',
-        'The actuarial method is different for governments',
-        'IPSAS does not require pension disclosures',
-      ],
-      'correctIndex': 0,
-      'explanation':
-          'Government pension obligations are often massive, partially or fully unfunded, and span the entire civil service, creating unique measurement and disclosure challenges beyond typical private sector plans.',
-    },
-    // Q3_11
-    {
-      'question':
-          'A government entity operates a public bus service at subsidized fares. When classifying revenue, which approach is most correct?',
-      'options': [
-        'All fare revenue is non-exchange because fares are below cost',
-        'Fare revenue is exchange (IPSAS 9) and any government subsidy received is non-exchange (IPSAS 23)',
-        'No revenue should be recognized',
-        'All revenue is classified as exchange only',
-      ],
-      'correctIndex': 1,
-      'explanation':
-          'Fares paid by passengers are exchange transactions (IPSAS 9) because value is exchanged. Government subsidies to cover the deficit are non-exchange transactions (IPSAS 23). Both streams are recognized separately.',
-    },
-    // Q3_12
-    {
-      'question':
-          'IFRS 5 requires "held for sale" classification and measurement. IPSAS does not have an equivalent because:',
-      'options': [
-        'Government assets are never sold',
-        'IPSAS covers it under a different number',
-        'Assets held for sale do not need disclosure',
-        'Government asset disposals follow different political and legal processes, and assets are rarely held primarily for resale',
-      ],
-      'correctIndex': 3,
-      'explanation':
-          'IPSAS has no equivalent to IFRS 5 because public sector assets are rarely held for sale. Government disposals involve lengthy legislative and administrative processes unlike private sector asset sales.',
-    },
-    // Q3_13
-    {
-      'question':
-          'Which statement accurately compares segment reporting under IFRS 8 and IPSAS 18?',
-      'options': [
-        'IFRS 8 uses the management approach; IPSAS 18 uses service segments and geographical segments relevant to public accountability',
-        'Both use identical approaches',
-        'Neither framework requires segment reporting',
-        'IPSAS uses the management approach and IFRS uses service segments',
-      ],
-      'correctIndex': 0,
-      'explanation':
-          'IFRS 8 uses the "management approach" based on internal reporting. IPSAS 18 defines segments by service type (e.g., health, education) and geography, which better serves public accountability needs.',
-    },
-    // Q3_14
-    {
-      'question':
-          'A government entity and a private company both have a lease for office space. Under IFRS 16 and IPSAS 43, what is the key common treatment?',
-      'options': [
-        'Both expense the lease payments as operating costs',
-        'Only the private company recognizes a right-of-use asset',
-        'Both recognize a right-of-use asset and lease liability on the balance sheet',
-        'Neither recognizes any asset or liability',
-      ],
-      'correctIndex': 2,
-      'explanation':
-          'Both IFRS 16 and IPSAS 43 require lessees to recognize a right-of-use asset and lease liability. This is a key similarity -- the single-model lessee accounting applies across both frameworks.',
-    },
+  keyTerms: [
+    {'term': 'IFRS', 'termAr': 'معايير IFRS', 'def': 'International Financial Reporting Standards - designed for private sector entities. Focuses on investor decision-making. Used by publicly traded companies.', 'defAr': 'معايير التقارير المالية الدولية - مصممة لكيانات القطاع الخاص. تركز على اتخاذ قرارات المستثمرين. تستخدمها الشركات المتداولة علناً.'},
+    {'term': 'IPSAS', 'termAr': 'معايير IPSAS', 'def': 'International Public Sector Accounting Standards - global standards specifically designed for government accounting. Ensures consistency and comparability across government entities.', 'defAr': 'المعايير المحاسبية الدولية للقطاع العام - معايير عالمية مصممة خصيصاً للمحاسبة الحكومية. تضمن الاتساق وقابلية المقارنة عبر الجهات الحكومية.'},
+    {'term': 'Public Sector', 'termAr': 'القطاع العام', 'def': 'Part of the economy controlled by government. Exists to serve public interest, provide essential services, and maintain social welfare. Accountable to citizens.', 'defAr': 'جزء من الاقتصاد تسيطر عليه الحكومة. موجود لخدمة المصلحة العامة وتقديم الخدمات الأساسية والحفاظ على الرفاهية الاجتماعية. مسؤول أمام المواطنين.'},
+    {'term': 'Fair Value', 'termAr': 'القيمة العادلة', 'def': 'The price that would be received to sell an asset or paid to transfer a liability in an orderly transaction between market participants at the measurement date (IFRS 13). IPSAS applies the same definition and the same hierarchy of measurement inputs, so fair value measurement is substantially aligned across the two frameworks.', 'defAr': 'السعر الذي يُستلم عند بيع أصل أو يُدفع لتحويل التزام في معاملة منظمة بين المشاركين في السوق في تاريخ القياس (IFRS 13). وتطبق معايير IPSAS التعريف نفسه والتسلسل الهرمي ذاته لمدخلات القياس، ولذلك يُعد قياس القيمة العادلة متوائماً إلى حد كبير بين الإطارين.'},
+    {'term': 'Property, Plant and Equipment (PP&E)', 'termAr': 'الممتلكات والمصانع والمعدات', 'def': 'Tangible assets held for use in production, for the supply of goods and services, or for administrative purposes over more than one period. Under IAS 16 the entity chooses between the cost model and the revaluation model, and IPSAS 17 applies the same choice with the same recognition, depreciation and derecognition rules. IPSAS 17 additionally addresses assets held for their service potential, such as roads and heritage buildings.', 'defAr': 'أصول ملموسة تُقتنى للاستخدام في الإنتاج أو لتوريد السلع والخدمات أو لأغراض إدارية على مدى أكثر من فترة واحدة. وبموجب IAS 16 تختار المنشأة بين نموذج التكلفة ونموذج إعادة التقييم، ويطبق IPSAS 17 الاختيار نفسه بالشروط ذاتها للاعتراف والاستهلاك والاستبعاد. ويضيف IPSAS 17 معالجة صريحة للأصول المحتفظ بها لقدرتها الخدمية مثل الطرق والمباني التراثية.'},
+    {'term': 'Financial Instruments', 'termAr': 'الأدوات المالية', 'def': 'Contracts that give rise to a financial asset of one entity and a financial liability or equity instrument of another. IFRS 9 classifies them as amortized cost, fair value through other comprehensive income, or fair value through profit or loss, and applies the expected credit loss model. IPSAS 41 mirrors that classification and impairment approach, and adds guidance for concessionary loans granted below market rates.', 'defAr': 'عقود تنشئ أصلاً مالياً لدى منشأة والتزاماً مالياً أو أداة حقوق ملكية لدى منشأة أخرى. ويصنفها IFRS 9 إلى التكلفة المطفأة، أو القيمة العادلة من خلال الدخل الشامل الآخر، أو القيمة العادلة من خلال الربح أو الخسارة، ويطبق نموذج خسائر الائتمان المتوقعة. ويعكس IPSAS 41 التصنيف ونموذج انخفاض القيمة ذاتهما، ويضيف إرشادات للقروض الميسرة الممنوحة بأقل من أسعار السوق.'},
+    {'term': 'Accrual Basis', 'termAr': 'أساس الاستحقاق', 'def': 'Accounting method that recognizes transactions when they occur, not when cash is received or paid. Provides more complete financial picture. Required by IPSAS.', 'defAr': 'طريقة محاسبية تعترف بالمعاملات عند حدوثها، وليس عند استلام النقد أو دفعه. توفر صورة مالية أكثر اكتمالاً. مطلوبة بموجب IPSAS.'},
+    {'term': 'Provisions', 'termAr': 'المخصصات', 'def': 'Liabilities of uncertain timing or amount. Under IAS 37 a provision is recognized when a present obligation arises from a past event, an outflow of resources is probable, and a reliable estimate can be made. IPSAS 19 applies the identical three-condition test, so the treatment is substantially aligned across both frameworks.', 'defAr': 'التزامات غير مؤكدة التوقيت أو المبلغ. وبموجب IAS 37 يُعترف بالمخصص عند وجود التزام حالي ناشئ عن حدث سابق، واحتمال تدفق موارد إلى الخارج، وإمكانية إجراء تقدير موثوق. ويطبق IPSAS 19 اختبار الشروط الثلاثة نفسه، فالمعالجة متوائمة إلى حد كبير بين الإطارين.'},
+    {'term': 'Leases', 'termAr': 'عقود الإيجار', 'def': 'Contracts conveying the right to use an asset for a period of time in exchange for consideration. Under IFRS 16 the lessee recognizes a right-of-use asset and a corresponding lease liability for nearly all leases, and IPSAS 43 requires the same model. The frameworks part company only on below-market public sector arrangements, where IPSAS addresses the subsidy element that IFRS 16 leaves invisible.', 'defAr': 'عقود تمنح الحق في استخدام أصل لفترة زمنية مقابل عوض. وبموجب IFRS 16 يعترف المستأجر بأصل حق الاستخدام وبالتزام إيجار مقابل لجميع العقود تقريباً، ويشترط IPSAS 43 النموذج نفسه. ولا يفترق الإطاران إلا في ترتيبات القطاع العام الممنوحة بأقل من سعر السوق، حيث يعالج IPSAS عنصر الدعم الذي يبقى غير مرئي في IFRS 16.'},
+    {'term': 'Cash Flow Statement', 'termAr': 'قائمة التدفقات النقدية', 'def': 'Shows actual cash movements during the period. Explains how cash changed from beginning to end. Divided into operating, investing, and financing activities.', 'defAr': 'تُظهر حركات النقد الفعلية خلال الفترة. توضح كيف تغير النقد من البداية إلى النهاية. مقسمة إلى أنشطة تشغيلية واستثمارية وتمويلية.'},
+    {'term': 'Consolidation', 'termAr': 'التوحيد', 'def': 'Combining financial statements of multiple entities into a single set of statements. Shows the government as a single economic entity.', 'defAr': 'دمج القوائم المالية للكيانات المتعددة في مجموعة واحدة من القوائم. تظهر الحكومة ككيان اقتصادي واحد.'},
+    {'term': 'Equity Method', 'termAr': 'طريقة حقوق الملكية', 'def': 'Method of accounting for an investment where the investor has significant influence but not control: the investment is recorded initially at cost and then adjusted for the investor share of the investee results. IAS 28 requires it for associates and IPSAS 36 applies the same method, with joint ventures treated equivalently under IFRS 11 and IPSAS 37.', 'defAr': 'طريقة لمحاسبة استثمار يمارس فيه المستثمر تأثيراً جوهرياً دون سيطرة: يُثبت الاستثمار مبدئياً بالتكلفة ثم يُعدَّل بحصة المستثمر من نتائج الشركة المستثمَر فيها. ويشترطها IAS 28 للشركات الزميلة، ويطبق IPSAS 36 الطريقة نفسها، كما تُعالج المشاريع المشتركة بالأسلوب ذاته بموجب IFRS 11 و IPSAS 37.'},
+    {'term': 'Service Potential', 'termAr': 'إمكانات الخدمة', 'def': 'The capacity of an asset to provide services contributing to government objectives. Unlike private sector focus on cash generation, government assets provide public services.', 'defAr': 'قدرة الأصل على تقديم خدمات تساهم في أهداف الحكومة. على عكس تركيز القطاع الخاص على توليد النقد، تقدم الأصول الحكومية خدمات عامة.'},
+    {'term': 'Public Accountability', 'termAr': 'المساءلة العامة', 'def': 'The obligation of a government to answer to citizens, legislators and oversight bodies for the way public resources are raised and used. IFRS reporting is oriented toward investors deciding where to allocate capital, so the question is whether a return will be earned. IPSAS reporting is oriented toward public accountability, so the question is whether public money was used as authorized and to good effect.', 'defAr': 'واجب الحكومة في تقديم حساب للمواطنين والمشرعين وهيئات الرقابة عن كيفية تحصيل الموارد العامة واستخدامها. وتتوجه تقارير IFRS إلى المستثمرين الذين يقررون أين يخصصون رأس المال، فالسؤال هو ما إذا كان العائد سيتحقق. أما تقارير IPSAS فتتوجه إلى المساءلة العامة، فالسؤال هو ما إذا كان المال العام قد أُنفق وفق ما أُجيز وبفاعلية.'},
+    {'term': 'Stewardship', 'termAr': 'الإشراف', 'def': 'Responsible management and oversight of public resources. Government has duty to manage assets and funds in the best interest of citizens.', 'defAr': 'الإدارة المسؤولة والإشراف على الموارد العامة. الحكومة لديها واجب إدارة الأصول والأموال لمصلحة المواطنين.'},
+    {'term': 'Surplus or Deficit', 'termAr': 'الفائض أو العجز', 'def': 'The bottom-line measure of the statement of financial performance. Under IFRS the measure is profit or loss (IAS 1), reflecting the return generated for shareholders. IPSAS 1 uses surplus or deficit instead, because governments do not exist to earn a profit: a surplus means resources collected exceeded resources consumed, not that the entity was profitable.', 'defAr': 'مقياس المحصلة النهائية في قائمة الأداء المالي. ففي إطار IFRS يكون المقياس هو الربح أو الخسارة (IAS 1) بما يعكس العائد المتحقق للمساهمين. أما IPSAS 1 فيستخدم الفائض أو العجز، لأن الحكومات لا توجد لتحقيق ربح: فالفائض يعني أن الموارد المحصلة تجاوزت الموارد المستهلكة لا أن الجهة كانت رابحة.'},
+    {'term': 'Conceptual Framework', 'termAr': 'الإطار المفاهيمي', 'def': 'The set of concepts defining the objective of financial reporting, the elements of the statements, and the criteria for recognizing them. The IFRS Conceptual Framework identifies existing and potential investors, lenders and other creditors as the primary users, and defines an asset by reference to future economic benefits. The IPSASB Conceptual Framework identifies citizens, legislators, donors and oversight bodies as the primary users, and extends the asset definition to service potential.', 'defAr': 'مجموعة المفاهيم التي تحدد هدف التقارير المالية وعناصر القوائم ومعايير الاعتراف بها. ويحدد الإطار المفاهيمي لمعايير IFRS المستثمرين والمقرضين والدائنين الحاليين والمحتملين بوصفهم المستخدمين الرئيسيين، ويعرّف الأصل بالرجوع إلى المنافع الاقتصادية المستقبلية. أما الإطار المفاهيمي لمجلس IPSASB فيحدد المواطنين والمشرعين والمانحين وهيئات الرقابة بوصفهم المستخدمين الرئيسيين، ويوسّع تعريف الأصل ليشمل القدرة الخدمية.'},
+    {'term': 'Non-Exchange Revenue', 'termAr': 'الإيرادات غير التبادلية', 'def': 'Revenue received without giving approximately equal value in return, such as taxes, transfers, fines, bequests and donations. IFRS has no equivalent standard, because IFRS 15 assumes revenue arises from contracts with customers. IPSAS 23 fills the gap: revenue is recognized when the entity controls the resource, with conditions that must be returned if unfulfilled recorded as a liability, while restrictions that only limit use do not delay recognition.', 'defAr': 'إيرادات تُستلم دون تقديم قيمة مساوية تقريباً في المقابل، مثل الضرائب والتحويلات والغرامات والوصايا والتبرعات. ولا يوجد في IFRS معيار مكافئ لأن IFRS 15 يفترض أن الإيراد ينشأ من عقود مع العملاء. ويسد IPSAS 23 هذه الفجوة: فيُعترف بالإيراد عندما تسيطر المنشأة على المورد، وتُسجَّل الشروط الواجب ردها عند عدم استيفائها التزاماً، في حين لا تؤخر القيود التي تحد من الاستخدام فقط الاعتراف بالإيراد.'},
+    {'term': 'Exchange Transactions', 'termAr': 'المعاملات التبادلية', 'def': 'Transactions where the government provides goods/services and receives approximately equal value in return. Similar to private sector transactions.', 'defAr': 'المعاملات التي تقدم فيها الحكومة سلع/خدمات وتتلقى قيمة معادلة تقريباً في المقابل. مشابهة لمعاملات القطاع الخاص.'},
+    {'term': 'Social Benefits', 'termAr': 'المنافع الاجتماعية', 'def': 'Cash transfers and services provided to individuals to mitigate social risk, such as welfare payments, public pensions and state healthcare. IFRS does not address them at all, as they fall outside its scope. IPSAS 42 provides dedicated guidance, recognizing an expense and a liability when the beneficiary satisfies the eligibility criteria.', 'defAr': 'تحويلات نقدية وخدمات تُقدَّم للأفراد للتخفيف من المخاطر الاجتماعية، مثل مدفوعات الرعاية والمعاشات العامة والرعاية الصحية الحكومية. ولا يعالجها IFRS إطلاقاً لأنها تقع خارج نطاقه. ويوفر IPSAS 42 إرشادات مخصصة لها، فيُعترف بالمصروف والالتزام عندما يستوفي المستفيد معايير الأهلية.'},
+    {'term': 'Heritage Assets', 'termAr': 'الأصول التراثية', 'def': 'Assets held for their cultural, historical or environmental significance, such as monuments, museum collections and historic buildings. IFRS gives no specific guidance, so such assets default to the general PP&E rules of IAS 16. IPSAS 17 addresses them explicitly: recognition is encouraged but not required where reliable measurement is not possible, while disclosure is required in every case.', 'defAr': 'أصول يُحتفظ بها لأهميتها الثقافية أو التاريخية أو البيئية، مثل المعالم والمقتنيات المتحفية والمباني التاريخية. ولا يقدم IFRS إرشادات محددة لها، فتخضع للقواعد العامة للممتلكات والمصانع والمعدات في IAS 16. أما IPSAS 17 فيعالجها صراحةً: فالاعتراف مشجع عليه وغير مطلوب حين يتعذر القياس الموثوق، بينما يبقى الإفصاح مطلوباً في جميع الأحوال.'},
+    {'term': 'Impairment', 'termAr': 'انخفاض قيمة الأصول', 'def': 'The loss recognized when the carrying amount of an asset exceeds its recoverable amount. IFRS uses a single standard, IAS 36, which measures recoverable amount from expected cash flows. IPSAS splits the question in two: IPSAS 26 for cash-generating assets, broadly mirroring IAS 36, and IPSAS 21 for non-cash-generating assets, where the loss is measured by the decline in remaining service potential rather than by cash flows.', 'defAr': 'الخسارة التي يُعترف بها عندما تتجاوز القيمة الدفترية للأصل قيمته القابلة للاسترداد. ويستخدم IFRS معياراً واحداً هو IAS 36 الذي يقيس القيمة القابلة للاسترداد من التدفقات النقدية المتوقعة. أما IPSAS فيقسم المسألة إلى معيارين: IPSAS 26 للأصول المولدة للنقد بما يوازي IAS 36، و IPSAS 21 للأصول غير المولدة للنقد حيث تُقاس الخسارة بتراجع القدرة الخدمية المتبقية لا بالتدفقات النقدية.'},
+    {'term': 'Inventories', 'termAr': 'المخزون', 'def': 'Assets held for sale, in the process of production, or as materials to be consumed in production or in rendering services. IAS 2 measures all inventories at the lower of cost and net realizable value. IPSAS 12 keeps that rule for commercial inventories, but measures items held for free distribution or for a nominal charge at the lower of cost and current replacement cost, because the entity never intends to sell them.', 'defAr': 'أصول محتفظ بها للبيع أو قيد الإنتاج أو مواد ستُستهلك في الإنتاج أو في تقديم الخدمات. ويقيس IAS 2 جميع المخزونات بأقل من التكلفة وصافي القيمة القابلة للتحقق. ويبقي IPSAS 12 على هذه القاعدة للمخزون التجاري، لكنه يقيس البنود المحتفظ بها للتوزيع المجاني أو مقابل مبلغ رمزي بأقل من التكلفة وتكلفة الاستبدال الحالية، لأن المنشأة لا تنوي بيعها.'},
+    {'term': 'Borrowing Costs', 'termAr': 'تكاليف الاقتراض', 'def': 'Interest and other costs incurred in connection with the borrowing of funds. IAS 23 requires capitalization of borrowing costs directly attributable to the acquisition, construction or production of a qualifying asset, with no alternative treatment. IPSAS 5 instead allows an accounting policy choice between capitalizing such costs and expensing them as incurred, recognizing the varied financing structures of public infrastructure.', 'defAr': 'الفوائد والتكاليف الأخرى التي تتكبدها المنشأة في سبيل اقتراض الأموال. ويوجب IAS 23 رسملة تكاليف الاقتراض المنسوبة مباشرة إلى اقتناء أصل مؤهل أو إنشائه أو إنتاجه، دون معالجة بديلة. أما IPSAS 5 فيتيح خياراً في السياسة المحاسبية بين رسملة هذه التكاليف وتحميلها على المصروفات عند تكبدها، مراعاةً لتنوع هياكل تمويل البنية التحتية العامة.'},
+    {'term': 'Concessionary Loan', 'termAr': 'القرض الميسّر', 'def': 'A loan granted or received on below-market terms to support a policy objective, for example lending to a social housing body at well under the market rate. IFRS 9 offers no specific guidance for the subsidy element. IPSAS 41 requires the day-one difference between the loan proceeds and its fair value to be recognized immediately as an expense, making the true cost of the concession transparent.', 'defAr': 'قرض يُمنح أو يُستلم بشروط أدنى من شروط السوق لدعم هدف من أهداف السياسة العامة، مثل الإقراض لجهة إسكان اجتماعي بسعر يقل كثيراً عن سعر السوق. ولا يقدم IFRS 9 إرشادات محددة لعنصر الدعم. ويشترط IPSAS 41 الاعتراف الفوري كمصروف بالفرق في اليوم الأول بين متحصلات القرض وقيمته العادلة، بما يجعل التكلفة الحقيقية للتيسير شفافة.'},
+    {'term': 'Peppercorn (Nominal) Lease', 'termAr': 'الإيجار الرمزي', 'def': 'A lease granted for a token or nominal amount, such as premises let to a community organization for a symbolic annual payment. Under IFRS 16 there is no specific guidance, so the lease is measured from the nominal payments and the subsidy element stays invisible. The IPSASB treats these concessionary leases as a distinct public sector issue and has developed dedicated proposals to recognize and disclose the benefit granted or received beyond the nominal payments.', 'defAr': 'إيجار يُمنح مقابل مبلغ رمزي، كتأجير مقر لمنظمة مجتمعية مقابل دفعة سنوية رمزية. وبموجب IFRS 16 لا توجد إرشادات محددة، فيُقاس عقد الإيجار من المدفوعات الرمزية ويبقى عنصر الدعم غير مرئي. ويعامل مجلس IPSASB هذه الإيجارات الميسرة بوصفها قضية متميزة خاصة بالقطاع العام، وقد طوّر مقترحات مخصصة للاعتراف بالمنفعة الممنوحة أو المستلمة بما يتجاوز المدفوعات الرمزية والإفصاح عنها.'},
+    {'term': 'Budget Reporting', 'termAr': 'التقرير عن الموازنة', 'def': 'Presentation of a comparison between approved budget amounts and actual amounts, with explanations of material variances. IFRS contains no such requirement, since a company budget is an internal management tool. IPSAS 24 makes the comparison mandatory, because legislatures authorize public spending through the budget and reporting against it is central to accountability.', 'defAr': 'عرض مقارنة بين مبالغ الموازنة المعتمدة والمبالغ الفعلية مع تفسير الفروقات الجوهرية. ولا يتضمن IFRS مثل هذا المتطلب لأن موازنة الشركة أداة إدارية داخلية. أما IPSAS 24 فيجعل المقارنة إلزامية، لأن السلطة التشريعية تجيز الإنفاق العام من خلال الموازنة، ويكون التقرير مقابلها ركناً أساسياً في المساءلة.'},
+    {'term': 'Related Party Transactions', 'termAr': 'معاملات الأطراف ذات العلاقة', 'def': 'Transactions between the reporting entity and parties with close relationships (controlled entities, key officials). Requires disclosure for transparency.', 'defAr': 'المعاملات بين الجهة المُبلغة والأطراف ذات العلاقات الوثيقة (الكيانات الخاضعة للسيطرة، المسؤولين الرئيسيين). تتطلب الإفصاح للشفافية.'},
+    {'term': 'Segment Reporting', 'termAr': 'تقارير القطاعات', 'def': 'Presenting financial information broken down by different segments (ministries, programs, geographic areas) for better understanding of performance.', 'defAr': 'تقديم المعلومات المالية مقسمة حسب قطاعات مختلفة (الوزارات، البرامج، المناطق الجغرافية) لفهم أفضل للأداء.'},
+    {'term': 'Amalgamation', 'termAr': 'الاندماج', 'def': 'The bringing together of separate entities into one, typically by merging ministries or agencies or by creating a new body from parts of existing ones. IFRS 3 treats combinations as acquisitions, applying the acquisition method and usually recognizing goodwill. IPSAS 40 covers both acquisitions and amalgamations, and goodwill rarely arises because such restructurings occur under common control with no purchase price.', 'defAr': 'ضم كيانات منفصلة في كيان واحد، عادةً بدمج وزارات أو هيئات أو بإنشاء جهة جديدة من أجزاء جهات قائمة. ويعالج IFRS 3 عمليات التجميع بوصفها عمليات استحواذ تطبق طريقة الاستحواذ وينتج عنها عادةً شهرة محل. أما IPSAS 40 فيغطي عمليات الاستحواذ والاندماجات معاً، ونادراً ما تنشأ شهرة محل لأن عمليات إعادة الهيكلة هذه تتم تحت سيطرة مشتركة ودون ثمن شراء.'},
+    {'term': 'Service Concession Arrangement', 'termAr': 'ترتيب امتياز الخدمة', 'def': 'An arrangement in which a private operator builds or upgrades infrastructure and then operates it to deliver a public service, such as a toll road or a hospital management contract. IFRIC 12 addresses the arrangement from the operator side under IFRS. IPSAS 32 addresses the same arrangement from the grantor side, requiring the government to recognize the service concession asset and the related liability or revenue.', 'defAr': 'ترتيب يقوم فيه مشغل من القطاع الخاص ببناء بنية تحتية أو تطويرها ثم تشغيلها لتقديم خدمة عامة، كطريق برسوم أو عقد لإدارة مستشفى. ويعالج التفسير IFRIC 12 هذا الترتيب من جانب المشغل في إطار IFRS. ويعالج IPSAS 32 الترتيب نفسه من جانب مانح الامتياز، فيلزم الجهة الحكومية بالاعتراف بأصل امتياز الخدمة وبما يقابله من التزام أو إيراد.'},
+    {'term': 'First-Time Adoption', 'termAr': 'التبني لأول مرة', 'def': 'The accounting applied when an entity prepares its first financial statements under a new framework. IFRS 1 provides mandatory exceptions and optional exemptions, assuming the entity already applied some form of accrual accounting. IPSAS 33 goes further, granting a three-year transitional relief period during which certain recognition and measurement requirements are suspended while a government moves from the cash basis to the accrual basis.', 'defAr': 'المعالجة المحاسبية عند إعداد المنشأة أول قوائم مالية لها وفق إطار جديد. ويوفر IFRS 1 استثناءات إلزامية وإعفاءات اختيارية، بافتراض أن المنشأة كانت تطبق شكلاً من أشكال محاسبة الاستحقاق. ويمضي IPSAS 33 أبعد من ذلك، فيمنح فترة إعفاء انتقالية مدتها ثلاث سنوات تُعلَّق خلالها بعض متطلبات الاعتراف والقياس بينما تنتقل الجهة الحكومية من الأساس النقدي إلى أساس الاستحقاق.'},
+    {'term': 'Cash Basis IPSAS', 'termAr': 'معيار IPSAS على الأساس النقدي', 'def': 'A standalone IPSAS standard setting minimum reporting requirements for governments still accounting on a cash basis. IFRS does not permit cash basis reporting at all, as every entity must apply accrual accounting. IPSAS takes the pragmatic view that a credible cash basis report is a stepping stone toward full accrual adoption rather than a permanent destination.', 'defAr': 'معيار IPSAS مستقل يحدد الحد الأدنى من متطلبات التقرير للحكومات التي ما زالت تحاسب على الأساس النقدي. ولا يجيز IFRS التقرير على الأساس النقدي إطلاقاً، إذ يجب على كل منشأة تطبيق محاسبة الاستحقاق. ويأخذ IPSAS بالنظرة العملية القائلة إن التقرير النقدي الموثوق حجر عبور نحو التبني الكامل لأساس الاستحقاق لا وجهة دائمة.'},
+    {'term': 'Transition to Accrual', 'termAr': 'الانتقال إلى أساس الاستحقاق', 'def': 'The staged move from one reporting basis to another. In the private sector this normally means switching between accrual frameworks under IFRS 1. In the public sector it usually means the longer journey from Cash Basis IPSAS, through a modified accrual stage, to full accrual IPSAS, supported by the three-year relief window of IPSAS 33.', 'defAr': 'الانتقال المرحلي من أساس تقرير إلى آخر. ويعني ذلك في القطاع الخاص عادةً التحول بين أطر الاستحقاق بموجب IFRS 1. أما في القطاع العام فيعني غالباً رحلة أطول من معيار IPSAS على الأساس النقدي، مروراً بمرحلة استحقاق معدل، وصولاً إلى الاستحقاق الكامل وفق IPSAS، مدعومة بنافذة الإعفاء ذات الثلاث سنوات في IPSAS 33.'},
+    {'term': 'Transparency', 'termAr': 'الشفافية', 'def': 'Open access to financial information with clear and understandable reporting - timely disclosure of financial statements, results, and material information to stakeholders.', 'defAr': 'إتاحة المعلومات المالية بوضوح من خلال تقارير مفهومة - الإفصاح في الوقت المناسب عن القوائم المالية والنتائج والمعلومات الجوهرية لأصحاب المصلحة.'},
+    {'term': 'IPSASB', 'termAr': 'مجلس معايير المحاسبة الدولية للقطاع العام', 'def': 'The International Public Sector Accounting Standards Board, the independent board that issues IPSAS under the auspices of the International Federation of Accountants (IFAC). Its private sector counterpart is the International Accounting Standards Board (IASB), which issues IFRS under the IFRS Foundation. The IPSASB converges with IFRS wherever a private sector treatment works for government, and diverges only where public sector realities require it.', 'defAr': 'مجلس معايير المحاسبة الدولية للقطاع العام، وهو المجلس المستقل الذي يصدر معايير IPSAS تحت رعاية الاتحاد الدولي للمحاسبين (IFAC). ونظيره في القطاع الخاص هو مجلس معايير المحاسبة الدولية (IASB) الذي يصدر معايير IFRS تحت مظلة مؤسسة IFRS. ويتقارب مجلس IPSASB مع IFRS حيثما صلحت معالجة القطاع الخاص للقطاع العام، ولا يتباعد إلا حيث يقتضي واقع القطاع العام ذلك.'},
+    {'term': 'Surplus/Deficit', 'termAr': 'الفائض/العجز'},
+    {'term': 'Related Party', 'termAr': 'طرف ذو علاقة'},
+    {'term': 'Exchange Transaction', 'termAr': 'معاملة تبادلية'},
+    {'term': 'Right-of-Use Asset', 'termAr': 'أصل حق الاستخدام'},
   ],
-  memoryPairs: [
-    {'term': 'IPSAS', 'definition': '\u0627\u0644\u0645\u0639\u0627\u064a\u064a\u0631 \u0627\u0644\u0645\u062d\u0627\u0633\u0628\u064a\u0629 \u0627\u0644\u062f\u0648\u0644\u064a\u0629 \u0644\u0644\u0642\u0637\u0627\u0639 \u0627\u0644\u0639\u0627\u0645'},
-    {'term': 'IFRS', 'definition': '\u0627\u0644\u0645\u0639\u0627\u064a\u064a\u0631 \u0627\u0644\u062f\u0648\u0644\u064a\u0629 \u0644\u0625\u0639\u062f\u0627\u062f \u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0645\u0627\u0644\u064a\u0629'},
-    {'term': 'Accrual Basis', 'definition': '\u0623\u0633\u0627\u0633 \u0627\u0644\u0627\u0633\u062a\u062d\u0642\u0627\u0642'},
-    {'term': 'Service Potential', 'definition': '\u0627\u0644\u0642\u062f\u0631\u0629 \u0627\u0644\u062e\u062f\u0645\u064a\u0629'},
-    {'term': 'Non-Exchange Revenue', 'definition': '\u0625\u064a\u0631\u0627\u062f\u0627\u062a \u063a\u064a\u0631 \u062a\u0628\u0627\u062f\u0644\u064a\u0629'},
-    {'term': 'Heritage Assets', 'definition': '\u0627\u0644\u0623\u0635\u0648\u0644 \u0627\u0644\u062a\u0631\u0627\u062b\u064a\u0629'},
-    {'term': 'Surplus/Deficit', 'definition': '\u0627\u0644\u0641\u0627\u0626\u0636/\u0627\u0644\u0639\u062c\u0632'},
-    {'term': 'Concessionary Loan', 'definition': '\u0642\u0631\u0636 \u0645\u064a\u0633\u0651\u0631'},
-    {'term': 'Budget Reporting', 'definition': '\u0627\u0644\u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0645\u0648\u0627\u0632\u0646\u064a\u0629'},
-    {'term': 'Consolidation', 'definition': '\u0627\u0644\u062a\u0648\u062d\u064a\u062f'},
-    {'term': 'Fair Value', 'definition': '\u0627\u0644\u0642\u064a\u0645\u0629 \u0627\u0644\u0639\u0627\u062f\u0644\u0629'},
-    {'term': 'Impairment', 'definition': '\u0627\u0646\u062e\u0641\u0627\u0636 \u0627\u0644\u0642\u064a\u0645\u0629'},
-    {'term': 'Related Party', 'definition': '\u0637\u0631\u0641 \u0630\u0648 \u0639\u0644\u0627\u0642\u0629'},
-    {'term': 'Segment Reporting', 'definition': '\u062a\u0642\u0627\u0631\u064a\u0631 \u0627\u0644\u0642\u0637\u0627\u0639\u0627\u062a'},
-    {'term': 'Social Benefits', 'definition': '\u0627\u0644\u0645\u0646\u0627\u0641\u0639 \u0627\u0644\u0627\u062c\u062a\u0645\u0627\u0639\u064a\u0629'},
-    {'term': 'Exchange Transaction', 'definition': '\u0645\u0639\u0627\u0645\u0644\u0629 \u062a\u0628\u0627\u062f\u0644\u064a\u0629'},
-    {'term': 'Provisions', 'definition': '\u0627\u0644\u0645\u062e\u0635\u0635\u0627\u062a'},
-    {'term': 'Right-of-Use Asset', 'definition': '\u0623\u0635\u0644 \u062d\u0642 \u0627\u0644\u0627\u0633\u062a\u062e\u062f\u0627\u0645'},
-    {'term': 'Cash Basis IPSAS', 'definition': '\u0645\u0639\u064a\u0627\u0631 IPSAS \u0639\u0644\u0649 \u0627\u0644\u0623\u0633\u0627\u0633 \u0627\u0644\u0646\u0642\u062f\u064a'},
-    {'term': 'Public Accountability', 'definition': '\u0627\u0644\u0645\u0633\u0627\u0621\u0644\u0629 \u0627\u0644\u0639\u0627\u0645\u0629'},
-  ],
-  classificationCategories: ['Similar Treatment', 'Different Treatment'],
-  classificationItems: [
-    // Similar Treatment (12)
-    {'name': 'PP&E measurement (cost or revaluation)', 'category': 'Similar Treatment'},
-    {'name': 'Accrual basis accounting', 'category': 'Similar Treatment'},
-    {'name': 'Lease recognition (right-of-use asset)', 'category': 'Similar Treatment'},
-    {'name': 'Provisions recognition criteria', 'category': 'Similar Treatment'},
-    {'name': 'Cash flow statement categories', 'category': 'Similar Treatment'},
-    {'name': 'Employee benefit measurement', 'category': 'Similar Treatment'},
-    {'name': 'Foreign currency translation', 'category': 'Similar Treatment'},
-    {'name': 'Investment property models', 'category': 'Similar Treatment'},
-    {'name': 'Financial instruments classification', 'category': 'Similar Treatment'},
-    {'name': 'Equity method for associates', 'category': 'Similar Treatment'},
-    {'name': 'Retrospective accounting policy changes', 'category': 'Similar Treatment'},
-    {'name': 'Events after reporting date', 'category': 'Similar Treatment'},
-    // Different Treatment (13)
-    {'name': 'Non-exchange revenue (taxes, grants)', 'category': 'Different Treatment'},
-    {'name': 'Heritage assets treatment', 'category': 'Different Treatment'},
-    {'name': 'Budget vs actual reporting', 'category': 'Different Treatment'},
-    {'name': 'Social benefits recognition', 'category': 'Different Treatment'},
-    {'name': 'Borrowing costs capitalization', 'category': 'Different Treatment'},
-    {'name': 'Concessionary loans treatment', 'category': 'Different Treatment'},
-    {'name': 'Primary users of financial statements', 'category': 'Different Treatment'},
-    {'name': 'Performance measure naming (Profit vs Surplus)', 'category': 'Different Treatment'},
-    {'name': 'Asset recognition concept', 'category': 'Different Treatment'},
-    {'name': 'Consolidation control concept', 'category': 'Different Treatment'},
-    {'name': 'Earnings per share reporting', 'category': 'Different Treatment'},
-    {'name': 'First-time adoption transitional relief', 'category': 'Different Treatment'},
-    {'name': 'Peppercorn (nominal) leases', 'category': 'Different Treatment'},
+  activities: [
+    ModuleActivity(
+      id: 'quiz',
+      tab: ActivityTab.practice,
+      kind: ActivityKind.quiz,
+      title: Bi('IFRS vs IPSAS Standards Quiz', 'اختبار معايير IFRS مقابل IPSAS'),
+      description: Bi('20 questions', '20 سؤال'),
+      maxScore: 50,
+      questions: [
+        QuizQuestion(id: 'q7_1', question: Bi('What does IFRS stand for?', 'ما هو اختصار IFRS؟'), options: [Bi('International Finance Regulatory System', 'النظام التنظيمي المالي الدولي'), Bi('International Financial Reporting Standards', 'المعايير الدولية لإعداد التقارير المالية'), Bi('Internal Fiscal Review Standards', 'معايير المراجعة المالية الداخلية'), Bi('Integrated Financial Record System', 'نظام السجلات المالية المتكامل')], correctIndex: 1, explanation: Bi('IFRS stands for International Financial Reporting Standards, developed by the IASB for private sector financial reporting.', 'IFRS يرمز إلى المعايير الدولية لإعداد التقارير المالية، التي طورها مجلس معايير المحاسبة الدولية لإعداد التقارير المالية للقطاع الخاص.')),
+        QuizQuestion(id: 'q7_4', question: Bi('Under both IFRS and IPSAS, PP&E can be measured using which models?', 'بموجب كل من IFRS و IPSAS، يمكن قياس الممتلكات والمصانع والمعدات باستخدام أي نماذج؟'), options: [Bi('Only fair value model', 'نموذج القيمة العادلة فقط'), Bi('Cost model or revaluation model', 'نموذج التكلفة أو نموذج إعادة التقييم'), Bi('Only historical cost model', 'نموذج التكلفة التاريخية فقط'), Bi('Replacement cost model only', 'نموذج تكلفة الاستبدال فقط')], correctIndex: 1, explanation: Bi('Both IAS 16 (IFRS) and IPSAS 17 allow PP&E to be measured using the cost model or the revaluation model after initial recognition.', 'يسمح كل من IAS 16 (IFRS) و IPSAS 17 بقياس الممتلكات والمصانع والمعدات باستخدام نموذج التكلفة أو نموذج إعادة التقييم بعد الاعتراف الأولي.')),
+        QuizQuestion(id: 'q7_7', question: Bi('Both frameworks use which accounting basis?', 'كلا الإطارين يستخدمان أي أساس محاسبي؟'), options: [Bi('Cash basis', 'الأساس النقدي'), Bi('Modified cash basis', 'الأساس النقدي المعدل'), Bi('Tax basis', 'الأساس الضريبي'), Bi('Accrual basis', 'أساس الاستحقاق')], correctIndex: 3, explanation: Bi('Both IFRS and IPSAS (accrual-basis standards) use accrual accounting, recognizing transactions when they occur rather than when cash changes hands.', 'كلا الإطارين IFRS و IPSAS (المعايير القائمة على الاستحقاق) يستخدمان محاسبة الاستحقاق، حيث يتم الاعتراف بالمعاملات عند حدوثها وليس عند تبادل النقد.')),
+        QuizQuestion(id: 'q7_8', question: Bi('Under IFRS 16 and IPSAS 43, lessees recognize:', 'بموجب IFRS 16 و IPSAS 43، يعترف المستأجرون بـ:'), options: [Bi('Only rental expense on a straight-line basis', 'فقط مصروف الإيجار على أساس القسط الثابت'), Bi('A right-of-use asset and a lease liability', 'أصل حق الاستخدام والتزام الإيجار'), Bi('Only a lease liability with no asset', 'فقط التزام الإيجار بدون أصل'), Bi('An operating lease disclosure only', 'إفصاح عن الإيجار التشغيلي فقط')], correctIndex: 1, explanation: Bi('Both IFRS 16 and IPSAS 43 require lessees to recognize a right-of-use asset and a corresponding lease liability on the balance sheet.', 'يتطلب كل من IFRS 16 و IPSAS 43 من المستأجرين الاعتراف بأصل حق الاستخدام والتزام إيجار مقابل في الميزانية العمومية.')),
+        QuizQuestion(id: 'q7_13', question: Bi('IFRS primarily serves which stakeholders?', 'IFRS يخدم بشكل أساسي أي أصحاب مصلحة؟'), options: [Bi('Government budget offices', 'مكاتب الموازنة الحكومية'), Bi('Investors, creditors, and capital markets', 'المستثمرون والدائنون وأسواق رأس المال'), Bi('Citizens and taxpayers', 'المواطنون ودافعو الضرائب'), Bi('International aid agencies', 'وكالات المساعدة الدولية')], correctIndex: 1, explanation: Bi('IFRS is designed for capital market participants - investors, lenders, and creditors who need information for economic decisions.', 'IFRS مصمم للمشاركين في أسواق رأس المال - المستثمرون والمقرضون والدائنون الذين يحتاجون معلومات لاتخاذ قرارات اقتصادية.')),
+        QuizQuestion(id: 'q7_15', question: Bi('The concept of "service potential" is unique to:', 'مفهوم "القدرة الخدمية" فريد في:'), options: [Bi('IFRS', 'IFRS'), Bi('US GAAP', 'US GAAP'), Bi('IPSAS', 'IPSAS'), Bi('Both IFRS and IPSAS equally', 'كلا الإطارين IFRS و IPSAS بالتساوي')], correctIndex: 2, explanation: Bi('Service potential is a concept unique to IPSAS, recognizing that many public sector assets exist to deliver services rather than generate cash flows.', 'القدرة الخدمية مفهوم فريد في IPSAS، يعترف بأن كثيراً من أصول القطاع العام موجودة لتقديم خدمات بدلاً من توليد تدفقات نقدية.')),
+        QuizQuestion(id: 'q7_19', question: Bi('Why was IPSAS created separately from IFRS?', 'لماذا تم إنشاء IPSAS بشكل مستقل عن IFRS؟'), options: [Bi('Because IFRS had too many standards', 'لأن IFRS كان لديه معايير كثيرة جداً'), Bi('Because public sector has unique transactions like taxes, grants, and non-exchange revenue not covered by IFRS', 'لأن القطاع العام لديه معاملات فريدة مثل الضرائب والمنح والإيرادات غير التبادلية لا يغطيها IFRS'), Bi('Because IFRS was only available in English', 'لأن IFRS كان متاحاً بالإنجليزية فقط'), Bi('Because governments wanted cheaper standards', 'لأن الحكومات أرادت معايير أرخص')], correctIndex: 1, explanation: Bi('IPSAS was created because public sector entities have unique transactions (non-exchange revenue, social benefits, heritage assets) that IFRS does not address.', 'تم إنشاء IPSAS لأن كيانات القطاع العام لديها معاملات فريدة (إيرادات غير تبادلية، منافع اجتماعية، أصول تراثية) لا يعالجها IFRS.')),
+        QuizQuestion(id: 'q7_21', question: Bi('Under IFRS, the primary performance measure is profit or loss. Under IPSAS, it is:', 'بموجب IFRS، مقياس الأداء الأساسي هو الربح أو الخسارة. بموجب IPSAS، هو:'), options: [Bi('Earnings per share', 'ربحية السهم'), Bi('Revenue growth', 'نمو الإيرادات'), Bi('Surplus or deficit', 'الفائض أو العجز'), Bi('Net asset value', 'صافي قيمة الأصول')], correctIndex: 2, explanation: Bi('IPSAS uses "surplus or deficit" instead of "profit or loss" because public sector entities do not operate for profit.', 'يستخدم IPSAS "الفائض أو العجز" بدلاً من "الربح أو الخسارة" لأن كيانات القطاع العام لا تعمل بهدف الربح.')),
+        QuizQuestion(id: 'q7_24', question: Bi('IPSAS distinguishes between exchange and non-exchange revenue. Which is an example of non-exchange revenue?', 'IPSAS يميز بين الإيرادات التبادلية وغير التبادلية. أي مما يلي مثال على الإيرادات غير التبادلية؟'), options: [Bi('Consulting fees charged by a government agency', 'رسوم الاستشارات التي تتقاضاها جهة حكومية'), Bi('Sale of government surplus equipment', 'بيع المعدات الحكومية الفائضة'), Bi('Tax revenue collected from citizens', 'الإيرادات الضريبية المحصلة من المواطنين'), Bi('Rent charged for government-owned buildings', 'الإيجار المتقاضى على المباني المملوكة للحكومة')], correctIndex: 2, explanation: Bi('Tax revenue is a non-exchange transaction because the government receives value (taxes) without providing equivalent direct value in return to the individual taxpayer.', 'الإيرادات الضريبية معاملة غير تبادلية لأن الحكومة تتلقى قيمة (ضرائب) دون تقديم قيمة مكافئة مباشرة في المقابل لدافع الضرائب الفردي.')),
+        QuizQuestion(id: 'q7_28', question: Bi('Heritage assets (e.g., national monuments, artworks) are specifically addressed by:', 'الأصول التراثية (مثل المعالم الوطنية والأعمال الفنية) يعالجها تحديداً:'), options: [Bi('IFRS only', 'IFRS فقط'), Bi('Neither IFRS nor IPSAS', 'لا IFRS ولا IPSAS'), Bi('IPSAS 17 (with special guidance)', 'IPSAS 17 (مع إرشادات خاصة)'), Bi('IAS 16 exclusively', 'IAS 16 حصرياً')], correctIndex: 2, explanation: Bi('IPSAS 17 provides specific guidance for heritage assets, which governments may not need to depreciate. IFRS has no specific heritage asset guidance.', 'IPSAS 17 يوفر إرشادات خاصة للأصول التراثية، التي قد لا تحتاج الحكومات لاستهلاكها. لا يوجد في IFRS إرشادات محددة للأصول التراثية.')),
+        QuizQuestion(id: 'q7_30', question: Bi('IPSAS has two impairment standards (IPSAS 21 and IPSAS 26) instead of one. The split is based on:', 'IPSAS لديه معياران لانخفاض القيمة (IPSAS 21 و IPSAS 26) بدلاً من واحد. التقسيم مبني على:'), options: [Bi('Size of the asset', 'حجم الأصل'), Bi('Whether the asset is cash-generating or non-cash-generating', 'ما إذا كان الأصل مولداً للنقد أو غير مولد للنقد'), Bi('Age of the asset', 'عمر الأصل'), Bi('Location of the asset', 'موقع الأصل')], correctIndex: 1, explanation: Bi('IPSAS 21 covers non-cash-generating assets (held for service delivery) and IPSAS 26 covers cash-generating assets. IFRS has only IAS 36 for all impairment.', 'IPSAS 21 يغطي الأصول غير المولدة للنقد (المحتفظ بها لتقديم الخدمات) و IPSAS 26 يغطي الأصول المولدة للنقد. IFRS لديه فقط IAS 36 لجميع حالات انخفاض القيمة.')),
+        QuizQuestion(id: 'q7_34', question: Bi('IPSAS 24 requires budget-to-actual comparison reporting. Why does IFRS have no equivalent?', 'IPSAS 24 يتطلب تقارير مقارنة الموازنة بالفعلي. لماذا لا يوجد مقابل في IFRS؟'), options: [Bi('Private companies do not prepare budgets', 'الشركات الخاصة لا تعد موازنات'), Bi('IFRS considers budgets irrelevant', 'IFRS يعتبر الموازنات غير ذات صلة'), Bi('Budget comparisons are too complex to disclose', 'مقارنات الموازنة معقدة جداً للإفصاح عنها'), Bi('Budgets are not publicly approved documents in the private sector', 'الموازنات ليست وثائق معتمدة علنياً في القطاع الخاص')], correctIndex: 3, explanation: Bi('Government budgets are publicly approved and legally binding documents. Budget-to-actual reporting is essential for public accountability. Private sector budgets are internal and not subject to public disclosure.', 'الموازنات الحكومية وثائق معتمدة علنياً وملزمة قانونياً. تقارير مقارنة الموازنة بالفعلي ضرورية للمساءلة العامة. موازنات القطاع الخاص داخلية وغير خاضعة للإفصاح العام.')),
+        QuizQuestion(id: 'q7_37', question: Bi('IPSAS defines "control" for consolidation purposes differently from IFRS 10. In the public sector, control often comes from:', 'IPSAS يعرّف "السيطرة" لأغراض التوحيد بشكل مختلف عن IFRS 10. في القطاع العام، السيطرة غالباً تأتي من:'), options: [Bi('Majority share ownership', 'ملكية أغلبية الأسهم'), Bi('Contractual agreements only', 'الاتفاقيات التعاقدية فقط'), Bi('Market share dominance', 'الهيمنة على الحصة السوقية'), Bi('Legislation, regulation, or executive authority rather than equity ownership', 'التشريع أو التنظيم أو السلطة التنفيذية بدلاً من ملكية حقوق الملكية')], correctIndex: 3, explanation: Bi('In the public sector, control often arises from legislation, regulations, or executive orders rather than equity ownership, which is the typical control basis under IFRS 10.', 'في القطاع العام، تنشأ السيطرة غالباً من التشريعات أو اللوائح أو الأوامر التنفيذية بدلاً من ملكية حقوق الملكية، التي هي الأساس النموذجي للسيطرة بموجب IFRS 10.')),
+        QuizQuestion(id: 'q7_39', question: Bi('IPSAS 33 (First-Time Adoption) provides transitional relief not found in IFRS 1, such as:', 'IPSAS 33 (التطبيق لأول مرة) يوفر تسهيلات انتقالية غير موجودة في IFRS 1، مثل:'), options: [Bi('Exemption from all disclosure requirements permanently', 'إعفاء من جميع متطلبات الإفصاح بشكل دائم'), Bi('Permission to use any accounting framework', 'إذن باستخدام أي إطار محاسبي'), Bi('No comparative information ever required', 'عدم الحاجة إلى معلومات مقارنة أبداً'), Bi('A three-year transitional exemption period for recognizing certain assets and liabilities', 'فترة إعفاء انتقالية لمدة ثلاث سنوات للاعتراف ببعض الأصول والالتزامات')], correctIndex: 3, explanation: Bi('IPSAS 33 provides a three-year transitional exemption period, recognizing that governments transitioning from cash to accrual accounting need more time to identify and measure all assets and liabilities.', 'IPSAS 33 يوفر فترة إعفاء انتقالية لمدة ثلاث سنوات، اعترافاً بأن الحكومات المنتقلة من المحاسبة النقدية إلى الاستحقاق تحتاج وقتاً أطول لتحديد وقياس جميع الأصول والالتزامات.')),
+        QuizQuestion(id: 'q7_42', question: Bi('A municipality receives SAR 10 million in property tax payments. Which standard applies for recognition?', 'بلدية تتلقى 10 ملايين ريال من مدفوعات ضريبة الأملاك. أي معيار ينطبق على الاعتراف؟'), options: [Bi('IFRS 15 (Revenue from Contracts with Customers)', 'IFRS 15 (الإيرادات من العقود مع العملاء)'), Bi('IAS 20 (Government Grants)', 'IAS 20 (المنح الحكومية)'), Bi('IPSAS 23 (Revenue from Non-Exchange Transactions)', 'IPSAS 23 (الإيرادات من المعاملات غير التبادلية)'), Bi('IPSAS 9 (Revenue from Exchange Transactions)', 'IPSAS 9 (الإيرادات من المعاملات التبادلية)')], correctIndex: 2, explanation: Bi('Tax revenue is a non-exchange transaction because citizens do not receive individually proportionate services in return. IPSAS 23 governs this recognition.', 'الإيرادات الضريبية معاملة غير تبادلية لأن المواطنين لا يتلقون خدمات متناسبة فردياً في المقابل. IPSAS 23 يحكم هذا الاعتراف.')),
+        QuizQuestion(id: 'q7_44', question: Bi('A government gives a SAR 5 million loan to a university at 1% interest when the market rate is 5%. How does IPSAS treat the difference?', 'حكومة تمنح قرضاً بقيمة 5 ملايين ريال لجامعة بفائدة 1% بينما سعر السوق 5%. كيف يعالج IPSAS الفرق؟'), options: [Bi('The full SAR 5 million is recognized as a financial asset at face value', 'يُعترف بكامل المبلغ 5 ملايين ريال كأصل مالي بالقيمة الاسمية'), Bi('The interest difference is ignored under both frameworks', 'يُتجاهل فرق الفائدة بموجب كلا الإطارين'), Bi('Only the interest income is recorded', 'يُسجل فقط دخل الفائدة'), Bi('The loan is measured at fair value; the difference between proceeds and fair value is recognized as a grant expense', 'القرض يُقاس بالقيمة العادلة؛ الفرق بين المتحصلات والقيمة العادلة يُعترف به كمصروف منحة')], correctIndex: 3, explanation: Bi('Under IPSAS, concessionary loans are initially measured at fair value. The difference between the loan proceeds and the present value at market rates represents a subsidy/grant expense to be recognized.', 'بموجب IPSAS، القروض الميسّرة تُقاس مبدئياً بالقيمة العادلة. الفرق بين متحصلات القرض والقيمة الحالية بأسعار السوق يمثل مصروف دعم/منحة يجب الاعتراف به.')),
+        QuizQuestion(id: 'q7_46', question: Bi('A ministry builds a road costing SAR 200 million with a 30-year useful life. Under IPSAS, the asset is impaired when:', 'وزارة تبني طريقاً بتكلفة 200 مليون ريال بعمر إنتاجي 30 سنة. بموجب IPSAS، ينخفض قيمة الأصل عندما:'), options: [Bi('Its market value drops below book value (IAS 36 approach)', 'تنخفض قيمته السوقية عن القيمة الدفترية (نهج IAS 36)'), Bi('Annual depreciation is missed', 'يتم تفويت الاستهلاك السنوي'), Bi('Its service potential declines significantly, since roads are non-cash-generating assets (IPSAS 21)', 'تنخفض قدرته الخدمية بشكل كبير، حيث أن الطرق أصول غير مولدة للنقد (IPSAS 21)'), Bi('The budget for maintenance is cut', 'يُخفض ميزانية الصيانة')], correctIndex: 2, explanation: Bi('Roads are non-cash-generating assets. Under IPSAS 21, impairment is assessed based on decline in service potential (e.g., damage, obsolescence), not market value as under IAS 36.', 'الطرق أصول غير مولدة للنقد. بموجب IPSAS 21، يُقيّم انخفاض القيمة بناءً على انخفاض القدرة الخدمية (مثل التلف أو التقادم)، وليس القيمة السوقية كما في IAS 36.')),
+        QuizQuestion(id: 'q7_49', question: Bi('A government budget shows planned spending of SAR 500 million but actual spending was SAR 480 million. Under which standard must this comparison be disclosed?', 'موازنة حكومية تُظهر إنفاقاً مخططاً قدره 500 مليون ريال لكن الإنفاق الفعلي كان 480 مليون ريال. بموجب أي معيار يجب الإفصاح عن هذه المقارنة؟'), options: [Bi('IAS 1', 'IAS 1'), Bi('IFRS 8', 'IFRS 8'), Bi('IPSAS 24 (Presentation of Budget Information)', 'IPSAS 24 (عرض معلومات الموازنة)'), Bi('IAS 34', 'IAS 34')], correctIndex: 2, explanation: Bi('IPSAS 24 requires entities that make their budgets publicly available to present a comparison of budget and actual amounts in their financial statements. There is no IFRS equivalent.', 'IPSAS 24 يتطلب من الكيانات التي تُتيح موازناتها للجمهور عرض مقارنة بين المبالغ الموازنية والفعلية في قوائمها المالية. لا يوجد مقابل في IFRS.')),
+        QuizQuestion(id: 'q7_53', question: Bi('A company reports "profit" of SAR 2 million under IFRS. If the same entity were a government body using IPSAS, what terminology would change?', 'شركة تُبلغ عن "ربح" قدره 2 مليون ريال بموجب IFRS. إذا كان نفس الكيان هيئة حكومية تستخدم IPSAS، ما المصطلح الذي سيتغير؟'), options: [Bi('Nothing - both use "profit"', 'لا شيء - كلاهما يستخدم "ربح"'), Bi('"Profit" would become "surplus" and "loss" would become "deficit"', '"الربح" سيصبح "فائض" و"الخسارة" ستصبح "عجز"'), Bi('"Profit" would become "revenue"', '"الربح" سيصبح "إيرادات"'), Bi('"Profit" would become "net assets"', '"الربح" سيصبح "صافي الأصول"')], correctIndex: 1, explanation: Bi('IPSAS uses "surplus" instead of "profit" and "deficit" instead of "loss" to reflect that governments operate for public service, not for profit.', 'IPSAS يستخدم "الفائض" بدلاً من "الربح" و"العجز" بدلاً من "الخسارة" ليعكس أن الحكومات تعمل من أجل الخدمة العامة وليس الربح.')),
+        QuizQuestion(id: 'q7_59', question: Bi('A newly independent country with no existing accounting framework seeks international credibility. What should it adopt for its government accounts?', 'دولة مستقلة حديثاً بدون إطار محاسبي موجود تسعى للمصداقية الدولية. ماذا يجب أن تتبنى لحساباتها الحكومية؟'), options: [Bi('IFRS, because it is more widely known', 'IFRS، لأنه أكثر شهرة'), Bi('No standards - create custom local rules', 'لا معايير - إنشاء قواعد محلية مخصصة'), Bi('IPSAS, starting with Cash Basis IPSAS and transitioning to accrual IPSAS over time', 'IPSAS، بدءاً بمعيار IPSAS على الأساس النقدي والانتقال إلى IPSAS على أساس الاستحقاق بمرور الوقت'), Bi('US GAAP for governments', 'US GAAP للحكومات')], correctIndex: 2, explanation: Bi('For government accounts, IPSAS is the appropriate framework. Starting with Cash Basis IPSAS provides an achievable first step, with IPSAS 33 providing a pathway to full accrual adoption.', 'للحسابات الحكومية، IPSAS هو الإطار المناسب. البدء بمعيار IPSAS على الأساس النقدي يوفر خطوة أولى قابلة للتحقيق، مع IPSAS 33 الذي يوفر مساراً للتبني الكامل لأساس الاستحقاق.')),
+      ],
+    ),
+    ModuleActivity(
+      id: 'memoryMatch',
+      tab: ActivityTab.games,
+      kind: ActivityKind.memoryMatch,
+      title: Bi('IFRS vs IPSAS Terms', 'مصطلحات IFRS مقابل IPSAS'),
+      description: Bi('Match English terms with Arabic translations', 'طابق المصطلحات الإنجليزية مع العربية'),
+      maxScore: 50,
+      pairs: [
+        MemoryPair(id: 't1', term: 'IPSAS', match: 'المعايير المحاسبية الدولية للقطاع العام'),
+        MemoryPair(id: 't2', term: 'IFRS', match: 'المعايير الدولية لإعداد التقارير المالية'),
+        MemoryPair(id: 't3', term: 'Accrual Basis', match: 'أساس الاستحقاق'),
+        MemoryPair(id: 't4', term: 'Service Potential', match: 'القدرة الخدمية'),
+        MemoryPair(id: 't5', term: 'Non-Exchange Revenue', match: 'إيرادات غير تبادلية'),
+        MemoryPair(id: 't6', term: 'Heritage Assets', match: 'الأصول التراثية'),
+        MemoryPair(id: 't7', term: 'Surplus/Deficit', match: 'الفائض/العجز'),
+        MemoryPair(id: 't8', term: 'Concessionary Loan', match: 'قرض ميسّر'),
+        MemoryPair(id: 't9', term: 'Budget Reporting', match: 'التقارير الموازنية'),
+        MemoryPair(id: 't10', term: 'Consolidation', match: 'التوحيد'),
+        MemoryPair(id: 't11', term: 'Fair Value', match: 'القيمة العادلة'),
+        MemoryPair(id: 't12', term: 'Impairment', match: 'انخفاض القيمة'),
+        MemoryPair(id: 't13', term: 'Related Party', match: 'طرف ذو علاقة'),
+        MemoryPair(id: 't14', term: 'Segment Reporting', match: 'تقارير القطاعات'),
+        MemoryPair(id: 't15', term: 'Social Benefits', match: 'المنافع الاجتماعية'),
+        MemoryPair(id: 't16', term: 'Exchange Transaction', match: 'معاملة تبادلية'),
+        MemoryPair(id: 't17', term: 'Provisions', match: 'المخصصات'),
+        MemoryPair(id: 't18', term: 'Right-of-Use Asset', match: 'أصل حق الاستخدام'),
+        MemoryPair(id: 't19', term: 'Cash Basis IPSAS', match: 'معيار IPSAS على الأساس النقدي'),
+        MemoryPair(id: 't20', term: 'Public Accountability', match: 'المساءلة العامة'),
+      ],
+    ),
+    ModuleActivity(
+      id: 'standardsClassification',
+      tab: ActivityTab.games,
+      kind: ActivityKind.classification,
+      title: Bi('IFRS vs IPSAS Classification', 'تصنيف IFRS مقابل IPSAS'),
+      description: Bi('Classify 25 items as Similar or Different', 'صنف 25 عنصراً كمتشابه أو مختلف'),
+      maxScore: 75,
+      categories: [
+        ClassCategory(id: 'similar', name: Bi('Similar Treatment', 'معاملة متشابهة'), description: Bi('IFRS and IPSAS treat this the same way', 'IFRS و IPSAS تعاملهما بنفس الطريقة')),
+        ClassCategory(id: 'different', name: Bi('Different Treatment', 'معاملة مختلفة'), description: Bi('IFRS and IPSAS treat this differently', 'IFRS و IPSAS تعاملهما بشكل مختلف')),
+      ],
+      items: [
+        ClassItem(id: 's1', name: Bi('PP&E measurement (cost or revaluation)', 'قياس الممتلكات والآلات والمعدات (التكلفة أو إعادة التقييم)'), category: 'similar', hint: Bi('Both IAS 16 and IPSAS 17 allow cost or revaluation model', 'كل من IAS 16 و IPSAS 17 يسمحان بنموذج التكلفة أو إعادة التقييم')),
+        ClassItem(id: 's2', name: Bi('Accrual basis accounting', 'المحاسبة على أساس الاستحقاق'), category: 'similar', hint: Bi('Both frameworks require accrual basis', 'كلا الإطارين يتطلبان أساس الاستحقاق')),
+        ClassItem(id: 's3', name: Bi('Lease recognition (right-of-use asset)', 'الاعتراف بالإيجار (أصل حق الاستخدام)'), category: 'similar', hint: Bi('IFRS 16 and IPSAS 43 both recognize ROU assets', 'IFRS 16 و IPSAS 43 كلاهما يعترفان بأصول حق الاستخدام')),
+        ClassItem(id: 's4', name: Bi('Provisions recognition criteria', 'معايير الاعتراف بالمخصصات'), category: 'similar', hint: Bi('IAS 37 and IPSAS 19 use the same criteria', 'IAS 37 و IPSAS 19 يستخدمان نفس المعايير')),
+        ClassItem(id: 's5', name: Bi('Cash flow statement categories', 'فئات قائمة التدفقات النقدية'), category: 'similar', hint: Bi('IAS 7 and IPSAS 2 use operating, investing, financing', 'IAS 7 و IPSAS 2 يستخدمان التشغيل والاستثمار والتمويل')),
+        ClassItem(id: 's6', name: Bi('Employee benefit measurement', 'قياس منافع الموظفين'), category: 'similar', hint: Bi('IAS 19 and IPSAS 39 follow similar measurement', 'IAS 19 و IPSAS 39 يتبعان قياسا مشابها')),
+        ClassItem(id: 's7', name: Bi('Foreign currency translation', 'ترجمة العملات الأجنبية'), category: 'similar', hint: Bi('IAS 21 and IPSAS 4 use functional currency approach', 'IAS 21 و IPSAS 4 يستخدمان نهج العملة الوظيفية')),
+        ClassItem(id: 's8', name: Bi('Investment property models', 'نماذج العقارات الاستثمارية'), category: 'similar', hint: Bi('IAS 40 and IPSAS 16 allow cost or fair value', 'IAS 40 و IPSAS 16 يسمحان بالتكلفة أو القيمة العادلة')),
+        ClassItem(id: 's9', name: Bi('Financial instruments classification', 'تصنيف الأدوات المالية'), category: 'similar', hint: Bi('IFRS 9 and IPSAS 41 use similar classification', 'IFRS 9 و IPSAS 41 يستخدمان تصنيفا مشابها')),
+        ClassItem(id: 's10', name: Bi('Equity method for associates', 'طريقة حقوق الملكية للشركات الزميلة'), category: 'similar', hint: Bi('IAS 28 and IPSAS 36 both use equity method', 'IAS 28 و IPSAS 36 كلاهما يستخدمان طريقة حقوق الملكية')),
+        ClassItem(id: 's11', name: Bi('Retrospective accounting policy changes', 'تغييرات السياسات المحاسبية بأثر رجعي'), category: 'similar', hint: Bi('IAS 8 and IPSAS 3 require retrospective application', 'IAS 8 و IPSAS 3 يتطلبان التطبيق بأثر رجعي')),
+        ClassItem(id: 's12', name: Bi('Events after reporting date', 'الأحداث بعد تاريخ التقرير'), category: 'similar', hint: Bi('IAS 10 and IPSAS 14 treat adjusting/non-adjusting the same', 'IAS 10 و IPSAS 14 يعاملان الأحداث المعدلة وغير المعدلة بنفس الطريقة')),
+        ClassItem(id: 'd1', name: Bi('Non-exchange revenue (taxes, grants)', 'إيرادات بدون مقابل (ضرائب، منح)'), category: 'different', hint: Bi('Only IPSAS has IPSAS 23 for non-exchange transactions', 'فقط IPSAS لديه IPSAS 23 للمعاملات بدون مقابل')),
+        ClassItem(id: 'd2', name: Bi('Heritage assets treatment', 'معالجة الأصول التراثية'), category: 'different', hint: Bi('IPSAS explicitly addresses heritage assets, IFRS does not', 'IPSAS يتناول الأصول التراثية صراحة، IFRS لا يفعل')),
+        ClassItem(id: 'd3', name: Bi('Budget vs actual reporting', 'تقارير الموازنة مقابل الفعلي'), category: 'different', hint: Bi('IPSAS 24 mandates this, IFRS has no equivalent', 'IPSAS 24 يلزم بهذا، IFRS ليس لديه ما يعادله')),
+        ClassItem(id: 'd4', name: Bi('Social benefits recognition', 'الاعتراف بالمنافع الاجتماعية'), category: 'different', hint: Bi('IPSAS 42 covers this, outside IFRS scope entirely', 'IPSAS 42 يغطي هذا، خارج نطاق IFRS تماما')),
+        ClassItem(id: 'd5', name: Bi('Borrowing costs capitalization', 'رسملة تكاليف الاقتراض'), category: 'different', hint: Bi('IFRS must capitalize, IPSAS allows policy choice', 'IFRS يجب أن يرسمل، IPSAS يسمح بالاختيار')),
+        ClassItem(id: 'd6', name: Bi('Concessionary loans treatment', 'معالجة القروض الميسرة'), category: 'different', hint: Bi('IPSAS has specific guidance for below-market loans', 'IPSAS لديه إرشادات خاصة للقروض بأقل من السوق')),
+        ClassItem(id: 'd7', name: Bi('Primary users of financial statements', 'المستخدمون الرئيسيون للقوائم المالية'), category: 'different', hint: Bi('IFRS targets investors, IPSAS targets citizens', 'IFRS يستهدف المستثمرين، IPSAS يستهدف المواطنين')),
+        ClassItem(id: 'd8', name: Bi('Performance measure naming (Profit vs Surplus)', 'تسمية مقياس الأداء (ربح مقابل فائض)'), category: 'different', hint: Bi('IFRS uses profit/loss, IPSAS uses surplus/deficit', 'IFRS يستخدم الربح/الخسارة، IPSAS يستخدم الفائض/العجز')),
+        ClassItem(id: 'd9', name: Bi('Asset recognition concept', 'مفهوم الاعتراف بالأصول'), category: 'different', hint: Bi('IFRS: economic benefits; IPSAS: service potential', 'IFRS: منافع اقتصادية؛ IPSAS: إمكانية خدمية')),
+        ClassItem(id: 'd10', name: Bi('Consolidation control concept', 'مفهوم السيطرة في التوحيد'), category: 'different', hint: Bi('Broader concept of control under IPSAS 35', 'مفهوم أوسع للسيطرة بموجب IPSAS 35')),
+        ClassItem(id: 'd11', name: Bi('Earnings per share reporting', 'الإفصاح عن ربحية السهم'), category: 'different', hint: Bi('Required under IFRS, not applicable under IPSAS', 'مطلوب بموجب IFRS، غير قابل للتطبيق بموجب IPSAS')),
+        ClassItem(id: 'd12', name: Bi('First-time adoption transitional relief', 'تسهيلات التطبيق لأول مرة'), category: 'different', hint: Bi('IPSAS 33 gives 3-year relief vs IFRS 1 approach', 'IPSAS 33 يمنح تسهيلات لمدة 3 سنوات مقارنة بنهج IFRS 1')),
+        ClassItem(id: 'd13', name: Bi('Peppercorn (nominal) leases', 'الإيجارات الرمزية (بالقيمة الاسمية)'), category: 'different', hint: Bi('IPSAS 43 has specific guidance for nominal leases', 'IPSAS 43 لديه إرشادات خاصة للإيجارات الرمزية')),
+      ],
+    ),
+    ModuleActivity(
+      id: 'ifrsIpsasCaseStudies',
+      tab: ActivityTab.sim,
+      kind: ActivityKind.caseScenario,
+      title: Bi('IFRS vs IPSAS Case Studies', 'دراسات حالة IFRS مقابل IPSAS'),
+      description: Bi('Apply IFRS vs IPSAS standards to real-world cases', 'طبق معايير IFRS مقابل IPSAS على حالات واقعية'),
+      maxScore: 100,
+      instruction: Bi('Apply your knowledge of international accounting standards to real-world scenarios comparing IFRS and IPSAS. Navigate complex decisions involving revenue recognition, asset treatment, and consolidation in public sector contexts. Each scenario tests your ability to identify the appropriate framework, apply technical requirements, and understand key differences between private and public sector accounting.', 'طبّق معرفتك بالمعايير المحاسبية الدولية على سيناريوهات واقعية تقارن بين IFRS وIPSAS. وتعامل مع قرارات معقدة تتعلق بالاعتراف بالإيرادات، ومعالجة الأصول، والتوحيد في سياقات القطاع العام. ويختبر كل سيناريو قدرتك على تحديد الإطار المناسب، وتطبيق المتطلبات الفنية، وفهم الفروق الرئيسية بين محاسبة القطاعين الخاص والعام.'),
+      scenarios: [
+        CaseScenario(id: 'revenue-recognition', title: Bi('Revenue Recognition: IFRS 15 vs IPSAS 23', 'الاعتراف بالإيرادات: IFRS 15 مقابل IPSAS 23'), role: Bi('Chief Financial Officer of the National Water Authority', 'المدير المالي للهيئة الوطنية للمياه'), overview: Bi('A government-owned utility company provides water services through a mix of commercial contracts and subsidized social programs. You must determine how to recognize revenue under both IFRS 15 (for commercial operations) and IPSAS 23 (for non-exchange transactions), ensuring compliance with both frameworks.', 'تقدم شركة مرافق مملوكة للحكومة خدمات المياه من خلال مزيج من العقود التجارية والبرامج الاجتماعية المدعومة. يجب عليك تحديد كيفية الاعتراف بالإيرادات وفقاً لكل من IFRS 15 (للعمليات التجارية) وIPSAS 23 (للمعاملات غير التبادلية)، مع ضمان الامتثال لكلا الإطارين.'), finalSummary: Bi('You have successfully navigated the complexities of revenue recognition under both IFRS 15 and IPSAS 23. Key takeaways: (1) Classify transactions correctly as exchange or non-exchange, (2) Apply IPSAS 23 to grants with condition-based recognition, (3) Identify distinct performance obligations under IFRS 15, (4) Allocate transaction prices based on relative standalone selling prices, and (5) Present revenue streams separately with comprehensive disclosures. Mixed entities must maintain expertise in both frameworks to ensure compliant financial reporting.', 'لقد نجحت في التعامل مع تعقيدات الاعتراف بالإيرادات وفقاً لكل من IFRS 15 وIPSAS 23. أهم النقاط المستفادة: (1) صنّف المعاملات بشكل صحيح كتبادلية أو غير تبادلية، (2) طبّق IPSAS 23 على المنح مع الاعتراف القائم على الشروط، (3) حدّد التزامات الأداء المتميزة وفقاً لـ IFRS 15، (4) وزّع أسعار المعاملات بناءً على أسعار البيع القائمة بذاتها النسبية، و(5) اعرض مصادر الإيرادات بشكل منفصل مع إفصاحات شاملة. ويجب على المنشآت المختلطة الحفاظ على خبرة في كلا الإطارين لضمان إعداد تقارير مالية ممتثلة.'), steps: [
+            CaseStep(id: 'step1', type: CaseStepType.analysis, title: Bi('Transaction Classification', 'تصنيف المعاملات'), description: Bi('The National Water Authority has three revenue streams: (1) Commercial contracts with businesses at market rates, (2) Residential services with government subsidies covering 40% of costs, and (3) A \$5M annual grant from the Ministry of Environment for infrastructure development. You need to classify each stream under the appropriate standard.', 'لدى الهيئة الوطنية للمياه ثلاثة مصادر للإيرادات: (1) عقود تجارية مع الشركات بأسعار السوق، (2) خدمات سكنية بدعم حكومي يغطي 40% من التكاليف، و(3) منحة سنوية بقيمة \$5M من وزارة البيئة لتطوير البنية التحتية. يتعين عليك تصنيف كل مصدر وفقاً للمعيار المناسب.'), context: Bi('IFRS 15 applies to contracts with customers in exchange transactions, while IPSAS 23 applies to non-exchange transactions where one party receives value without directly giving equal value in exchange.', 'ينطبق IFRS 15 على العقود المبرمة مع العملاء في المعاملات التبادلية، بينما ينطبق IPSAS 23 على المعاملات غير التبادلية التي يتلقى فيها أحد الأطراف قيمة دون أن يقدم بشكل مباشر قيمة مساوية في المقابل.'), data: [CaseDatum(Bi('Commercial Contracts', 'العقود التجارية'), '\$12M annual revenue'), CaseDatum(Bi('Subsidized Residential', 'الخدمات السكنية المدعومة'), '\$8M from residents, \$5.3M subsidy'), CaseDatum(Bi('Infrastructure Grant', 'منحة البنية التحتية'), '\$5M annual from Ministry')], question: Bi('Which framework should primarily govern the revenue recognition for the government grant for infrastructure development?', 'أي إطار ينبغي أن يحكم بشكل أساسي الاعتراف بالإيرادات الخاصة بالمنحة الحكومية لتطوير البنية التحتية؟'), options: [
+                CaseOption(Bi('IFRS 15 - Recognize revenue as infrastructure is delivered to the government', 'IFRS 15 - الاعتراف بالإيرادات عند تسليم البنية التحتية للحكومة'), feedback: Bi('Incorrect. The grant is a non-exchange transaction (no customer contract for specific performance obligations). IFRS 15 does not apply to non-exchange transactions.', 'إجابة غير صحيحة. المنحة معاملة غير تبادلية (لا يوجد عقد مع عميل مقابل التزامات أداء محددة). لا ينطبق IFRS 15 على المعاملات غير التبادلية.'), consequence: Bi('Revenue misclassified; regulatory audit identifies non-compliance with IPSAS requirements.', 'تصنيف الإيرادات بشكل خاطئ، ويكشف التدقيق الرقابي عن عدم الامتثال لمتطلبات IPSAS.')),
+                CaseOption(Bi('IPSAS 23 - Recognize revenue when grant conditions are satisfied', 'IPSAS 23 - الاعتراف بالإيرادات عند استيفاء شروط المنحة'), isCorrect: true, feedback: Bi('Correct! The infrastructure grant is a non-exchange transaction governed by IPSAS 23. Revenue should be recognized when grant conditions (if any) are satisfied, or immediately if no conditions exist.', 'إجابة صحيحة. منحة البنية التحتية معاملة غير تبادلية يحكمها IPSAS 23. ينبغي الاعتراف بالإيرادات عند استيفاء شروط المنحة (إن وجدت)، أو فوراً في حال عدم وجود شروط.'), consequence: Bi('Proper classification established; you proceed to analyze grant conditions.', 'تم تحديد التصنيف الصحيح، وتنتقل الآن إلى تحليل شروط المنحة.')),
+                CaseOption(Bi('Both IFRS 15 and IPSAS 23 - Apply dual recognition', 'كل من IFRS 15 وIPSAS 23 - تطبيق اعتراف مزدوج'), feedback: Bi('Incorrect. Transactions should be classified under one framework. The grant is clearly non-exchange and falls under IPSAS 23 only.', 'إجابة غير صحيحة. ينبغي تصنيف المعاملات وفقاً لإطار واحد. المنحة غير تبادلية بوضوح وتندرج تحت IPSAS 23 فقط.'), consequence: Bi('Dual accounting creates confusion and increases audit complexity unnecessarily.', 'تخلق المحاسبة المزدوجة التباساً وتزيد من تعقيد التدقيق دون داعٍ.')),
+                CaseOption(Bi('Cash basis - Recognize when grant money is received', 'الأساس النقدي - الاعتراف عند استلام أموال المنحة'), feedback: Bi('Incorrect. Both IFRS and IPSAS use accrual accounting. Cash basis does not comply with either framework.', 'إجابة غير صحيحة. يستخدم كل من IFRS وIPSAS أساس الاستحقاق. لا يمتثل الأساس النقدي لأي من الإطارين.'), consequence: Bi('Non-compliance with accrual accounting standards; financial statements rejected.', 'عدم الامتثال لمعايير المحاسبة على أساس الاستحقاق، ورفض القوائم المالية.')),
+            ]),
+            CaseStep(id: 'step2', type: CaseStepType.decision, title: Bi('Grant Condition Analysis', 'تحليل شروط المنحة'), description: Bi('The Ministry grant agreement states: "Funds must be used for water infrastructure development within 3 years. If not fully utilized, unused amounts must be returned." You have spent \$3M in Year 1 on qualifying infrastructure projects, with \$2M remaining in a restricted fund.', 'تنص اتفاقية منحة الوزارة على أن الأموال يجب أن تُستخدم لتطوير البنية التحتية للمياه خلال 3 سنوات، وفي حال عدم استخدامها بالكامل يجب إعادة المبالغ غير المستخدمة. لقد أنفقت \$3M في السنة الأولى على مشاريع بنية تحتية مؤهلة، مع تبقي \$2M في صندوق مقيد.'), context: Bi('IPSAS 23 requires entities to recognize a liability for grants with conditions until those conditions are satisfied. Revenue is recognized as conditions are met.', 'يتطلب IPSAS 23 من المنشآت الاعتراف بالتزام مقابل المنح المشروطة إلى حين استيفاء تلك الشروط. ويُعترف بالإيرادات مع استيفاء الشروط.'), data: [CaseDatum(Bi('Total Grant Received', 'إجمالي المنحة المستلمة'), '\$5,000,000'), CaseDatum(Bi('Infrastructure Expenditure', 'الإنفاق على البنية التحتية'), '\$3,000,000'), CaseDatum(Bi('Remaining in Restricted Fund', 'المتبقي في الصندوق المقيد'), '\$2,000,000'), CaseDatum(Bi('Time Remaining', 'الوقت المتبقي'), '2 years')], question: Bi('How should you recognize the \$5M grant revenue in Year 1 under IPSAS 23?', 'كيف ينبغي أن تعترف بإيرادات المنحة البالغة \$5M في السنة الأولى وفقاً لـ IPSAS 23؟'), options: [
+                CaseOption(Bi('Recognize \$5M revenue immediately - grant was received', 'الاعتراف بإيرادات قدرها \$5M فوراً - لأن المنحة استُلمت'), feedback: Bi('Incorrect. The grant has a performance condition (infrastructure development). IPSAS 23 requires recognizing a liability for the portion where conditions are not yet satisfied.', 'إجابة غير صحيحة. للمنحة شرط أداء (تطوير البنية التحتية). يتطلب IPSAS 23 الاعتراف بالتزام مقابل الجزء الذي لم تُستوفَ شروطه بعد.'), consequence: Bi('Revenue overstated by \$2M; liability understated; financial statements materially misstated.', 'المبالغة في الإيرادات بمقدار \$2M، والتقليل من الالتزام، وتحريف القوائم المالية تحريفاً جوهرياً.')),
+                CaseOption(Bi('Recognize \$3M revenue; \$2M deferred revenue liability', 'الاعتراف بإيرادات قدرها \$3M، والتزام إيرادات مؤجلة قدره \$2M'), isCorrect: true, feedback: Bi('Correct! Under IPSAS 23, recognize revenue of \$3M (conditions satisfied through infrastructure spending) and a liability of \$2M for the unspent portion with unfulfilled conditions.', 'إجابة صحيحة. وفقاً لـ IPSAS 23، يُعترف بإيرادات قدرها \$3M (استُوفيت شروطها عبر الإنفاق على البنية التحتية) والتزام قدره \$2M مقابل الجزء غير المنفق ذي الشروط غير المستوفاة.'), consequence: Bi('Accurate representation of grant transaction; compliance with IPSAS 23 achieved.', 'عرض دقيق لمعاملة المنحة، وتحقيق الامتثال لـ IPSAS 23.')),
+                CaseOption(Bi('Recognize \$1.67M revenue annually over 3 years (straight-line)', 'الاعتراف بإيرادات قدرها \$1.67M سنوياً على مدى 3 سنوات (بطريقة القسط الثابت)'), feedback: Bi('Incorrect. IPSAS 23 requires revenue recognition based on satisfaction of conditions, not time-based allocation. The pattern should follow actual infrastructure spending.', 'إجابة غير صحيحة. يتطلب IPSAS 23 الاعتراف بالإيرادات بناءً على استيفاء الشروط، وليس على أساس التوزيع الزمني. وينبغي أن يتبع النمط الإنفاق الفعلي على البنية التحتية.'), consequence: Bi('Revenue recognition pattern does not match economic substance of grant conditions.', 'لا يتطابق نمط الاعتراف بالإيرادات مع الجوهر الاقتصادي لشروط المنحة.')),
+                CaseOption(Bi('No revenue recognition until all \$5M is spent on infrastructure', 'عدم الاعتراف بأي إيرادات حتى يُنفق كامل مبلغ \$5M على البنية التحتية'), feedback: Bi('Incorrect. IPSAS 23 allows for progressive recognition as conditions are satisfied. Since \$3M of conditions have been met, that portion should be recognized.', 'إجابة غير صحيحة. يتيح IPSAS 23 الاعتراف التدريجي مع استيفاء الشروط. وبما أنه تم استيفاء شروط بقيمة \$3M، فينبغي الاعتراف بذلك الجزء.'), consequence: Bi('Revenue understated by \$3M; does not reflect economic reality of performance.', 'التقليل من الإيرادات بمقدار \$3M، وعدم عكس الواقع الاقتصادي للأداء.')),
+            ]),
+            CaseStep(id: 'step3', type: CaseStepType.analysis, title: Bi('Commercial Revenue - Performance Obligations', 'الإيرادات التجارية - التزامات الأداء'), description: Bi('For the commercial contracts (\$12M annual), you have a 5-year contract with a manufacturing plant to supply water. The contract includes: (1) Water supply at \$180,000/month, (2) Installation of dedicated pipeline for \$600,000 upfront, and (3) Quarterly maintenance services at \$40,000/quarter. You need to identify distinct performance obligations under IFRS 15.', 'ضمن العقود التجارية (\$12M سنوياً)، لديك عقد مدته 5 سنوات مع مصنع لتوريد المياه. يتضمن العقد: (1) توريد المياه بقيمة \$180,000 شهرياً، (2) تركيب خط أنابيب مخصص بقيمة \$600,000 تُدفع مقدماً، و(3) خدمات صيانة ربع سنوية بقيمة \$40,000 لكل ربع سنة. يتعين عليك تحديد التزامات الأداء المتميزة وفقاً لـ IFRS 15.'), context: Bi('IFRS 15 requires identifying distinct performance obligations - promises in a contract that are separately identifiable and provide benefit to the customer on their own or with readily available resources.', 'يتطلب IFRS 15 تحديد التزامات الأداء المتميزة - وهي وعود في العقد يمكن تحديدها بشكل منفصل وتوفر منفعة للعميل بمفردها أو مع موارد متاحة بسهولة.'), data: [CaseDatum(Bi('Water Supply (monthly)', 'توريد المياه (شهرياً)'), '\$180,000 × 12 = \$2.16M/year'), CaseDatum(Bi('Pipeline Installation (one-time)', 'تركيب خط الأنابيب (مرة واحدة)'), '\$600,000'), CaseDatum(Bi('Maintenance Services (quarterly)', 'خدمات الصيانة (ربع سنوية)'), '\$40,000 × 4 = \$160,000/year'), CaseDatum(Bi('Total Annual Value', 'إجمالي القيمة السنوية'), '\$2.92M')], question: Bi('How many distinct performance obligations exist in this contract under IFRS 15?', 'كم عدد التزامات الأداء المتميزة الموجودة في هذا العقد وفقاً لـ IFRS 15؟'), options: [
+                CaseOption(Bi('One performance obligation - bundled water service', 'التزام أداء واحد - خدمة مياه مجمعة'), feedback: Bi('Incorrect. Pipeline installation and maintenance are separately identifiable from ongoing water supply and should be treated as distinct obligations.', 'إجابة غير صحيحة. يمكن تحديد تركيب خط الأنابيب والصيانة بشكل منفصل عن توريد المياه المستمر، وينبغي معاملتهما كالتزامات متميزة.'), consequence: Bi('Revenue timing distorted; IFRS 15 compliance failure on performance obligation identification.', 'تشويه توقيت الاعتراف بالإيرادات، وإخفاق في الامتثال لـ IFRS 15 بشأن تحديد التزامات الأداء.')),
+                CaseOption(Bi('Two performance obligations - water supply and installation (maintenance bundled with supply)', 'التزاما أداء - توريد المياه والتركيب (مع دمج الصيانة ضمن التوريد)'), feedback: Bi('Incorrect. Maintenance services are distinct from water supply (quarterly vs. continuous delivery) and should be a separate obligation.', 'إجابة غير صحيحة. تتميز خدمات الصيانة عن توريد المياه (ربع سنوية مقابل تسليم مستمر) وينبغي أن تكون التزاماً منفصلاً.'), consequence: Bi('Maintenance revenue recognition pattern incorrect; does not reflect transfer of services.', 'نمط الاعتراف بإيرادات الصيانة غير صحيح، ولا يعكس انتقال الخدمات.')),
+                CaseOption(Bi('Three performance obligations - water supply, pipeline installation, and maintenance', 'ثلاثة التزامات أداء - توريد المياه، وتركيب خط الأنابيب، والصيانة'), isCorrect: true, feedback: Bi('Correct! All three are distinct: (1) Water supply is a series of distinct services, (2) Pipeline provides standalone benefit, (3) Maintenance is separately identifiable quarterly service. Each should have revenue recognized when/as satisfied.', 'إجابة صحيحة. الثلاثة جميعها متميزة: (1) توريد المياه سلسلة من الخدمات المتميزة، (2) خط الأنابيب يوفر منفعة قائمة بذاتها، (3) الصيانة خدمة ربع سنوية يمكن تحديدها بشكل منفصل. وينبغي الاعتراف بإيرادات كل منها عند/مع استيفائه.'), consequence: Bi('Proper allocation of transaction price across obligations; accurate revenue timing.', 'توزيع سليم لسعر المعاملة على الالتزامات، وتوقيت دقيق للاعتراف بالإيرادات.')),
+                CaseOption(Bi('Four performance obligations - separate each month of water supply', 'أربعة التزامات أداء - فصل كل شهر من توريد المياه'), feedback: Bi('Incorrect. Monthly water supplies are a "series of distinct goods or services substantially the same with same pattern of transfer" - treated as single performance obligation under IFRS 15.', 'إجابة غير صحيحة. عمليات توريد المياه الشهرية هي سلسلة من السلع أو الخدمات المتميزة المتماثلة جوهرياً وذات نمط انتقال واحد - وتُعامل كالتزام أداء واحد وفقاً لـ IFRS 15.'), consequence: Bi('Unnecessary complexity; each month is not a separate obligation when pattern is consistent.', 'تعقيد لا داعي له، فكل شهر ليس التزاماً منفصلاً ما دام النمط ثابتاً.')),
+            ]),
+            CaseStep(id: 'step4', type: CaseStepType.decision, title: Bi('Transaction Price Allocation', 'توزيع سعر المعاملة'), description: Bi('You have identified three distinct performance obligations. Now you must allocate the total transaction price (\$3.52M for Year 1) based on standalone selling prices. Market analysis shows: Pipeline installation typically costs \$750,000, Maintenance services \$50,000/quarter, and Water supply \$200,000/month for similar industrial customers.', 'لقد حددت ثلاثة التزامات أداء متميزة. والآن يجب عليك توزيع إجمالي سعر المعاملة (\$3.52M للسنة الأولى) بناءً على أسعار البيع القائمة بذاتها. يُظهر تحليل السوق: تكلفة تركيب خط الأنابيب عادةً \$750,000، وخدمات الصيانة \$50,000 لكل ربع سنة، وتوريد المياه \$200,000 شهرياً للعملاء الصناعيين المماثلين.'), context: Bi('IFRS 15 requires allocating transaction price to each performance obligation based on relative standalone selling prices. Contract discount should be allocated proportionally.', 'يتطلب IFRS 15 توزيع سعر المعاملة على كل التزام أداء بناءً على أسعار البيع القائمة بذاتها النسبية. وينبغي توزيع خصم العقد بشكل تناسبي.'), data: [CaseDatum(Bi('Water Supply (market)', 'توريد المياه (السوق)'), '\$200,000/month × 12 = \$2,400,000'), CaseDatum(Bi('Pipeline Installation (market)', 'تركيب خط الأنابيب (السوق)'), '\$750,000'), CaseDatum(Bi('Maintenance (market)', 'الصيانة (السوق)'), '\$50,000/quarter × 4 = \$200,000'), CaseDatum(Bi('Total Standalone Price', 'إجمالي السعر القائم بذاته'), '\$3,350,000'), CaseDatum(Bi('Actual Contract Price Year 1', 'سعر العقد الفعلي للسنة الأولى'), '\$2,920,000')], question: Bi('What is the allocated transaction price for the pipeline installation performance obligation in Year 1?', 'ما هو سعر المعاملة الموزع على التزام أداء تركيب خط الأنابيب في السنة الأولى؟'), options: [
+                CaseOption(Bi('\$600,000 - Use the actual contract amount for pipeline', '\$600,000 - استخدام مبلغ العقد الفعلي لخط الأنابيب'), feedback: Bi('Incorrect. IFRS 15 requires allocation based on relative standalone selling prices, not contract-stated amounts, to properly reflect economic value of each obligation.', 'إجابة غير صحيحة. يتطلب IFRS 15 التوزيع بناءً على أسعار البيع القائمة بذاتها النسبية، وليس المبالغ المذكورة في العقد، لعكس القيمة الاقتصادية لكل التزام بشكل صحيح.'), consequence: Bi('Revenue allocation does not reflect fair value; water supply revenue understated.', 'لا يعكس توزيع الإيرادات القيمة العادلة، ويجري التقليل من إيرادات توريد المياه.')),
+                CaseOption(Bi('\$654,000 - Proportional allocation (\$750,000 × [\$2,920,000/\$3,350,000])', '\$654,000 - توزيع تناسبي (\$750,000 × [\$2,920,000/\$3,350,000])'), isCorrect: true, feedback: Bi('Correct! Allocated price = \$750,000 × (\$2,920,000 / \$3,350,000) = \$654,000. This reflects the pipeline\'s proportional standalone value adjusted for the contract discount.', 'إجابة صحيحة. السعر الموزع = \$750,000 × (\$2,920,000 / \$3,350,000) = \$654,000. ويعكس هذا القيمة القائمة بذاتها النسبية لخط الأنابيب بعد تعديلها لخصم العقد.'), consequence: Bi('Transaction price properly allocated across performance obligations per IFRS 15.', 'توزيع سعر المعاملة بشكل صحيح على التزامات الأداء وفقاً لـ IFRS 15.')),
+                CaseOption(Bi('\$750,000 - Use full standalone selling price', '\$750,000 - استخدام سعر البيع القائم بذاته بالكامل'), feedback: Bi('Incorrect. The contract price (\$2.92M) is less than total standalone prices (\$3.35M), so the discount must be allocated. Using full standalone price overstates revenue.', 'إجابة غير صحيحة. سعر العقد (\$2.92M) أقل من إجمالي الأسعار القائمة بذاتها (\$3.35M)، لذا يجب توزيع الخصم. واستخدام السعر القائم بذاته بالكامل يبالغ في الإيرادات.'), consequence: Bi('Revenue overstated; total allocated exceeds actual contract price.', 'المبالغة في الإيرادات، وتجاوز الإجمالي الموزع لسعر العقد الفعلي.')),
+                CaseOption(Bi('\$973,333 - Equal allocation across three obligations (\$2,920,000 / 3)', '\$973,333 - توزيع متساوٍ على الالتزامات الثلاثة (\$2,920,000 / 3)'), feedback: Bi('Incorrect. IFRS 15 does not allow equal allocation. Allocation must be based on relative standalone selling prices to reflect economic value.', 'إجابة غير صحيحة. لا يسمح IFRS 15 بالتوزيع المتساوي. يجب أن يستند التوزيع إلى أسعار البيع القائمة بذاتها النسبية لعكس القيمة الاقتصادية.'), consequence: Bi('Allocation does not reflect fair value; material misstatement of performance obligation values.', 'لا يعكس التوزيع القيمة العادلة، ويؤدي إلى تحريف جوهري لقيم التزامات الأداء.')),
+            ]),
+            CaseStep(id: 'step5', type: CaseStepType.recommendation, title: Bi('Disclosure and Presentation', 'الإفصاح والعرض'), description: Bi('The Authority\'s financial statements must present revenue streams appropriately. The Board asks whether to present commercial (IFRS 15) and non-exchange (IPSAS 23) revenues separately or combined, and what disclosures are required under both frameworks.', 'يجب أن تعرض القوائم المالية للهيئة مصادر الإيرادات بشكل ملائم. ويتساءل مجلس الإدارة عما إذا كان ينبغي عرض الإيرادات التجارية (IFRS 15) والإيرادات غير التبادلية (IPSAS 23) بشكل منفصل أم مجمع، وما هي الإفصاحات المطلوبة وفقاً لكلا الإطارين.'), context: Bi('Both IFRS 15 and IPSAS 23 require disclosure of disaggregated revenue information to understand the nature, amount, timing, and uncertainty of revenue and cash flows.', 'يتطلب كل من IFRS 15 وIPSAS 23 الإفصاح عن معلومات الإيرادات المصنفة تفصيلياً لفهم طبيعة الإيرادات والتدفقات النقدية ومقدارها وتوقيتها ودرجة عدم اليقين المرتبطة بها.'), question: Bi('What is the best presentation and disclosure approach for the Authority\'s dual-framework revenue?', 'ما هو أفضل نهج للعرض والإفصاح عن إيرادات الهيئة ذات الإطارين؟'), options: [
+                CaseOption(Bi('Combine all revenue as "Water Services Revenue" with minimal disclosure', 'دمج جميع الإيرادات تحت بند إيرادات خدمات المياه مع الحد الأدنى من الإفصاح'), feedback: Bi('Incorrect. This obscures the different revenue recognition methods and fails disclosure requirements under both IFRS 15 and IPSAS 23.', 'إجابة غير صحيحة. يؤدي هذا إلى إخفاء طرق الاعتراف بالإيرادات المختلفة، ولا يفي بمتطلبات الإفصاح وفقاً لكل من IFRS 15 وIPSAS 23.'), consequence: Bi('Lack of transparency; stakeholders cannot assess revenue quality and risk profiles.', 'غياب الشفافية، وعدم قدرة أصحاب المصلحة على تقييم جودة الإيرادات ومستويات المخاطر.')),
+                CaseOption(Bi('Present separately: "Commercial Revenue (IFRS 15)" and "Non-Exchange Revenue (IPSAS 23)" with required disclosures', 'العرض بشكل منفصل: الإيرادات التجارية (IFRS 15) والإيرادات غير التبادلية (IPSAS 23) مع الإفصاحات المطلوبة'), isCorrect: true, feedback: Bi('Correct! Separate presentation enhances transparency. Disclose: (1) Disaggregation of revenue by source, (2) Performance obligations and timing, (3) Grant conditions and restrictions, (4) Significant judgments and changes in liability balances.', 'إجابة صحيحة. يعزز العرض المنفصل الشفافية. أفصح عن: (1) تصنيف الإيرادات حسب المصدر، (2) التزامات الأداء وتوقيتها، (3) شروط المنحة وقيودها، (4) الأحكام الجوهرية والتغيرات في أرصدة الالتزامات.'), consequence: Bi('Clear, compliant presentation; stakeholders understand revenue composition and recognition policies.', 'عرض واضح وممتثل، ويفهم أصحاب المصلحة تكوين الإيرادات وسياسات الاعتراف بها.')),
+                CaseOption(Bi('Present all revenue under IFRS 15 only to simplify reporting', 'عرض جميع الإيرادات وفقاً لـ IFRS 15 فقط لتبسيط إعداد التقارير'), feedback: Bi('Incorrect. IFRS 15 does not apply to non-exchange transactions. This would be a fundamental misapplication of accounting standards.', 'إجابة غير صحيحة. لا ينطبق IFRS 15 على المعاملات غير التبادلية. وسيكون هذا تطبيقاً خاطئاً جوهرياً للمعايير المحاسبية.'), consequence: Bi('Material non-compliance with IPSAS; grant revenue improperly recognized.', 'عدم امتثال جوهري لـ IPSAS، والاعتراف بإيرادات المنحة بشكل غير سليم.')),
+                CaseOption(Bi('Present all revenue under IPSAS 23 to align with government entity status', 'عرض جميع الإيرادات وفقاً لـ IPSAS 23 لتتوافق مع صفة الجهة الحكومية'), feedback: Bi('Incorrect. IPSAS 23 does not provide guidance on exchange transactions with customers. Commercial contracts require IFRS 15 treatment for proper revenue recognition.', 'إجابة غير صحيحة. لا يقدم IPSAS 23 إرشادات بشأن المعاملات التبادلية مع العملاء. وتتطلب العقود التجارية معالجة وفقاً لـ IFRS 15 للاعتراف السليم بالإيرادات.'), consequence: Bi('Commercial revenue recognition incorrect; performance obligation accounting missing.', 'الاعتراف بالإيرادات التجارية بشكل غير صحيح، وغياب محاسبة التزامات الأداء.')),
+            ]),
+          ]),
+        CaseScenario(id: 'asset-treatment', title: Bi('Asset Treatment: Heritage and Infrastructure Assets', 'معالجة الأصول: أصول التراث والبنية التحتية'), role: Bi('Director of Finance, National Museum and Parks Authority', 'مدير الشؤون المالية، هيئة المتاحف والحدائق الوطنية'), overview: Bi('The National Museum and Parks Authority manages heritage assets (historical artifacts, monuments) and infrastructure assets (roads, bridges in national parks). You must determine appropriate accounting treatment under IPSAS, which differs significantly from IFRS for government-specific asset classes.', 'تدير هيئة المتاحف والحدائق الوطنية أصولاً تراثية (قطع أثرية تاريخية، ونصب تذكارية) وأصول بنية تحتية (طرق، وجسور في الحدائق الوطنية). يجب عليك تحديد المعالجة المحاسبية المناسبة وفقاً لـ IPSAS، والتي تختلف اختلافاً كبيراً عن IFRS فيما يتعلق بفئات الأصول الخاصة بالحكومة.'), finalSummary: Bi('You have successfully navigated the unique asset accounting challenges of public sector entities. Key insights: (1) Heritage assets have specific IPSAS 17 guidance allowing non-recognition when reliable measurement is not feasible, (2) Infrastructure assets must be recognized and depreciated despite public ownership, (3) Componentization is the preferred method for complex infrastructure networks, (4) IPSAS explicitly prohibits renewals accounting, (5) IPSAS provides clearer public sector guidance than IFRS for government-specific asset classes. These differences reflect the distinct nature of public sector stewardship over assets held for public benefit.', 'لقد نجحت في التعامل مع التحديات المحاسبية الفريدة لأصول منشآت القطاع العام. أهم الأفكار المستفادة: (1) لأصول التراث إرشادات محددة في IPSAS 17 تتيح عدم الاعتراف عند تعذر القياس الموثوق، (2) يجب الاعتراف بأصول البنية التحتية واستهلاكها رغم الملكية العامة، (3) تُعد تجزئة المكونات الطريقة المفضلة لشبكات البنية التحتية المعقدة، (4) يحظر IPSAS محاسبة التجديدات صراحةً، (5) يقدم IPSAS إرشادات للقطاع العام أوضح من IFRS لفئات الأصول الخاصة بالحكومة. وتعكس هذه الفروق الطبيعة المميزة لإشراف القطاع العام على الأصول المحتفظ بها للمنفعة العامة.'), steps: [
+            CaseStep(id: 'step1', type: CaseStepType.analysis, title: Bi('Heritage Asset Identification', 'تحديد أصول التراث'), description: Bi('The Authority holds: (1) A 2,000-year-old archaeological collection acquired through excavations, (2) Historical buildings designated as national monuments, (3) A modern administrative office building, and (4) Paintings and sculptures purchased for the museum\'s public gallery. IPSAS 17 provides specific guidance for heritage assets.', 'تمتلك الهيئة: (1) مجموعة أثرية عمرها 2,000 عام تم الحصول عليها من خلال الحفريات، (2) مبانٍ تاريخية مصنفة كنصب وطنية، (3) مبنى مكتبي إداري حديث، و(4) لوحات ومنحوتات اشتُريت لصالة العرض العامة للمتحف. يقدم IPSAS 17 إرشادات محددة لأصول التراث.'), context: Bi('IPSAS 17 defines heritage assets as assets with cultural, environmental, or historical significance held indefinitely and preserved for future generations. IFRS does not have specific heritage asset guidance.', 'يعرّف IPSAS 17 أصول التراث بأنها أصول ذات أهمية ثقافية أو بيئية أو تاريخية يُحتفظ بها لأجل غير مسمى وتُصان للأجيال القادمة. ولا يتضمن IFRS إرشادات محددة لأصول التراث.'), data: [CaseDatum(Bi('Archaeological Collection', 'المجموعة الأثرية'), 'Cultural/historical significance, held indefinitely'), CaseDatum(Bi('Historical Buildings', 'المباني التاريخية'), 'National monuments, irreplaceable'), CaseDatum(Bi('Administrative Office', 'المكتب الإداري'), 'Operational building, no heritage value'), CaseDatum(Bi('Gallery Art Collection', 'مجموعة الأعمال الفنية للصالة'), 'Cultural significance, public exhibition')], question: Bi('Which assets qualify as "heritage assets" under IPSAS 17 and may be excluded from recognition if certain criteria are met?', 'أي الأصول تُصنّف كأصول تراثية وفقاً لـ IPSAS 17 ويمكن استبعادها من الاعتراف في حال استيفاء معايير معينة؟'), options: [
+                CaseOption(Bi('All four asset types - they are all owned by a heritage institution', 'جميع فئات الأصول الأربع - لأنها جميعاً مملوكة لمؤسسة تراثية'), feedback: Bi('Incorrect. Ownership by a heritage institution does not automatically make assets "heritage assets." The administrative office serves operational purposes and lacks heritage characteristics.', 'إجابة غير صحيحة. لا تجعل ملكية مؤسسة تراثية للأصول منها أصولاً تراثية تلقائياً. فالمكتب الإداري يخدم أغراضاً تشغيلية ويفتقر إلى الخصائص التراثية.'), consequence: Bi('Operational assets misclassified; depreciation and recognition policies incorrect.', 'تصنيف الأصول التشغيلية بشكل خاطئ، وعدم صحة سياسات الاستهلاك والاعتراف.')),
+                CaseOption(Bi('Archaeological collection, historical buildings, and art collection only', 'المجموعة الأثرية والمباني التاريخية ومجموعة الأعمال الفنية فقط'), isCorrect: true, feedback: Bi('Correct! These three meet IPSAS 17 heritage criteria: cultural/historical significance, held indefinitely for public benefit, preservation requirements. The administrative office is a standard operational asset under IPSAS 17 (Property, Plant & Equipment).', 'إجابة صحيحة. تستوفي هذه الأصول الثلاثة معايير التراث في IPSAS 17: الأهمية الثقافية والتاريخية، والاحتفاظ بها لأجل غير مسمى للمنفعة العامة، ومتطلبات الصيانة. أما المكتب الإداري فهو أصل تشغيلي عادي وفقاً لـ IPSAS 17 (الممتلكات والمصانع والمعدات).'), consequence: Bi('Proper classification established; you can now determine recognition approach for heritage assets.', 'تم تحديد التصنيف الصحيح، ويمكنك الآن تحديد نهج الاعتراف بأصول التراث.')),
+                CaseOption(Bi('Historical buildings only - buildings are property, others are not', 'المباني التاريخية فقط - لأن المباني ممتلكات والبقية ليست كذلك'), feedback: Bi('Incorrect. Heritage assets can include collections, art, monuments, and buildings. IPSAS 17 does not limit heritage classification to buildings only.', 'إجابة غير صحيحة. يمكن أن تشمل أصول التراث المجموعات والأعمال الفنية والنصب والمباني. ولا يقصر IPSAS 17 تصنيف التراث على المباني وحدها.'), consequence: Bi('Archaeological and art collections improperly excluded from heritage asset classification.', 'استبعاد المجموعات الأثرية والفنية بشكل غير سليم من تصنيف أصول التراث.')),
+                CaseOption(Bi('None - IPSAS requires all assets to be recognized at fair value', 'لا شيء - لأن IPSAS يتطلب الاعتراف بجميع الأصول بالقيمة العادلة'), feedback: Bi('Incorrect. IPSAS 17 allows entities to choose not to recognize heritage assets if reliable cost/value cannot be obtained. IPSAS does not mandate universal fair value measurement.', 'إجابة غير صحيحة. يتيح IPSAS 17 للمنشآت اختيار عدم الاعتراف بأصول التراث إذا تعذر الحصول على تكلفة أو قيمة موثوقة. ولا يفرض IPSAS القياس بالقيمة العادلة بشكل شامل.'), consequence: Bi('Misunderstanding of IPSAS 17 recognition exemption; unnecessary valuation efforts undertaken.', 'سوء فهم لإعفاء الاعتراف في IPSAS 17، وبذل جهود تقييم لا داعي لها.')),
+            ]),
+            CaseStep(id: 'step2', type: CaseStepType.decision, title: Bi('Heritage Asset Recognition Decision', 'قرار الاعتراف بأصول التراث'), description: Bi('For the archaeological collection (15,000 artifacts from excavations spanning 50 years), no acquisition cost exists for most items. Professional appraisers quote \$2.5M to value the entire collection, but note "significant uncertainty due to uniqueness and illiquid market." The historical buildings can be valued at \$12M (insurance replacement cost). The art collection has documented purchase costs totaling \$3.8M.', 'بالنسبة للمجموعة الأثرية (15,000 قطعة أثرية من حفريات امتدت 50 عاماً)، لا توجد تكلفة اقتناء لمعظم القطع. ويقدّر المثمّنون المحترفون قيمة المجموعة بأكملها بـ \$2.5M، لكنهم يشيرون إلى وجود عدم يقين جوهري بسبب التفرد وضعف سيولة السوق. ويمكن تقييم المباني التاريخية بـ \$12M (تكلفة الاستبدال التأمينية). ولمجموعة الأعمال الفنية تكاليف شراء موثقة يبلغ إجماليها \$3.8M.'), context: Bi('IPSAS 17 allows non-recognition of heritage assets if no cost or reliable value can be obtained. If recognized, they are measured at cost or fair value. The standard requires disclosure even if not recognized.', 'يتيح IPSAS 17 عدم الاعتراف بأصول التراث إذا تعذر الحصول على تكلفة أو قيمة موثوقة. وفي حال الاعتراف بها، تُقاس بالتكلفة أو القيمة العادلة. ويتطلب المعيار الإفصاح عنها حتى لو لم يُعترف بها.'), data: [CaseDatum(Bi('Archaeological Collection', 'المجموعة الأثرية'), 'No cost data; appraisal \$2.5M (high uncertainty)'), CaseDatum(Bi('Historical Buildings', 'المباني التاريخية'), 'Replacement cost \$12M (reliable)'), CaseDatum(Bi('Art Collection', 'مجموعة الأعمال الفنية'), 'Purchase cost \$3.8M (documented)')], question: Bi('What is the most appropriate recognition approach under IPSAS 17 for these heritage assets?', 'ما هو نهج الاعتراف الأنسب وفقاً لـ IPSAS 17 لأصول التراث هذه؟'), options: [
+                CaseOption(Bi('Recognize all three at total value \$18.3M (\$2.5M + \$12M + \$3.8M)', 'الاعتراف بالأصول الثلاثة جميعها بقيمة إجمالية قدرها \$18.3M (\$2.5M + \$12M + \$3.8M)'), feedback: Bi('Incorrect. The archaeological collection has "significant uncertainty" in valuation. IPSAS 17 does not require recognition when reliable measurement is not possible without undue cost or effort.', 'إجابة غير صحيحة. تعاني المجموعة الأثرية من عدم يقين جوهري في التقييم. ولا يتطلب IPSAS 17 الاعتراف عندما يتعذر القياس الموثوق دون تكلفة أو جهد لا مبرر لهما.'), consequence: Bi('Balance sheet includes unreliable valuation; users may be misled about asset values.', 'تتضمن الميزانية العمومية تقييماً غير موثوق، وقد يُضلَّل المستخدمون بشأن قيم الأصول.')),
+                CaseOption(Bi('Do not recognize archaeological collection (no reliable value); recognize buildings at \$12M and art at \$3.8M', 'عدم الاعتراف بالمجموعة الأثرية (لعدم توفر قيمة موثوقة)، والاعتراف بالمباني بقيمة \$12M والأعمال الفنية بقيمة \$3.8M'), isCorrect: true, feedback: Bi('Correct! IPSAS 17 permits non-recognition when reliable measurement is not achievable. Recognize buildings (reliable replacement cost) and art (documented purchase cost). Disclose existence and nature of archaeological collection in notes.', 'إجابة صحيحة. يسمح IPSAS 17 بعدم الاعتراف عندما يتعذر القياس الموثوق. اعترف بالمباني (تكلفة استبدال موثوقة) والأعمال الفنية (تكلفة شراء موثقة). وأفصح عن وجود المجموعة الأثرية وطبيعتها في الإيضاحات.'), consequence: Bi('Recognition reflects reliable measurements only; disclosures provide transparency on unrecognized heritage assets.', 'يعكس الاعتراف القياسات الموثوقة فقط، وتوفر الإفصاحات الشفافية بشأن أصول التراث غير المعترف بها.')),
+                CaseOption(Bi('Do not recognize any heritage assets - IPSAS exempts all heritage items', 'عدم الاعتراف بأي أصول تراثية - لأن IPSAS يعفي جميع بنود التراث'), feedback: Bi('Incorrect. IPSAS 17 allows non-recognition only when reliable value cannot be obtained. Buildings and art have reliable measurements and should be recognized.', 'إجابة غير صحيحة. يسمح IPSAS 17 بعدم الاعتراف فقط عندما يتعذر الحصول على قيمة موثوقة. وللمباني والأعمال الفنية قياسات موثوقة وينبغي الاعتراف بها.'), consequence: Bi('Assets with reliable values excluded from balance sheet; financial position understated.', 'استبعاد الأصول ذات القيم الموثوقة من الميزانية العمومية، والتقليل من المركز المالي.')),
+                CaseOption(Bi('Recognize all at symbolic \$1 value to acknowledge their existence', 'الاعتراف بها جميعاً بقيمة رمزية قدرها \$1 للإقرار بوجودها'), feedback: Bi('Incorrect. IPSAS 17 does not permit symbolic recognition. Assets must be measured at cost, fair value, or not recognized at all. Symbolic values provide no useful information.', 'إجابة غير صحيحة. لا يسمح IPSAS 17 بالاعتراف الرمزي. يجب قياس الأصول بالتكلفة أو القيمة العادلة، أو عدم الاعتراف بها إطلاقاً. فالقيم الرمزية لا تقدم معلومات مفيدة.'), consequence: Bi('Non-compliant measurement basis; financial statements not in accordance with IPSAS.', 'أساس قياس غير ممتثل، وقوائم مالية غير متوافقة مع IPSAS.')),
+            ]),
+            CaseStep(id: 'step3', type: CaseStepType.analysis, title: Bi('Infrastructure Asset Classification', 'تصنيف أصول البنية التحتية'), description: Bi('The Authority manages 450 km of roads within national parks (built over 30 years, maintained annually), 28 bridges (constructed 5-40 years ago), hiking trails, and parking facilities. The parks are publicly accessible. You need to determine if these qualify as "infrastructure assets" under IPSAS 17 and whether specialized accounting is needed.', 'تدير الهيئة 450 km من الطرق داخل الحدائق الوطنية (شُيّدت على مدى 30 عاماً وتُصان سنوياً)، و28 جسراً (شُيّدت قبل 5-40 عاماً)، ومسارات للمشي، ومرافق لوقوف السيارات. والحدائق متاحة للجمهور. يتعين عليك تحديد ما إذا كانت هذه تُصنّف كأصول بنية تحتية وفقاً لـ IPSAS 17 وما إذا كانت هناك حاجة إلى محاسبة متخصصة.'), context: Bi('IPSAS 17 treats infrastructure assets (roads, bridges, networks) as Property, Plant & Equipment. They must be recognized and depreciated. IPSAS does not exempt infrastructure from recognition, unlike some heritage assets.', 'يعامل IPSAS 17 أصول البنية التحتية (الطرق والجسور والشبكات) كممتلكات ومصانع ومعدات. ويجب الاعتراف بها واستهلاكها. ولا يعفي IPSAS البنية التحتية من الاعتراف، بخلاف بعض أصول التراث.'), data: [CaseDatum(Bi('Roads (450 km)', 'الطرق (450 km)'), 'Network asset, continuous maintenance'), CaseDatum(Bi('Bridges (28 units)', 'الجسور (28 وحدة)'), 'Individual structures, age 5-40 years'), CaseDatum(Bi('Trails & Parking', 'المسارات ومواقف السيارات'), 'Supporting access infrastructure'), CaseDatum(Bi('Estimated Replacement Cost', 'تكلفة الاستبدال التقديرية'), '\$85M total')], question: Bi('How should these infrastructure assets be classified and measured under IPSAS 17?', 'كيف ينبغي تصنيف أصول البنية التحتية هذه وقياسها وفقاً لـ IPSAS 17؟'), options: [
+                CaseOption(Bi('Recognize as heritage assets - they are in heritage parks', 'الاعتراف بها كأصول تراثية - لأنها تقع في حدائق تراثية'), feedback: Bi('Incorrect. Infrastructure assets are not heritage assets. They serve operational/access purposes, not cultural preservation. IPSAS 17 treats them as standard PP&E.', 'إجابة غير صحيحة. أصول البنية التحتية ليست أصولاً تراثية. فهي تخدم أغراضاً تشغيلية أو أغراض وصول، وليس الحفاظ الثقافي. ويعاملها IPSAS 17 كممتلكات ومصانع ومعدات عادية.'), consequence: Bi('Misclassification; depreciation and impairment policies incorrectly applied.', 'تصنيف خاطئ، وتطبيق غير صحيح لسياسات الاستهلاك والانخفاض في القيمة.')),
+                CaseOption(Bi('Recognize as infrastructure PP&E at cost/valuation; depreciate systematically', 'الاعتراف بها كممتلكات ومصانع ومعدات للبنية التحتية بالتكلفة أو القيمة، واستهلاكها بشكل منتظم'), isCorrect: true, feedback: Bi('Correct! IPSAS 17 requires infrastructure assets to be recognized as PP&E, measured at cost or revalued amount, and depreciated over useful life. Networks (roads) can use componentization or modern equivalent asset approach.', 'إجابة صحيحة. يتطلب IPSAS 17 الاعتراف بأصول البنية التحتية كممتلكات ومصانع ومعدات، وقياسها بالتكلفة أو المبلغ المعاد تقييمه، واستهلاكها على مدى العمر الإنتاجي. ويمكن للشبكات (الطرق) استخدام نهج تجزئة المكونات أو الأصل المعادل الحديث.'), consequence: Bi('Proper classification and measurement; depreciation reflects asset consumption over time.', 'تصنيف وقياس صحيحان، والاستهلاك يعكس استنفاد الأصل مع مرور الوقت.')),
+                CaseOption(Bi('Expense all maintenance costs; do not capitalize infrastructure', 'تحميل جميع تكاليف الصيانة كمصروفات، وعدم رسملة البنية التحتية'), feedback: Bi('Incorrect. IPSAS 17 requires capitalization of infrastructure assets. Only routine maintenance is expensed; initial construction and major improvements are capitalized.', 'إجابة غير صحيحة. يتطلب IPSAS 17 رسملة أصول البنية التحتية. وتُحمّل الصيانة الروتينية فقط كمصروفات، بينما تُرسمل أعمال الإنشاء الأولية والتحسينات الكبرى.'), consequence: Bi('Assets not recognized; financial position severely understated; non-compliance with IPSAS.', 'عدم الاعتراف بالأصول، والتقليل الشديد من المركز المالي، وعدم الامتثال لـ IPSAS.')),
+                CaseOption(Bi('Do not recognize - infrastructure is publicly owned and has no market value', 'عدم الاعتراف بها - لأن البنية التحتية مملوكة للعامة وليس لها قيمة سوقية'), feedback: Bi('Incorrect. IPSAS 17 does not exempt infrastructure because it is publicly owned. Lack of market value does not prevent recognition; cost or replacement cost can be used.', 'إجابة غير صحيحة. لا يعفي IPSAS 17 البنية التحتية لأنها مملوكة للعامة. وغياب القيمة السوقية لا يمنع الاعتراف، إذ يمكن استخدام التكلفة أو تكلفة الاستبدال.'), consequence: Bi('Major assets excluded from balance sheet; non-compliance with IPSAS 17 recognition requirements.', 'استبعاد أصول رئيسية من الميزانية العمومية، وعدم الامتثال لمتطلبات الاعتراف في IPSAS 17.')),
+            ]),
+            CaseStep(id: 'step4', type: CaseStepType.decision, title: Bi('Depreciation Method Selection', 'اختيار طريقة الاستهلاك'), description: Bi('You have decided to recognize infrastructure assets. The road network is maintained to a constant service level through annual resurfacing and repairs (\$4.2M/year). The bridges have varying remaining useful lives (10-45 years). Engineering assessments show roads maintained indefinitely, but individual road segments need major rehabilitation every 15-20 years.', 'لقد قررت الاعتراف بأصول البنية التحتية. تتم صيانة شبكة الطرق للحفاظ على مستوى خدمة ثابت من خلال إعادة الرصف والإصلاحات السنوية (\$4.2M سنوياً). وللجسور أعمار إنتاجية متبقية متفاوتة (10-45 عاماً). وتُظهر التقييمات الهندسية أن الطرق تُصان لأجل غير مسمى، لكن مقاطع الطرق الفردية تحتاج إلى إعادة تأهيل كبرى كل 15-20 عاماً.'), context: Bi('IPSAS 17 requires systematic depreciation over useful life. For infrastructure networks, componentization (separating base, surface, etc.) or depreciation despite maintenance are common approaches. The "renewals accounting" approach (no depreciation if maintained) is NOT permitted under IPSAS.', 'يتطلب IPSAS 17 الاستهلاك المنتظم على مدى العمر الإنتاجي. وبالنسبة لشبكات البنية التحتية، يُعد نهج تجزئة المكونات (فصل الأساس والسطح وما إلى ذلك) أو الاستهلاك رغم الصيانة من الأساليب الشائعة. ولا يُسمح بنهج محاسبة التجديدات (عدم الاستهلاك في حال الصيانة) وفقاً لـ IPSAS.'), data: [CaseDatum(Bi('Annual Maintenance Cost', 'تكلفة الصيانة السنوية'), '\$4.2M (routine)'), CaseDatum(Bi('Road Network Value', 'قيمة شبكة الطرق'), '\$58M replacement cost'), CaseDatum(Bi('Segment Rehabilitation Cycle', 'دورة إعادة تأهيل المقاطع'), '15-20 years'), CaseDatum(Bi('Bridge Individual Lives', 'الأعمار الفردية للجسور'), '10-45 years remaining')], question: Bi('What is the most appropriate depreciation approach for the road network under IPSAS 17?', 'ما هو نهج الاستهلاك الأنسب لشبكة الطرق وفقاً لـ IPSAS 17؟'), options: [
+                CaseOption(Bi('No depreciation - maintenance maintains the road at constant service level', 'عدم الاستهلاك - لأن الصيانة تحافظ على الطريق عند مستوى خدمة ثابت'), feedback: Bi('Incorrect. IPSAS 17 requires depreciation regardless of maintenance. Maintenance may extend life but does not eliminate depreciation. "Renewals accounting" is prohibited.', 'إجابة غير صحيحة. يتطلب IPSAS 17 الاستهلاك بغض النظر عن الصيانة. فالصيانة قد تطيل العمر لكنها لا تلغي الاستهلاك. ومحاسبة التجديدات محظورة.'), consequence: Bi('Non-compliance with IPSAS 17; asset consumption not reflected in financial performance.', 'عدم الامتثال لـ IPSAS 17، وعدم عكس استنفاد الأصل في الأداء المالي.')),
+                CaseOption(Bi('Componentize road network (base, sub-base, surface); depreciate each component over its useful life', 'تجزئة شبكة الطرق إلى مكونات (الأساس، وطبقة ما تحت الأساس، والسطح)، واستهلاك كل مكون على مدى عمره الإنتاجي'), isCorrect: true, feedback: Bi('Correct! IPSAS 17 encourages componentization for assets with parts having different useful lives. Surface (10-15 years), sub-base (25-30 years), base (40-50 years) can be depreciated separately, reflecting economic reality.', 'إجابة صحيحة. يشجع IPSAS 17 على تجزئة المكونات للأصول التي تتفاوت أعمار أجزائها الإنتاجية. فالسطح (10-15 عاماً)، وطبقة ما تحت الأساس (25-30 عاماً)، والأساس (40-50 عاماً) يمكن استهلاكها بشكل منفصل، بما يعكس الواقع الاقتصادي.'), consequence: Bi('Depreciation accurately reflects consumption pattern; maintenance vs. capital expenditure clearly distinguished.', 'يعكس الاستهلاك نمط الاستنفاد بدقة، ويُميّز بوضوح بين الصيانة والنفقات الرأسمالية.')),
+                CaseOption(Bi('Depreciate entire network over 100 years (effectively no depreciation)', 'استهلاك الشبكة بأكملها على مدى 100 عام (بما يعادل عملياً عدم الاستهلاك)'), feedback: Bi('Incorrect. While networks can have long lives, 100 years is not supportable for road surfaces and many components. This approach understates depreciation and circumvents IPSAS requirements.', 'إجابة غير صحيحة. رغم أن الشبكات قد تتمتع بأعمار طويلة، فإن 100 عام غير مبرر لأسطح الطرق والعديد من المكونات. ويؤدي هذا النهج إلى التقليل من الاستهلاك والالتفاف على متطلبات IPSAS.'), consequence: Bi('Depreciation understated; asset consumption not properly matched to periods of use.', 'التقليل من الاستهلاك، وعدم مطابقة استنفاد الأصل بشكل سليم مع فترات الاستخدام.')),
+                CaseOption(Bi('Depreciate based on traffic volume (units of production method)', 'الاستهلاك بناءً على حجم حركة المرور (طريقة وحدات الإنتاج)'), feedback: Bi('Partially acceptable but not best choice. Units of production can be used under IPSAS 17, but requires reliable traffic data and assumes deterioration is usage-based. Componentization is more practical for maintained road networks.', 'مقبولة جزئياً لكنها ليست الخيار الأفضل. يمكن استخدام طريقة وحدات الإنتاج وفقاً لـ IPSAS 17، لكنها تتطلب بيانات موثوقة عن حركة المرور وتفترض أن التدهور مرتبط بالاستخدام. وتُعد تجزئة المكونات أكثر عملية لشبكات الطرق التي تُصان.'), consequence: Bi('Requires extensive traffic monitoring; depreciation volatility based on visitor patterns.', 'تتطلب مراقبة مكثفة لحركة المرور، وتقلب الاستهلاك بناءً على أنماط الزوار.')),
+            ]),
+            CaseStep(id: 'step5', type: CaseStepType.recommendation, title: Bi('IFRS vs IPSAS Comparison', 'المقارنة بين IFRS وIPSAS'), description: Bi('The Board asks you to prepare a briefing on how the Authority\'s asset accounting differs from a private sector park operator using IFRS. Specifically, they want to understand heritage asset treatment and infrastructure depreciation differences.', 'يطلب منك مجلس الإدارة إعداد إحاطة حول كيفية اختلاف محاسبة أصول الهيئة عن مشغّل حدائق من القطاع الخاص يستخدم IFRS. وعلى وجه التحديد، يريدون فهم الفروق في معالجة أصول التراث واستهلاك البنية التحتية.'), context: Bi('IFRS has IAS 16 (Property, Plant & Equipment) and IAS 38 (Intangible Assets), but no specific standard for heritage assets. IPSAS 17 provides explicit guidance for public sector assets including heritage items.', 'يتضمن IFRS معيار IAS 16 (الممتلكات والمصانع والمعدات) وIAS 38 (الأصول غير الملموسة)، لكن لا يوجد معيار محدد لأصول التراث. ويقدم IPSAS 17 إرشادات صريحة لأصول القطاع العام بما في ذلك بنود التراث.'), question: Bi('What are the key differences between IPSAS and IFRS for the Authority\'s heritage and infrastructure assets?', 'ما هي الفروق الرئيسية بين IPSAS وIFRS فيما يتعلق بأصول التراث والبنية التحتية للهيئة؟'), options: [
+                CaseOption(Bi('No differences - IPSAS 17 and IAS 16 are identical for these asset types', 'لا توجد فروق - لأن IPSAS 17 وIAS 16 متطابقان لفئات الأصول هذه'), feedback: Bi('Incorrect. Significant differences exist: IPSAS 17 explicitly addresses heritage assets (recognition exemption option), while IFRS has no specific heritage guidance. Infrastructure treatment is similar but IPSAS provides more public sector context.', 'إجابة غير صحيحة. توجد فروق جوهرية: يتناول IPSAS 17 أصول التراث صراحةً (مع خيار إعفاء الاعتراف)، بينما لا يتضمن IFRS إرشادات محددة للتراث. ومعالجة البنية التحتية متشابهة، لكن IPSAS يقدم سياقاً أوسع للقطاع العام.'), consequence: Bi('Board misled on framework differences; risks applying IFRS guidance inappropriately.', 'تضليل مجلس الإدارة بشأن الفروق بين الإطارين، مع خطر تطبيق إرشادات IFRS بشكل غير ملائم.')),
+                CaseOption(Bi('IPSAS allows heritage asset non-recognition if no reliable value; IFRS would require estimation. Infrastructure depreciation principles similar but IPSAS prohibits renewals accounting explicitly.', 'يتيح IPSAS عدم الاعتراف بأصول التراث في حال عدم توفر قيمة موثوقة، بينما يتطلب IFRS التقدير. ومبادئ استهلاك البنية التحتية متشابهة، لكن IPSAS يحظر محاسبة التجديدات صراحةً.'), isCorrect: true, feedback: Bi('Correct! Key differences: (1) IPSAS 17 permits heritage asset non-recognition (para 41-44), IFRS has no equivalent exemption, (2) IPSAS explicitly prohibits renewals accounting for infrastructure (IFRS less explicit), (3) IPSAS provides public sector examples, (4) Both require depreciation of infrastructure.', 'إجابة صحيحة. الفروق الرئيسية: (1) يسمح IPSAS 17 بعدم الاعتراف بأصول التراث (الفقرات 41-44)، ولا يتضمن IFRS إعفاءً مماثلاً، (2) يحظر IPSAS صراحةً محاسبة التجديدات للبنية التحتية (وهو أقل وضوحاً في IFRS)، (3) يقدم IPSAS أمثلة من القطاع العام، (4) يتطلب كلاهما استهلاك البنية التحتية.'), consequence: Bi('Board understands framework distinctions; can articulate why IPSAS is appropriate for public sector.', 'يفهم مجلس الإدارة الفروق بين الإطارين، ويمكنه توضيح سبب ملاءمة IPSAS للقطاع العام.')),
+                CaseOption(Bi('IPSAS requires all heritage assets at fair value; IFRS allows cost model', 'يتطلب IPSAS قياس جميع أصول التراث بالقيمة العادلة، بينما يتيح IFRS نموذج التكلفة'), feedback: Bi('Incorrect. This is backwards. IPSAS 17 allows cost or revaluation model (like IAS 16) AND permits non-recognition for heritage assets. Neither framework mandates fair value for all heritage items.', 'إجابة غير صحيحة. هذا معكوس. يتيح IPSAS 17 نموذج التكلفة أو إعادة التقييم (مثل IAS 16) ويسمح أيضاً بعدم الاعتراف بأصول التراث. ولا يفرض أي من الإطارين القيمة العادلة على جميع بنود التراث.'), consequence: Bi('Fundamental misunderstanding of both frameworks; incorrect policy recommendations.', 'سوء فهم جوهري لكلا الإطارين، وتوصيات سياسات غير صحيحة.')),
+                CaseOption(Bi('IFRS requires infrastructure depreciation; IPSAS allows non-depreciation if maintained', 'يتطلب IFRS استهلاك البنية التحتية، بينما يتيح IPSAS عدم الاستهلاك في حال الصيانة'), feedback: Bi('Incorrect. Both IFRS (IAS 16) and IPSAS 17 require depreciation of infrastructure. IPSAS explicitly prohibits the "renewals accounting" approach. Both frameworks mandate systematic depreciation.', 'إجابة غير صحيحة. يتطلب كل من IFRS (IAS 16) وIPSAS 17 استهلاك البنية التحتية. ويحظر IPSAS صراحةً نهج محاسبة التجديدات. ويفرض كلا الإطارين الاستهلاك المنتظم.'), consequence: Bi('Incorrect depreciation policy could be adopted; non-compliance with IPSAS.', 'قد تُعتمد سياسة استهلاك غير صحيحة، مع عدم الامتثال لـ IPSAS.')),
+            ]),
+          ]),
+        CaseScenario(id: 'consolidation', title: Bi('Consolidation: IPSAS 35 vs IFRS 10', 'التوحيد: IPSAS 35 مقابل IFRS 10'), role: Bi('Chief Financial Officer, Ministry of Transport', 'المدير المالي، وزارة النقل'), overview: Bi('The Ministry of Transport controls multiple entities: a 100%-owned rail company, a 40%-owned airport authority (with veto rights), an independent regulatory commission, and a public-private partnership (PPP) for highway construction. You must determine which entities to consolidate under IPSAS 35, which differs from IFRS 10 in addressing public sector control relationships.', 'تسيطر وزارة النقل على عدة منشآت: شركة سكك حديدية مملوكة بنسبة 100%، وهيئة مطار مملوكة بنسبة 40% (مع حقوق نقض)، ولجنة تنظيمية مستقلة، وشراكة بين القطاعين العام والخاص (PPP) لإنشاء طريق سريع. يجب عليك تحديد المنشآت التي يجب توحيدها وفقاً لـ IPSAS 35، الذي يختلف عن IFRS 10 في تناول علاقات السيطرة في القطاع العام.'), finalSummary: Bi('You have successfully navigated the complexities of public sector consolidation under IPSAS 35. Critical insights: (1) Control can exist without majority ownership when substantive rights (e.g., veto rights) over relevant activities exist, (2) Statutory independence and fixed-term appointments can prevent control despite appointment powers, (3) IPSAS 32 requires grantors to recognize PPP infrastructure assets when control and residual interest criteria are met, (4) Economic dependency alone does not establish control, (5) IPSAS 35 adapts IFRS 10\'s control model for public sector contexts including regulatory bodies and service concessions. Understanding these nuances ensures accurate representation of government\'s economic entity and obligations.', 'لقد نجحت في التعامل مع تعقيدات توحيد القطاع العام وفقاً لـ IPSAS 35. أهم الأفكار: (1) يمكن أن توجد السيطرة دون ملكية الأغلبية عند وجود حقوق جوهرية (مثل حقوق النقض) على الأنشطة ذات الصلة، (2) يمكن للاستقلالية النظامية والتعيينات محددة المدة أن تمنع السيطرة رغم صلاحيات التعيين، (3) يتطلب IPSAS 32 من المانحين الاعتراف بأصول البنية التحتية للشراكات PPP عند استيفاء معياري السيطرة والحصة المتبقية، (4) لا ينشئ الاعتماد الاقتصادي وحده سيطرة، (5) يكيّف IPSAS 35 نموذج السيطرة في IFRS 10 مع سياقات القطاع العام بما في ذلك الجهات التنظيمية وامتيازات الخدمة. ويضمن فهم هذه الدقائق عرضاً دقيقاً للمنشأة الاقتصادية الحكومية والتزاماتها.'), steps: [
+            CaseStep(id: 'step1', type: CaseStepType.analysis, title: Bi('Control Assessment - Rail Company', 'تقييم السيطرة - شركة السكك الحديدية'), description: Bi('The National Rail Company is 100% owned by the Ministry. The Ministry appoints the entire Board of Directors (7 members) and has the authority to approve the annual budget and strategic plan. The Rail Company operates commercially with a public service obligation to maintain unprofitable rural routes (subsidized by the Ministry). Annual subsidy: \$45M.', 'شركة السكك الحديدية الوطنية مملوكة بنسبة 100% للوزارة. وتعيّن الوزارة مجلس الإدارة بأكمله (7 أعضاء) ولها صلاحية اعتماد الموازنة السنوية والخطة الاستراتيجية. وتعمل شركة السكك الحديدية تجارياً مع التزام خدمة عامة يقضي بالحفاظ على الخطوط الريفية غير المربحة (المدعومة من الوزارة). الدعم السنوي: \$45M.'), context: Bi('IPSAS 35 defines control as power over another entity, exposure/rights to variable benefits, and ability to use power to affect benefits. Control can exist with less than majority ownership in the public sector.', 'يعرّف IPSAS 35 السيطرة بأنها القدرة على التحكم في منشأة أخرى، والتعرض لمنافع متغيرة أو الحق فيها، والقدرة على استخدام هذه القوة للتأثير في المنافع. ويمكن أن توجد السيطرة بملكية أقل من الأغلبية في القطاع العام.'), data: [CaseDatum(Bi('Ownership', 'الملكية'), '100% Ministry ownership'), CaseDatum(Bi('Board Appointment', 'تعيين مجلس الإدارة'), 'Ministry appoints all 7 directors'), CaseDatum(Bi('Budget Approval', 'اعتماد الموازنة'), 'Ministry must approve annual budget'), CaseDatum(Bi('Operating Model', 'نموذج التشغيل'), 'Commercial with public service obligation'), CaseDatum(Bi('Financial Dependency', 'الاعتماد المالي'), '\$45M annual subsidy from Ministry')], question: Bi('Does the Ministry have control over the National Rail Company under IPSAS 35?', 'هل تتمتع الوزارة بالسيطرة على شركة السكك الحديدية الوطنية وفقاً لـ IPSAS 35؟'), options: [
+                CaseOption(Bi('No control - the Rail Company operates commercially and independently', 'لا توجد سيطرة - لأن شركة السكك الحديدية تعمل تجارياً وباستقلالية'), feedback: Bi('Incorrect. Commercial operations do not negate control. The Ministry has 100% ownership, appoints all directors, and approves budgets - clear power over relevant activities under IPSAS 35.', 'إجابة غير صحيحة. لا تنفي العمليات التجارية السيطرة. فالوزارة تملك 100% وتعيّن جميع أعضاء المجلس وتعتمد الموازنات - وهي قوة واضحة على الأنشطة ذات الصلة وفقاً لـ IPSAS 35.'), consequence: Bi('Controlled entity excluded from consolidation; group financial position materially misstated.', 'استبعاد منشأة خاضعة للسيطرة من التوحيد، وتحريف جوهري للمركز المالي للمجموعة.')),
+                CaseOption(Bi('Yes, control exists - consolidate the Rail Company in Ministry financial statements', 'نعم، توجد سيطرة - وحّد شركة السكك الحديدية في القوائم المالية للوزارة'), isCorrect: true, feedback: Bi('Correct! IPSAS 35 control criteria satisfied: (1) Power - 100% ownership, board appointment, budget approval, (2) Benefits - exposure to operating results and subsidy requirements, (3) Link - Ministry uses power to direct rail policy and service obligations. Must consolidate.', 'إجابة صحيحة. استُوفيت معايير السيطرة في IPSAS 35: (1) القوة - ملكية 100% وتعيين المجلس واعتماد الموازنة، (2) المنافع - التعرض لنتائج التشغيل ومتطلبات الدعم، (3) الرابط - تستخدم الوزارة قوتها لتوجيه سياسة السكك الحديدية والتزامات الخدمة. يجب التوحيد.'), consequence: Bi('Rail Company consolidated; Ministry\'s financial statements reflect full economic entity.', 'توحيد شركة السكك الحديدية، وتعكس القوائم المالية للوزارة المنشأة الاقتصادية الكاملة.')),
+                CaseOption(Bi('Joint control - treat as joint venture due to public service obligation', 'سيطرة مشتركة - معاملتها كمشروع مشترك بسبب التزام الخدمة العامة'), feedback: Bi('Incorrect. Joint control requires contractually agreed sharing of control (IPSAS 37). The Ministry has sole control; public service obligations do not create joint control.', 'إجابة غير صحيحة. تتطلب السيطرة المشتركة تقاسماً للسيطرة متفقاً عليه تعاقدياً (IPSAS 37). فالوزارة تتمتع بالسيطرة المنفردة، والتزامات الخدمة العامة لا تنشئ سيطرة مشتركة.'), consequence: Bi('Incorrect accounting method applied; consolidation inappropriately avoided.', 'تطبيق طريقة محاسبية غير صحيحة، وتجنب التوحيد بشكل غير ملائم.')),
+                CaseOption(Bi('Significant influence only - use equity method due to commercial operations', 'تأثير جوهري فقط - استخدام طريقة حقوق الملكية بسبب العمليات التجارية'), feedback: Bi('Incorrect. 100% ownership, board appointment, and budget approval indicate control, not merely significant influence. Commercial operations do not downgrade control to influence under IPSAS 35.', 'إجابة غير صحيحة. تشير ملكية 100% وتعيين المجلس واعتماد الموازنة إلى السيطرة، وليس مجرد تأثير جوهري. والعمليات التجارية لا تخفض السيطرة إلى تأثير وفقاً لـ IPSAS 35.'), consequence: Bi('Equity method applied instead of consolidation; assets, liabilities, revenues not fully reflected.', 'تطبيق طريقة حقوق الملكية بدلاً من التوحيد، وعدم عكس الأصول والالتزامات والإيرادات بالكامل.')),
+            ]),
+            CaseStep(id: 'step2', type: CaseStepType.decision, title: Bi('Control Assessment - Airport Authority (Non-Majority Ownership)', 'تقييم السيطرة - هيئة المطار (ملكية أقل من الأغلبية)'), description: Bi('The Regional Airport Authority is owned 40% by the Ministry, 35% by the Provincial Government, and 25% by private investors. The governance agreement states: "Major decisions (capital investments >\$10M, route pricing, safety standards) require Ministry approval. Day-to-day operations managed by professional CEO appointed by shareholder vote." Last year: Ministry vetoed a \$75M terminal expansion.', 'هيئة المطار الإقليمي مملوكة بنسبة 40% للوزارة و35% لحكومة المقاطعة و25% لمستثمرين من القطاع الخاص. وتنص اتفاقية الحوكمة على أن القرارات الكبرى (الاستثمارات الرأسمالية التي تتجاوز \$10M، وتسعير الخطوط، ومعايير السلامة) تتطلب موافقة الوزارة، وأن العمليات اليومية يديرها رئيس تنفيذي محترف يُعيّن بتصويت المساهمين. وفي العام الماضي، استخدمت الوزارة حق النقض ضد توسعة مبنى ركاب بقيمة \$75M.'), context: Bi('IPSAS 35 emphasizes substantive rights. Veto rights over relevant activities can indicate control even without majority ownership. The key question: Can the Ministry unilaterally direct activities that significantly affect Airport returns?', 'يؤكد IPSAS 35 على الحقوق الجوهرية. ويمكن أن تشير حقوق النقض على الأنشطة ذات الصلة إلى السيطرة حتى دون ملكية الأغلبية. والسؤال الرئيسي: هل تستطيع الوزارة أن توجّه بمفردها الأنشطة التي تؤثر بشكل جوهري في عوائد المطار؟'), data: [CaseDatum(Bi('Ministry Ownership', 'ملكية الوزارة'), '40% (non-majority)'), CaseDatum(Bi('Veto Rights', 'حقوق النقض'), 'Major decisions (capex, pricing, safety)'), CaseDatum(Bi('CEO Appointment', 'تعيين الرئيس التنفيذي'), 'Shareholder vote (no Ministry veto)'), CaseDatum(Bi('Recent Exercise of Power', 'ممارسة حديثة للقوة'), 'Ministry vetoed \$75M terminal expansion'), CaseDatum(Bi('Other Shareholders', 'المساهمون الآخرون'), 'Provincial Govt 35%, Private 25%')], question: Bi('Should the Ministry consolidate the Airport Authority despite holding only 40% ownership?', 'هل ينبغي على الوزارة توحيد هيئة المطار رغم امتلاكها 40% فقط من الملكية؟'), options: [
+                CaseOption(Bi('No consolidation - Ministry has only 40% ownership, below majority threshold', 'لا توحيد - لأن الوزارة تملك 40% فقط، وهي أقل من حد الأغلبية'), feedback: Bi('Incorrect. IPSAS 35 does not require majority ownership for control. Veto rights over capital investments, pricing, and safety (relevant activities) can constitute control despite non-majority ownership.', 'إجابة غير صحيحة. لا يشترط IPSAS 35 ملكية الأغلبية للسيطرة. ويمكن أن تشكّل حقوق النقض على الاستثمارات الرأسمالية والتسعير والسلامة (الأنشطة ذات الصلة) سيطرة رغم عدم امتلاك الأغلبية.'), consequence: Bi('Controlled entity excluded; fails to reflect Ministry\'s power over Airport\'s significant decisions.', 'استبعاد منشأة خاضعة للسيطرة، وعدم عكس قوة الوزارة على القرارات الجوهرية للمطار.')),
+                CaseOption(Bi('Consolidate - veto rights over relevant activities indicate control despite 40% ownership', 'التوحيد - لأن حقوق النقض على الأنشطة ذات الصلة تشير إلى السيطرة رغم ملكية 40%'), isCorrect: true, feedback: Bi('Correct! IPSAS 35 control exists: (1) Power - veto over capital investments, pricing, safety (relevant activities affecting economic benefits), (2) Benefits - 40% ownership provides exposure, (3) Link - Ministry demonstrably uses power (vetoed \$75M project). Consolidate with non-controlling interest of 60%.', 'إجابة صحيحة. توجد سيطرة وفقاً لـ IPSAS 35: (1) القوة - حق النقض على الاستثمارات الرأسمالية والتسعير والسلامة (الأنشطة ذات الصلة المؤثرة في المنافع الاقتصادية)، (2) المنافع - توفر ملكية 40% تعرضاً، (3) الرابط - تستخدم الوزارة قوتها بشكل ملموس (نقضت مشروعاً بقيمة \$75M). وحّد مع حصة غير مسيطرة قدرها 60%.'), consequence: Bi('Airport Authority consolidated; non-controlling interest of 60% recognized in equity.', 'توحيد هيئة المطار، والاعتراف بحصة غير مسيطرة قدرها 60% ضمن حقوق الملكية.')),
+                CaseOption(Bi('Equity method - Ministry has significant influence but not control', 'طريقة حقوق الملكية - للوزارة تأثير جوهري لكن دون سيطرة'), feedback: Bi('Incorrect. Veto rights over major decisions (capex, pricing, safety) exceed "significant influence." The Ministry can block relevant activities unilaterally, indicating control under IPSAS 35.', 'إجابة غير صحيحة. تتجاوز حقوق النقض على القرارات الكبرى (النفقات الرأسمالية والتسعير والسلامة) التأثير الجوهري. فالوزارة تستطيع منع الأنشطة ذات الصلة بمفردها، مما يدل على السيطرة وفقاً لـ IPSAS 35.'), consequence: Bi('Controlled entity treated as associate; Ministry\'s power over Airport understated.', 'معاملة منشأة خاضعة للسيطرة كشركة زميلة، والتقليل من قوة الوزارة على المطار.')),
+                CaseOption(Bi('Joint control - share control with Provincial Government (40% + 35%)', 'سيطرة مشتركة - تقاسم السيطرة مع حكومة المقاطعة (40% + 35%)'), feedback: Bi('Incorrect. Joint control requires contractual agreement to share control (IPSAS 37). Ministry has unilateral veto rights; Provincial Govt does not. Ministry controls alone, not jointly.', 'إجابة غير صحيحة. تتطلب السيطرة المشتركة اتفاقاً تعاقدياً على تقاسم السيطرة (IPSAS 37). فالوزارة تملك حقوق نقض منفردة، وحكومة المقاطعة لا تملكها. والوزارة تسيطر بمفردها، وليس بشكل مشترك.'), consequence: Bi('Incorrect joint arrangement accounting; consolidation inappropriately avoided.', 'محاسبة ترتيب مشترك غير صحيحة، وتجنب التوحيد بشكل غير ملائم.')),
+            ]),
+            CaseStep(id: 'step3', type: CaseStepType.analysis, title: Bi('Regulatory Commission - Assessing Independence', 'اللجنة التنظيمية - تقييم الاستقلالية'), description: Bi('The Transport Safety Regulatory Commission was established by Transport Safety Act. Commissioners (5 members) are appointed by the President on Ministry recommendation, serve 6-year fixed terms, and can only be removed for cause. The Commission sets safety standards, licenses operators, and investigates accidents independently. Funded by industry fees (\$12M/year) and a Ministry grant (\$3M/year) for non-commercial safety research.', 'أُنشئت لجنة تنظيم سلامة النقل بموجب نظام سلامة النقل. ويُعيَّن أعضاء اللجنة (5 أعضاء) من قبل الرئيس بناءً على توصية الوزارة، ويشغلون فترات محددة مدتها 6 سنوات، ولا يمكن إقالتهم إلا لسبب مبرر. وتضع اللجنة معايير السلامة، وتصدر تراخيص المشغّلين، وتحقق في الحوادث باستقلالية. وتُموَّل من رسوم القطاع (\$12M سنوياً) ومنحة من الوزارة (\$3M سنوياً) لأبحاث السلامة غير التجارية.'), context: Bi('IPSAS 35 requires control over relevant activities. Public sector entities may have statutory independence to perform regulatory functions without government direction. Fixed terms and "for cause" removal limit ongoing power.', 'يتطلب IPSAS 35 السيطرة على الأنشطة ذات الصلة. وقد تتمتع منشآت القطاع العام باستقلالية نظامية لأداء الوظائف التنظيمية دون توجيه حكومي. وتحد الفترات المحددة والإقالة لسبب مبرر من استمرار القوة.'), data: [CaseDatum(Bi('Legal Establishment', 'التأسيس القانوني'), 'Transport Safety Act (statutory body)'), CaseDatum(Bi('Appointment Process', 'عملية التعيين'), 'Ministry recommends, President appoints'), CaseDatum(Bi('Term and Removal', 'مدة الولاية والإقالة'), '6-year fixed term, removal for cause only'), CaseDatum(Bi('Operational Independence', 'الاستقلالية التشغيلية'), 'Sets standards/licenses independently'), CaseDatum(Bi('Funding', 'التمويل'), '\$12M industry fees, \$3M Ministry grant')], question: Bi('Does the Ministry have control over the Regulatory Commission under IPSAS 35?', 'هل تتمتع الوزارة بالسيطرة على اللجنة التنظيمية وفقاً لـ IPSAS 35؟'), options: [
+                CaseOption(Bi('Yes, control - Ministry recommends appointments and provides funding', 'نعم، توجد سيطرة - لأن الوزارة توصي بالتعيينات وتقدم التمويل'), feedback: Bi('Incorrect. Appointment recommendation and partial funding alone do not establish control. Fixed 6-year terms and "for cause" removal prevent ongoing power over relevant activities (safety regulation). IPSAS 35 requires current ability to direct activities.', 'إجابة غير صحيحة. لا تنشئ التوصية بالتعيين والتمويل الجزئي وحدهما سيطرة. فالفترات المحددة بـ 6 سنوات والإقالة لسبب مبرر تمنعان استمرار القوة على الأنشطة ذات الصلة (تنظيم السلامة). ويتطلب IPSAS 35 قدرة حالية على توجيه الأنشطة.'), consequence: Bi('Independent regulator improperly consolidated; overstates Ministry\'s control over regulatory function.', 'توحيد جهة تنظيمية مستقلة بشكل غير سليم، والمبالغة في سيطرة الوزارة على الوظيفة التنظيمية.')),
+                CaseOption(Bi('No control - Commission operates independently with statutory authority; do not consolidate', 'لا توجد سيطرة - اللجنة تعمل باستقلالية بسلطة نظامية، فلا تُوحّد'), isCorrect: true, feedback: Bi('Correct! IPSAS 35 control does not exist: (1) Power limited - Ministry cannot direct regulatory decisions; fixed terms and protected removal prevent ongoing power, (2) Commission has statutory authority to act independently, (3) Partial funding does not create control. Disclose as related party, do not consolidate.', 'إجابة صحيحة. لا توجد سيطرة وفقاً لـ IPSAS 35: (1) القوة محدودة - لا تستطيع الوزارة توجيه القرارات التنظيمية، والفترات المحددة والإقالة المحمية تمنعان استمرار القوة، (2) للجنة سلطة نظامية للتصرف باستقلالية، (3) التمويل الجزئي لا ينشئ سيطرة. أفصح عنها كطرف ذي علاقة، ولا تُوحّدها.'), consequence: Bi('Independent regulator properly excluded from consolidation; disclosed as related party.', 'استبعاد الجهة التنظيمية المستقلة من التوحيد بشكل سليم، والإفصاح عنها كطرف ذي علاقة.')),
+                CaseOption(Bi('Joint control - shared between Ministry and industry fee-payers', 'سيطرة مشتركة - مقسّمة بين الوزارة ودافعي رسوم القطاع'), feedback: Bi('Incorrect. Industry fees fund operations but do not grant control rights over the Commission. No contractual control-sharing exists. The Commission operates independently by statute.', 'إجابة غير صحيحة. تموّل رسوم القطاع العمليات لكنها لا تمنح حقوق سيطرة على اللجنة. ولا يوجد تقاسم تعاقدي للسيطرة. فاللجنة تعمل باستقلالية بموجب النظام.'), consequence: Bi('Incorrect joint arrangement classification; does not reflect regulatory independence.', 'تصنيف ترتيب مشترك غير صحيح، ولا يعكس الاستقلالية التنظيمية.')),
+                CaseOption(Bi('Control through economic dependency - consolidate due to \$3M Ministry grant', 'سيطرة عبر الاعتماد الاقتصادي - التوحيد بسبب منحة الوزارة البالغة \$3M'), feedback: Bi('Incorrect. Economic dependency alone (\$3M of \$15M total = 20%) does not establish control under IPSAS 35. The Ministry must have power to direct relevant activities, which statutory independence prevents.', 'إجابة غير صحيحة. لا ينشئ الاعتماد الاقتصادي وحده (\$3M من إجمالي \$15M = 20%) سيطرة وفقاً لـ IPSAS 35. فيجب أن تتمتع الوزارة بالقوة على توجيه الأنشطة ذات الصلة، وهو ما تمنعه الاستقلالية النظامية.'), consequence: Bi('Control incorrectly inferred from funding; consolidates entity Ministry cannot direct.', 'استنتاج السيطرة بشكل خاطئ من التمويل، وتوحيد منشأة لا تستطيع الوزارة توجيهها.')),
+            ]),
+            CaseStep(id: 'step4', type: CaseStepType.decision, title: Bi('Public-Private Partnership Assessment', 'تقييم الشراكة بين القطاعين العام والخاص'), description: Bi('The Ministry entered a 30-year PPP for Highway 401 construction and operation. Private consortium (HighwaysCo) finances and builds (\$850M), operates and maintains the highway, and collects tolls for 30 years. Ministry retains ownership of land and highway assets. Contract specifies: "At year 30, all assets transfer to Ministry. Ministry can terminate for poor performance (below 95% uptime) and must compensate HighwaysCo for unamortized investment." Current construction: 60% complete.', 'أبرمت الوزارة شراكة PPP مدتها 30 عاماً لإنشاء وتشغيل الطريق السريع 401. ويتولى تحالف من القطاع الخاص (HighwaysCo) التمويل والبناء (\$850M)، ويشغّل الطريق السريع ويصونه، ويحصّل الرسوم لمدة 30 عاماً. وتحتفظ الوزارة بملكية الأرض وأصول الطريق السريع. وينص العقد على أنه في السنة الثلاثين تنتقل جميع الأصول إلى الوزارة، وأن الوزارة يمكنها إنهاء العقد بسبب ضعف الأداء (أقل من 95% من زمن التشغيل) ويجب عليها تعويض HighwaysCo عن الاستثمار غير المطفأ. نسبة الإنجاز الحالية للبناء: 60%.'), context: Bi('IPSAS 32 applies when: (1) Grantor controls/regulates services, (2) Grantor controls residual interest. If both met, grantor recognizes the infrastructure asset and a corresponding liability. This differs from IFRIC 12 (IFRS) which is from operator perspective.', 'ينطبق IPSAS 32 عندما: (1) يسيطر المانح على الخدمات أو ينظّمها، (2) يسيطر المانح على الحصة المتبقية. وفي حال استيفاء كليهما، يعترف المانح بأصل البنية التحتية والتزام مقابل له. ويختلف هذا عن IFRIC 12 (IFRS) الذي يتناوله من منظور المشغّل.'), data: [CaseDatum(Bi('Asset Ownership', 'ملكية الأصل'), 'Ministry owns land/highway; legal title'), CaseDatum(Bi('Construction & Financing', 'البناء والتمويل'), 'HighwaysCo (\$850M, 60% complete)'), CaseDatum(Bi('Operations Period', 'فترة التشغيل'), '30 years toll collection by HighwaysCo'), CaseDatum(Bi('Ministry Control Rights', 'حقوق سيطرة الوزارة'), 'Terminate for poor performance; asset return'), CaseDatum(Bi('Residual Interest', 'الحصة المتبقية'), 'Automatic transfer to Ministry at year 30')], question: Bi('How should the Ministry account for the PPP highway asset under IPSAS 32 (Service Concession Arrangements)?', 'كيف ينبغي على الوزارة أن تحاسب عن أصل الطريق السريع في إطار الشراكة PPP وفقاً لـ IPSAS 32 (ترتيبات امتياز الخدمة)؟'), options: [
+                CaseOption(Bi('Do not recognize asset - HighwaysCo owns it during construction and operations', 'عدم الاعتراف بالأصل - لأن HighwaysCo تملكه خلال البناء والتشغيل'), feedback: Bi('Incorrect. IPSAS 32 requires the grantor (Ministry) to recognize the asset when both control tests are met. Ministry controls service (performance standards, termination rights) and residual interest (automatic return at year 30).', 'إجابة غير صحيحة. يتطلب IPSAS 32 من المانح (الوزارة) الاعتراف بالأصل عند استيفاء اختباري السيطرة كليهما. فالوزارة تسيطر على الخدمة (معايير الأداء وحقوق الإنهاء) وعلى الحصة المتبقية (العودة التلقائية في السنة الثلاثين).'), consequence: Bi('Major infrastructure asset excluded from balance sheet; misleading financial position.', 'استبعاد أصل بنية تحتية رئيسي من الميزانية العمومية، وعرض مركز مالي مضلل.')),
+                CaseOption(Bi('Recognize highway asset under construction (\$510M) and corresponding liability (financial or grant of right)', 'الاعتراف بأصل الطريق السريع قيد الإنشاء (\$510M) والتزام مقابل له (التزام مالي أو منح حق)'), isCorrect: true, feedback: Bi('Correct! IPSAS 32 applies: (1) Ministry controls services (performance standards, termination), (2) Controls residual interest (asset returns at year 30). Recognize asset at \$510M (60% × \$850M) and liability for consideration (likely financial liability if Ministry pays, or grant of toll rights if HighwaysCo compensated via tolls).', 'إجابة صحيحة. ينطبق IPSAS 32: (1) تسيطر الوزارة على الخدمات (معايير الأداء والإنهاء)، (2) تسيطر على الحصة المتبقية (يعود الأصل في السنة الثلاثين). اعترف بالأصل بقيمة \$510M (60% × \$850M) والتزام مقابل المقابل (غالباً التزام مالي إذا دفعت الوزارة، أو منح حقوق الرسوم إذا عُوّضت HighwaysCo عبر الرسوم).'), consequence: Bi('PPP asset and liability properly recognized; reflects Ministry\'s control and future obligations.', 'الاعتراف بأصل والتزام الشراكة PPP بشكل سليم، بما يعكس سيطرة الوزارة والتزاماتها المستقبلية.')),
+                CaseOption(Bi('Recognize asset at year 30 when it transfers to Ministry', 'الاعتراف بالأصل في السنة الثلاثين عند انتقاله إلى الوزارة'), feedback: Bi('Incorrect. IPSAS 32 requires recognition during construction/operation if control criteria are met. Waiting until transfer ignores current control rights and economic substance of the arrangement.', 'إجابة غير صحيحة. يتطلب IPSAS 32 الاعتراف أثناء البناء أو التشغيل في حال استيفاء معايير السيطرة. والانتظار حتى الانتقال يتجاهل حقوق السيطرة الحالية والجوهر الاقتصادي للترتيب.'), consequence: Bi('Asset recognition delayed 30 years; financial statements do not reflect PPP infrastructure.', 'تأخير الاعتراف بالأصل 30 عاماً، وعدم عكس القوائم المالية للبنية التحتية للشراكة PPP.')),
+                CaseOption(Bi('Recognize only a disclosure note - PPP is off-balance sheet', 'الاكتفاء بإيضاح إفصاحي فقط - لأن الشراكة PPP خارج الميزانية العمومية'), feedback: Bi('Incorrect. IPSAS 32 explicitly requires on-balance sheet recognition for service concession arrangements meeting control criteria. Disclosure-only approach is non-compliant.', 'إجابة غير صحيحة. يتطلب IPSAS 32 صراحةً الاعتراف داخل الميزانية العمومية لترتيبات امتياز الخدمة التي تستوفي معايير السيطرة. ونهج الاكتفاء بالإفصاح غير ممتثل.'), consequence: Bi('Material non-compliance with IPSAS 32; PPP assets and liabilities hidden from users.', 'عدم امتثال جوهري لـ IPSAS 32، وإخفاء أصول والتزامات الشراكة PPP عن المستخدمين.')),
+            ]),
+            CaseStep(id: 'step5', type: CaseStepType.recommendation, title: Bi('IPSAS 35 vs IFRS 10 - Key Differences', 'IPSAS 35 مقابل IFRS 10 - الفروق الرئيسية'), description: Bi('The Ministry\'s audit committee asks for a briefing on how IPSAS 35 consolidation differs from IFRS 10, particularly for government-controlled entities. They want to understand why a private sector holding company might consolidate differently than the Ministry.', 'تطلب لجنة المراجعة في الوزارة إحاطة حول كيفية اختلاف التوحيد وفقاً لـ IPSAS 35 عن IFRS 10، لا سيما للمنشآت الخاضعة لسيطرة حكومية. ويريدون فهم سبب احتمال قيام شركة قابضة في القطاع الخاص بالتوحيد بشكل مختلف عن الوزارة.'), context: Bi('IPSAS 35 is based on IFRS 10 but modified for public sector context. Both use the control model (power, exposure to variable benefits, link between power and benefits) but differ in application and specific scenarios.', 'يستند IPSAS 35 إلى IFRS 10 لكنه مُعدَّل ليلائم سياق القطاع العام. ويستخدم كلاهما نموذج السيطرة (القوة، والتعرض للمنافع المتغيرة، والرابط بين القوة والمنافع) لكنهما يختلفان في التطبيق والحالات المحددة.'), question: Bi('What are the key differences between IPSAS 35 and IFRS 10 for government consolidation?', 'ما هي الفروق الرئيسية بين IPSAS 35 وIFRS 10 في التوحيد الحكومي؟'), options: [
+                CaseOption(Bi('No differences - IPSAS 35 and IFRS 10 are identical standards', 'لا توجد فروق - لأن IPSAS 35 وIFRS 10 معياران متطابقان'), feedback: Bi('Incorrect. While IPSAS 35 is based on IFRS 10, differences exist: (1) IPSAS 35 addresses statutory control, (2) IPSAS has specific guidance on economic dependency, (3) IPSAS 32 (service concessions) has no IFRS 10 equivalent (IFRIC 12 is operator-focused), (4) Public sector examples differ.', 'إجابة غير صحيحة. رغم أن IPSAS 35 يستند إلى IFRS 10، توجد فروق: (1) يتناول IPSAS 35 السيطرة النظامية، (2) لدى IPSAS إرشادات محددة بشأن الاعتماد الاقتصادي، (3) ليس لـ IPSAS 32 (امتيازات الخدمة) مقابل في IFRS 10 (إذ يركز IFRIC 12 على المشغّل)، (4) تختلف أمثلة القطاع العام.'), consequence: Bi('Committee misunderstands framework differences; risks inappropriate application of IFRS guidance.', 'سوء فهم اللجنة للفروق بين الإطارين، مع خطر تطبيق إرشادات IFRS بشكل غير ملائم.')),
+                CaseOption(Bi('IPSAS 35 similar to IFRS 10 control model but includes public sector context: statutory bodies, economic dependency considerations, and IPSAS 32 for service concessions. Both use power-benefits-link framework.', 'IPSAS 35 مشابه لنموذج السيطرة في IFRS 10 لكنه يشمل سياق القطاع العام: الجهات النظامية، واعتبارات الاعتماد الاقتصادي، وIPSAS 32 لامتيازات الخدمة. ويستخدم كلاهما إطار القوة-المنافع-الرابط.'), isCorrect: true, feedback: Bi('Correct! Key points: (1) Both use control model (power, benefits, link), (2) IPSAS 35 provides public sector guidance (statutory entities, regulatory independence, economic dependency as supporting not sufficient factor), (3) IPSAS 32 requires grantor to recognize PPP assets (no IFRS 10 equivalent; IFRIC 12 is operator view), (4) Both can consolidate with <50% ownership if substantive control rights exist.', 'إجابة صحيحة. النقاط الرئيسية: (1) يستخدم كلاهما نموذج السيطرة (القوة، والمنافع، والرابط)، (2) يقدم IPSAS 35 إرشادات للقطاع العام (المنشآت النظامية، والاستقلالية التنظيمية، والاعتماد الاقتصادي كعامل مساند لا كافٍ)، (3) يتطلب IPSAS 32 من المانح الاعتراف بأصول الشراكة PPP (لا مقابل له في IFRS 10، وIFRIC 12 يمثل منظور المشغّل)، (4) يمكن لكليهما التوحيد بملكية أقل من 50% في حال وجود حقوق سيطرة جوهرية.'), consequence: Bi('Committee understands framework similarities and public sector adaptations; appropriate policies adopted.', 'تفهم اللجنة أوجه التشابه بين الإطارين وتكييفات القطاع العام، واعتماد سياسات ملائمة.')),
+                CaseOption(Bi('IPSAS requires consolidation of all government-funded entities; IFRS only consolidates majority-owned subsidiaries', 'يتطلب IPSAS توحيد جميع المنشآت الممولة حكومياً، بينما يوحّد IFRS الشركات التابعة المملوكة بالأغلبية فقط'), feedback: Bi('Incorrect. Neither standard uses "government funding" or "majority ownership" as sole criteria. Both require control assessment (power over relevant activities, exposure to benefits, link). IFRS 10 can consolidate <50% ownership with control (e.g., substantive rights).', 'إجابة غير صحيحة. لا يستخدم أي من المعيارين التمويل الحكومي أو ملكية الأغلبية كمعيار وحيد. فكلاهما يتطلب تقييم السيطرة (القوة على الأنشطة ذات الصلة، والتعرض للمنافع، والرابط). ويمكن لـ IFRS 10 التوحيد بملكية أقل من 50% مع السيطرة (مثل الحقوق الجوهرية).'), consequence: Bi('Fundamental misunderstanding of both frameworks; incorrect consolidation decisions.', 'سوء فهم جوهري لكلا الإطارين، وقرارات توحيد غير صحيحة.')),
+                CaseOption(Bi('IFRS 10 uses risk/rewards model; IPSAS 35 uses control model', 'يستخدم IFRS 10 نموذج المخاطر والمنافع، بينما يستخدم IPSAS 35 نموذج السيطرة'), feedback: Bi('Incorrect. This is backwards. IFRS 10 replaced the old IAS 27 risks/rewards approach with a control model in 2013. IPSAS 35 (issued 2015) adopted the same IFRS 10 control model for public sector.', 'إجابة غير صحيحة. هذا معكوس. فقد استبدل IFRS 10 نهج المخاطر والمنافع القديم في IAS 27 بنموذج السيطرة عام 2013. واعتمد IPSAS 35 (الصادر عام 2015) نفس نموذج السيطرة في IFRS 10 للقطاع العام.'), consequence: Bi('Outdated understanding of IFRS; incorrect comparison with IPSAS.', 'فهم قديم لـ IFRS، ومقارنة غير صحيحة مع IPSAS.')),
+            ]),
+          ]),
+      ],
+    ),
   ],
 );

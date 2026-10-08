@@ -1,3 +1,4 @@
+import '../../features/facilitator/api_once.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 
@@ -141,7 +142,8 @@ class EarningsCallRepository {
 
   /// Generate three analyst questions for a team — saved as a DRAFT for review.
   Future<Map<String, dynamic>> generateQuestions(String teamId) async {
-    return _api.post(
+    // Orders paid AI work: never let the retry interceptor send it twice.
+    return _api.postOnce(
       '${ApiEndpoints.earningsCallQuestions}/${Uri.encodeComponent(teamId)}/generate',
     );
   }

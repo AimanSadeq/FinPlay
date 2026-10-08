@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../app/theme/app_colors.dart';
-import '../../../core/utils/constants.dart';
+import '../../../providers/repository_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
+import 'round_report_link.dart';
 
 class PdfReportButton extends ConsumerStatefulWidget {
   final String teamId;
@@ -35,13 +36,11 @@ class _PdfReportButtonState extends ConsumerState<PdfReportButton> {
       _error = null;
     });
 
-    // Backend only accepts rounds 1–3.
-    final round = widget.round < 1 ? 1 : (widget.round > 3 ? 3 : widget.round);
-    final uri = Uri.parse(
-      '${AppConstants.baseUrl}${AppConstants.apiPrefix}/reports/round-report/${widget.teamId}/$round',
-    );
-
     try {
+      // Rounds clamp to 1–3; the team-member token rides as ?token= (the endpoint 401s
+      // without it).
+      final uri = await buildRoundReportUri(
+          ref.read(apiClientProvider), widget.teamId, widget.round);
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (mounted) {
         setState(() {

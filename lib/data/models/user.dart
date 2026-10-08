@@ -12,6 +12,10 @@ class SelfPacedUser {
   final String? phone;
   final String? city;
   final String role;
+  /// Billing plan: 'trial' | 'voucher' | 'self_paced' | 'student' | 'comp' |
+  /// 'demo'. Only GET /self-paced/me returns it (login/register do not), so it
+  /// is null until /me has been read. 'demo' lifts every earned lock.
+  final String? plan;
   final int currentRound;
   final String currentModule;
   final bool isActive;
@@ -30,6 +34,7 @@ class SelfPacedUser {
     this.phone,
     this.city,
     this.role = 'participant',
+    this.plan,
     this.currentRound = 1,
     this.currentModule = 'financing',
     this.isActive = true,
@@ -50,6 +55,7 @@ class SelfPacedUser {
       phone: json['phone'] as String?,
       city: json['city'] as String?,
       role: json['role'] as String? ?? 'participant',
+      plan: json['plan']?.toString(),
       currentRound: json['currentRound'] as int? ?? 1,
       currentModule: json['currentModule'] as String? ?? 'financing',
       isActive: json['isActive'] as bool? ?? true,
@@ -81,8 +87,12 @@ class SelfPacedUser {
     'phone': phone,
     'city': city,
     'role': role,
+    'plan': plan,
     'currentRound': currentRound,
     'currentModule': currentModule,
     'isActive': isActive,
   };
+
+  /// A business-development demo account (website isDemoAccount()).
+  bool get isDemoPlan => plan == 'demo';
 }

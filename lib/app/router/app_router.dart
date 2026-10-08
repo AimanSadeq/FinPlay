@@ -19,8 +19,11 @@ import '../../features/dashboard/screens/multi_round_dashboard_screen.dart';
 import '../../features/education/screens/education_hub_screen.dart';
 import '../../features/education/screens/break_even_screen.dart';
 import '../../features/education/screens/capital_budgeting_screen.dart';
-import '../../features/education/screens/excel_view_screen.dart';
 import '../../features/education/screens/financial_glossary_screen.dart';
+import '../../features/knowledge/screens/knowledge_base_screen.dart';
+import '../../features/achievements/screens/achievements_screen.dart';
+import '../../features/knowledge/screens/knowledge_article_screen.dart';
+import '../../features/term_trainer/screens/term_trainer_screen.dart';
 import '../../features/education/screens/certificate_screen.dart';
 import '../../features/education/screens/wacc_screen.dart';
 import '../../features/education/screens/dupont_screen.dart';
@@ -31,6 +34,10 @@ import '../../features/education/screens/cap_table_screen.dart';
 import '../../features/education/screens/dividends_screen.dart';
 import '../../features/education/screens/ratios_category_screen.dart';
 import '../../features/assessment/screens/assessment_screen.dart';
+<<<<<<< Updated upstream
+=======
+import '../../features/auth/screens/delete_account_screen.dart';
+>>>>>>> Stashed changes
 import '../../features/earnings_call/screens/earnings_call_screen.dart';
 import '../../features/facilitator/screens/admin_model_screen.dart';
 import '../../features/education/screens/web_module_screen.dart';
@@ -93,6 +100,15 @@ class AppRouter {
         name: 'self-paced-progress',
         pageBuilder: (context, state) => _buildPage(
           const SelfPacedProgressScreen(),
+          state,
+        ),
+      ),
+      // In-app account deletion for self-paced learners (Apple 5.1.1(v))
+      GoRoute(
+        path: '/delete-account',
+        name: 'delete-account',
+        pageBuilder: (context, state) => _buildPage(
+          const DeleteAccountScreen(),
           state,
         ),
       ),
@@ -210,23 +226,39 @@ class AppRouter {
         path: '/education/glossary',
         name: 'glossary',
         pageBuilder: (context, state) => _buildPage(
-          const FinancialGlossaryScreen(),
+          // ?term=<id> opens one term (Knowledge Base article links).
+          FinancialGlossaryScreen(initialTerm: state.uri.queryParameters['term']),
           state,
         ),
+      ),
+      GoRoute(
+        path: '/knowledge',
+        name: 'knowledge',
+        pageBuilder: (context, state) => _buildPage(const KnowledgeBaseScreen(), state),
+      ),
+      GoRoute(
+        path: '/knowledge/:articleId',
+        name: 'knowledge-article',
+        pageBuilder: (context, state) {
+          final id = state.pathParameters['articleId'] ?? '';
+          return _buildPage(KnowledgeArticleScreen(key: ValueKey('kb-$id'), articleId: id), state);
+        },
+      ),
+      GoRoute(
+        path: '/achievements',
+        name: 'achievements',
+        pageBuilder: (context, state) => _buildPage(const AchievementsScreen(), state),
+      ),
+      GoRoute(
+        path: '/term-trainer',
+        name: 'term-trainer',
+        pageBuilder: (context, state) => _buildPage(const TermTrainerScreen(), state),
       ),
       GoRoute(
         path: '/education/certificate',
         name: 'certificate',
         pageBuilder: (context, state) => _buildPage(
           const CertificateScreen(),
-          state,
-        ),
-      ),
-      GoRoute(
-        path: '/education/excel',
-        name: 'excel-view',
-        pageBuilder: (context, state) => _buildPage(
-          const ExcelViewScreen(),
           state,
         ),
       ),

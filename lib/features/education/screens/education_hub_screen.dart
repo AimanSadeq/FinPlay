@@ -6,9 +6,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../knowledge/data/financial_terms_data.dart' show financialTerms;
+import '../../term_trainer/screens/term_trainer_screen.dart' show showDailyPractice;
 import '../../../app/theme/app_colors.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/services/education_progress_sync.dart';
+import '../../../providers/socket_provider.dart';
 import '../../../providers/repository_providers.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/team_provider.dart';
@@ -19,6 +22,8 @@ import '../../../app/i18n/app_strings.dart';
 import '../../../data/education_catalog.dart';
 import '../../../data/module_plan.dart';
 import '../../self_paced/widgets/entitlement_banner.dart';
+import '../../auth/providers/self_paced_plan_provider.dart';
+import '../education_gating.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for each education module
@@ -221,6 +226,12 @@ const _modules = <_EduModule>[
     catalogId: 10,
   ),
   _EduModule(
+<<<<<<< Updated upstream
+=======
+    number: 12,
+    titleEn: 'Value Creation: ROIC, WACC and Economic Profit',
+    titleAr: 'خلق القيمة: العائد على رأس المال المستثمر والمتوسط المرجح لتكلفة رأس المال والربح الاقتصادي',
+>>>>>>> Stashed changes
     descEn:
         'Learn what actually creates value: invested capital, NOPAT, the ROIC minus WACC spread, economic profit, and the value drivers behind them.',
     descAr:
@@ -349,6 +360,7 @@ const _modules = <_EduModule>[
   ),
 ];
 
+<<<<<<< Updated upstream
 /// Catalog ids of the hub cards in display order. Exposed so a test can pin the
 /// registry to the catalog's non-simulation entries.
 @visibleForTesting
@@ -375,7 +387,18 @@ List<int> educationHubCardIdsFor(ModulePlan plan) =>
 bool _isToolOrWebOnly(_EduModule m) {
   final entry = catalogEntry(m.catalogId);
   return entry == null || !entry.isContent || !entry.inApp;
+=======
+/// A content module whose lessons are only on the website cannot be finished
+/// in the app, so it never holds the in-app chain or the simulation back.
+/// (Workshop tools DO gate now: opening one is what moves the chain past it.)
+bool _isWebOnlyContent(int catalogId) {
+  final entry = catalogEntry(catalogId);
+  return entry != null && entry.isContent && !entry.inApp;
+>>>>>>> Stashed changes
 }
+
+/// Pref key the module screen writes when a module's Learn section is done.
+String _learnKey(String scope, int catalogId) => 'edu_module_${scope}_${catalogId}_learn';
 
 // ---------------------------------------------------------------------------
 // Main Screen
@@ -392,31 +415,72 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   final Map<int, int> _moduleProgress = {}; // catalogId -> completion %
   final Map<int, bool> _modulePassed = {};
 
-  // Unlocked modules fetched from /education-modules/status (like web app)
-  List<int> _unlockedModules = [];
-  // Self-paced progressive-unlock set (catalogId values currently accessible).
-  Set<int> _selfPacedUnlocked = {};
-  // Self-paced simulation unlocks once every content module's Learn is complete.
-  bool _selfPacedSimUnlocked = false;
+  // From GET /education-modules/status (facilitator controls, corporate only):
+  // the per-module force-open list, and the global Education switch — null
+  // until it has answered, so nothing is locked on unknown state.
+  List<int> _forceUnlocked = [];
+  bool? _educationUnlocked;
+  // GET /facilitator/simulation-access: the facilitator opened the game.
+  bool _simAccessOpen = false;
+  // GET /education/module-plan: this cohort's modules, null = the whole catalog.
+  // Fails open (null) on any error.
+  List<int>? _modulePlan;
+  // Per-module Learn / workshop-visit flags, read from prefs for this learner's
+  // progress scope ('sp' for self-paced, else the corporate team id).
+  final Map<int, bool> _learnDone = {};
+  final Set<int> _toolsVisited = {};
   Timer? _statusPollTimer;
+<<<<<<< Updated upstream
+=======
+  Timer? _simAccessPollTimer;
+
+  /// Module the learner last read a slide in, for the resume card.
+  EducationCatalogEntry? _resumeEntry;
+>>>>>>> Stashed changes
 
   bool get _isSelfPaced {
     final auth = ref.read(authProvider);
     return auth.user != null && !auth.isFacilitator;
   }
 
+<<<<<<< Updated upstream
   /// The module plan in force: the cached or fallback plan straight away, the
   /// server's once it answers. Never awaited, so the hub never waits on it.
   ModulePlan get _plan => ref.read(modulePlanProvider);
 
   /// The cards this hub draws, in order.
   List<_EduModule> get _visible => _modulesFor(_plan);
+=======
+  bool get _isFacilitator => ref.read(authProvider).isFacilitator;
+
+  /// The plan narrows cohort (corporate) hubs only: a self-paced member is an
+  /// individual subscriber, so their hub is always the whole catalog (website).
+  List<int>? get _effectivePlan => _isSelfPaced ? null : _modulePlan;
+
+  /// Hub cards in this engagement, in hub order (simulation banner excluded).
+  List<_EduModule> get _displayedModules =>
+      _modules.where((m) => isModuleInPlan(m.catalogId, _effectivePlan)).toList();
+
+  Set<int> get _progressive => progressiveUnlocked(
+        displayed: _displayedModules.map((m) => m.catalogId).toList(),
+        learnDone: (id) => _learnDone[id] ?? false,
+        toolVisited: _toolsVisited.contains,
+        passThrough: _isWebOnlyContent,
+        plan: _effectivePlan,
+      );
+
+  /// The facilitator's global Education lock — the authoritative OFF switch for
+  /// a corporate room (never for self-paced learners or the facilitator).
+  bool get _educationGloballyLocked =>
+      !_isSelfPaced && !_isFacilitator && _educationUnlocked == false;
+>>>>>>> Stashed changes
 
   @override
   void initState() {
     super.initState();
     _loadProgress();
     _syncProgress();
+<<<<<<< Updated upstream
     // A new plan changes the cards, the progression chain and the sim gate.
     ref.listenManual<ModulePlan>(modulePlanProvider, (prev, next) {
       if (prev != next && mounted) _loadProgress();
@@ -436,6 +500,10 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
         for (final m in visible)
           if (_isToolOrWebOnly(m)) m.catalogId,
       };
+=======
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkMandatedAssessment());
+    if (_isSelfPaced) {
+>>>>>>> Stashed changes
       // Refresh entitlement (trial countdown / lapsed state) from /me so the
       // access banner reflects live billing state. /me is not gated, so this is
       // safe even for a lapsed learner. Fail-quiet — never blocks the hub.
@@ -443,10 +511,17 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
         (_) => ref.read(selfPacedProvider.notifier).fetchProgress(),
       );
     } else {
+      _fetchModulePlan();
       _fetchEducationStatus();
       _statusPollTimer = Timer.periodic(
         const Duration(seconds: 5),
         (_) => _fetchEducationStatus(),
+      );
+      // The facilitator can open the game mid-session (website polls every 15s).
+      _fetchSimulationAccess();
+      _simAccessPollTimer = Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => _fetchSimulationAccess(),
       );
     }
   }
@@ -498,6 +573,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   @override
   void dispose() {
     _statusPollTimer?.cancel();
+    _simAccessPollTimer?.cancel();
     super.dispose();
   }
 
@@ -511,10 +587,47 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
       final modules = (res['educationModulesUnlocked'] as List<dynamic>?)
           ?.map((e) => (e as num).toInt())
           .toList() ?? [];
-      if (mounted) setState(() => _unlockedModules = modules);
+      final globalOn = res['educationUnlocked'];
+      if (mounted) {
+        setState(() {
+          _forceUnlocked = modules;
+          if (globalOn is bool) _educationUnlocked = globalOn;
+        });
+      }
     } catch (_) {
       // Keep existing state on error
     }
+  }
+
+  Future<void> _fetchSimulationAccess() async {
+    try {
+      final res = await ref.read(apiClientProvider).get(ApiEndpoints.facilitatorSimulationAccess);
+      if (mounted) setState(() => _simAccessOpen = res['open'] == true);
+    } catch (_) {
+      // Keep existing state on error
+    }
+  }
+
+  /// The cohort's module plan. Fails open: any error leaves the whole catalog.
+  Future<void> _fetchModulePlan() async {
+    try {
+      final res = await ref.read(apiClientProvider).get(ApiEndpoints.educationModulePlan);
+      final plan = parseModulePlan(res);
+      if (mounted) setState(() => _modulePlan = plan);
+    } catch (_) {
+      // Fail open — keep the whole catalog.
+    }
+  }
+
+  /// A workshop tool counts as done once opened (website markToolVisited); the
+  /// chain moves past it only after that, one tile at a time.
+  Future<void> _markToolVisited(int catalogId) async {
+    if (!(catalogEntry(catalogId)?.isWorkshop ?? false)) return;
+    if (_toolsVisited.contains(catalogId)) return;
+    final prefs = await SharedPreferences.getInstance();
+    final scope = _isSelfPaced ? 'sp' : (prefs.getInt('edu_team_id') ?? 1).toString();
+    await prefs.setBool(toolVisitedPrefKey(scope, catalogId), true);
+    if (mounted) setState(() => _toolsVisited.add(catalogId));
   }
 
   /// Who this device's education progress belongs to on the server. Self-paced
@@ -545,15 +658,27 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
 
   Future<void> _loadProgress() async {
     final prefs = await SharedPreferences.getInstance();
+<<<<<<< Updated upstream
     if (!mounted) return;
     final visible = _visible;
     final updated = <int, int>{};
     final passed = <int, bool>{};
     for (final m in visible) {
+=======
+    // Same scope the module screen writes: 'sp' for self-paced learners, else
+    // the corporate team id.
+    final scope = _isSelfPaced ? 'sp' : (prefs.getInt('edu_team_id') ?? 1).toString();
+    final updated = <int, int>{};
+    final passed = <int, bool>{};
+    final learn = <int, bool>{};
+    final visited = <int>{};
+    for (final m in _modules) {
+>>>>>>> Stashed changes
       updated[m.catalogId] =
           prefs.getInt('edu_progress_${m.catalogId}') ?? 0;
       passed[m.catalogId] =
           prefs.getBool('edu_passed_${m.catalogId}') ?? false;
+<<<<<<< Updated upstream
     }
     // Recompute self-paced progressive unlocks from per-module Learn completion.
     final unlocked = <int>{};
@@ -567,10 +692,39 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
           final learnDone = prefs.getBool('edu_module_sp_${m.catalogId}_learn') ?? false;
           gateOpen = gateOpen && learnDone; // close the chain until this Learn is done
         }
+=======
+      learn[m.catalogId] = prefs.getBool(_learnKey(scope, m.catalogId)) ?? false;
+      if (prefs.getBool(toolVisitedPrefKey(scope, m.catalogId)) ?? false) {
+        visited.add(m.catalogId);
+>>>>>>> Stashed changes
       }
     }
+    // One-time migration: a learner already past the workshop tools (progress
+    // from before visit-tracking, or restored on a new device) must not find
+    // the chain re-locked behind them. Infer the visits and persist them.
+    bool hasProgress(int id) =>
+        (learn[id] ?? false) ||
+        (updated[id] ?? 0) > 0 ||
+        const ['game', 'quiz', 'sim']
+            .any((a) => prefs.getBool('edu_module_${scope}_${id}_$a') ?? false);
+    final inferred = inferToolsVisited(
+      hubOrder: _modules.map((m) => m.catalogId).toList(),
+      visited: visited,
+      hasProgress: hasProgress,
+    );
+    for (final id in inferred.difference(visited)) {
+      await prefs.setBool(toolVisitedPrefKey(scope, id), true);
+    }
+    visited
+      ..clear()
+      ..addAll(inferred);
+    // "Continue where you left off" (website a2da32f). Runs after the hub's
+    // progress sync, so a position saved on another device is already merged.
+    final resume = await LearnResumeStore.lastResume(scope);
+    final resumeId = resume?.catalogId;
     if (mounted) {
       setState(() {
+<<<<<<< Updated upstream
         // Replaced, not merged, so a module the plan no longer shows stops
         // counting toward the totals.
         _moduleProgress
@@ -584,10 +738,22 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
           // gateOpen is still true only if every content module's Learn is done.
           _selfPacedSimUnlocked = _selfPacedSimGate(prefs);
         }
+=======
+        _resumeEntry = resumeId == null ? null : catalogEntry(resumeId);
+        _moduleProgress.addAll(updated);
+        _modulePassed.addAll(passed);
+        _learnDone
+          ..clear()
+          ..addAll(learn);
+        _toolsVisited
+          ..clear()
+          ..addAll(visited);
+>>>>>>> Stashed changes
       });
     }
   }
 
+<<<<<<< Updated upstream
   /// The game opens once every in-app content module the plan requires has
   /// its Learn section done; an optional module never holds it back.
   bool _selfPacedSimGate(SharedPreferences prefs) {
@@ -595,39 +761,71 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
       if (!(prefs.getBool('edu_module_sp_${n}_learn') ?? false)) return false;
     }
     return true;
+=======
+  /// "X of N complete" counts every displayed card — content modules AND the
+  /// workshop tools, optional modules included, the game excluded (website).
+  bool _isCardFinished(_EduModule m) {
+    final entry = catalogEntry(m.catalogId);
+    if (entry != null && entry.isWorkshop) return _toolsVisited.contains(m.catalogId);
+    return _modulePassed[m.catalogId] ?? false;
+>>>>>>> Stashed changes
   }
 
-  int get _completedCount =>
-      _modulePassed.values.where((v) => v).length;
+  int get _completedCount => _displayedModules.where(_isCardFinished).length;
+
+  int get _totalCount => _displayedModules.length;
 
   int get _overallPercent {
+<<<<<<< Updated upstream
     if (_moduleProgress.isEmpty) return 0;
     final total = _moduleProgress.values.fold<int>(0, (a, b) => a + b);
     final contentCount = _visible
+=======
+    final content = _displayedModules
+>>>>>>> Stashed changes
         .where((m) => catalogEntry(m.catalogId)?.isContent ?? false)
-        .length;
-    return contentCount == 0 ? 0 : (total / contentCount).round();
+        .toList();
+    if (content.isEmpty) return 0;
+    final total = content.fold<int>(0, (a, m) => a + (_moduleProgress[m.catalogId] ?? 0));
+    return (total / content.length).round();
   }
 
-  int get _badgeCount => _completedCount; // 1 badge per completed module
+  // 1 badge per passed content module.
+  int get _badgeCount => _displayedModules
+      .where((m) => (catalogEntry(m.catalogId)?.isContent ?? false) &&
+          (_modulePassed[m.catalogId] ?? false))
+      .length;
 
-  // Whether a module is unlocked (facilitator list, or progressive for self-paced)
-  bool _isUnlocked(int catalogId, List<int> unlocked) {
-    final auth = ref.read(authProvider);
-    if (auth.user != null && !auth.isFacilitator) {
-      return _selfPacedUnlocked.contains(catalogId);
-    }
-    return unlocked.contains(catalogId);
+  /// Website isModuleUnlocked(): self-paced progressive (demo accounts see all,
+  /// the simulation is open from the start); corporate progressive plus the
+  /// facilitator's force-open list, under the global Education lock.
+  bool _isUnlocked(int catalogId, {Set<int>? progressive}) {
+    return isHubModuleUnlocked(
+      catalogId,
+      isSelfPaced: _isSelfPaced,
+      progressive: progressive ?? _progressive,
+      isDemoAccount: ref.read(isDemoAccountProvider),
+      isFacilitator: _isFacilitator,
+      simAccessOpen: _simAccessOpen,
+      educationGloballyLocked: _educationGloballyLocked,
+      forceUnlocked: _forceUnlocked,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Live facilitator Open/Close push (socket 'facilitator:simulation_access'); the
+    // poll stays as the fallback.
+    ref.listen<bool?>(simulationAccessProvider, (_, open) {
+      if (open != null && open != _simAccessOpen) setState(() => _simAccessOpen = open);
+    });
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final auth = ref.watch(authProvider);
     final teamState = ref.watch(teamProvider);
     final plan = ref.watch(modulePlanProvider);
     final modules = _modulesFor(plan);
 
+<<<<<<< Updated upstream
     // The game (13) opens for a corporate room when the facilitator's
     // simulation switch is on, or on a facilitator's own device (website hub:
     // `progressiveUnlocked.has(13) || simAccessOpen || isFacilitatorSession`).
@@ -636,6 +834,19 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
         (simGateOpen || auth.isFacilitator) && !_unlockedModules.contains(13)
             ? [..._unlockedModules, 13]
             : _unlockedModules;
+=======
+    // Rebuild when /me reports a demo plan (every earned lock lifts).
+    ref.watch(isDemoAccountProvider);
+    final displayed = _displayedModules;
+    final progressive = _progressive;
+    // One unlock answer per card for this frame; 13 is the simulation.
+    final unlocked = <int>{
+      for (final m in displayed)
+        if (_isUnlocked(m.catalogId, progressive: progressive)) m.catalogId,
+      if (_isUnlocked(simulationCatalogId, progressive: progressive))
+        simulationCatalogId,
+    };
+>>>>>>> Stashed changes
 
     final isSelfPaced =
         auth.user != null && !auth.isFacilitator && teamState.selectedTeam == null;
@@ -683,7 +894,8 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
             slivers: [
               // ── Header ──
               SliverToBoxAdapter(
-                child: _buildHeader(context, isSelfPaced, unlockedModules),
+                child: _buildHeader(context, isSelfPaced,
+                    simUnlocked: unlocked.contains(simulationCatalogId)),
               ),
 
               // ── Access banner (self-paced only): trial countdown / access-ended notice.
@@ -698,11 +910,25 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   child: _buildProgressCard(
                     context,
                     teamName: teamName,
+<<<<<<< Updated upstream
                     unlockedModules: unlockedModules,
                     modules: modules,
+=======
+                    displayed: displayed,
+                    unlocked: unlocked,
+>>>>>>> Stashed changes
                   ),
                 ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
               ),
+
+              // ── Continue where you left off ──
+              if (_resumeEntry != null && unlocked.contains(_resumeEntry!.num))
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: _buildResumeCard(context, _resumeEntry!),
+                  ),
+                ),
 
               // ── Module Cards Grid ──
               SliverPadding(
@@ -716,8 +942,13 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
+<<<<<<< Updated upstream
                       final m = modules[index];
                       final isLocked = !_isUnlocked(m.catalogId, unlockedModules);
+=======
+                      final m = displayed[index];
+                      final isLocked = !unlocked.contains(m.catalogId);
+>>>>>>> Stashed changes
                       final completion = _moduleProgress[m.catalogId] ?? 0;
                       final passed = _modulePassed[m.catalogId] ?? false;
                       return _ModuleCard(
@@ -727,8 +958,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                         completionPercent: completion,
                         isPassed: passed,
                         ar: ref.watch(stringsProvider).ar,
-                        isSelfPaced: _isSelfPaced,
+                        // Under the facilitator's global lock the reason is the
+                        // facilitator; otherwise the learner's own progression.
+                        lockedByFacilitator: _educationGloballyLocked,
                         // Refresh progressive unlocks when returning from a
+<<<<<<< Updated upstream
                         // module, and push the new work to the server (this
                         // also pulls in work done on the website's module).
                         onTap: () => context
@@ -740,12 +974,28 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                             _syncProgress();
                           }
                         }),
+=======
+                        // module, and push the new work to the server.
+                        onTap: () {
+                          _markToolVisited(m.catalogId);
+                          context.push(m.route).then((_) {
+                            if (mounted) {
+                              _loadProgress();
+                              _syncProgress();
+                            }
+                          });
+                        },
+>>>>>>> Stashed changes
                       ).animate().fadeIn(
                             delay: (300 + 60 * index).ms,
                             duration: 350.ms,
                           );
                     },
+<<<<<<< Updated upstream
                     childCount: modules.length,
+=======
+                    childCount: displayed.length,
+>>>>>>> Stashed changes
                   ),
                 ),
               ),
@@ -756,14 +1006,13 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                   child: _buildSimulationBanner(
                     context,
-                    isUnlocked: isSelfPaced
-                        ? _selfPacedSimUnlocked
-                        : unlockedModules.contains(13),
+                    isUnlocked: unlocked.contains(simulationCatalogId),
+                    isSelfPaced: isSelfPaced,
                   ),
                 ).animate().fadeIn(delay: 800.ms, duration: 400.ms),
               ),
 
-              // ── Glossary & Excel buttons ──
+              // ── Glossary & Certificate ──
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -779,11 +1028,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                 ).animate().fadeIn(delay: 950.ms, duration: 400.ms),
               ),
 
-              // ── Assessment & Research ──
+              // ── Assessment ──
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-                  child: _buildAssessmentResearch(context),
+                  child: _buildAssessment(context),
                 ).animate().fadeIn(delay: 980.ms, duration: 400.ms),
               ),
 
@@ -806,9 +1055,9 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildHeader(
     BuildContext context,
-    bool isSelfPaced,
-    List<int> unlockedModules,
-  ) {
+    bool isSelfPaced, {
+    required bool simUnlocked,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final s = ref.watch(stringsProvider);
     final teamState = ref.watch(teamProvider);
@@ -914,14 +1163,14 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
               ),
               const SizedBox(width: 6),
               _NavPill(
-                icon: unlockedModules.contains(13)
+                icon: simUnlocked
                     ? Icons.play_arrow_rounded
                     : Icons.lock_rounded,
                 label: s.tr('Sim', 'المحاكاة'),
-                color: unlockedModules.contains(13)
+                color: simUnlocked
                     ? AppColors.secondaryLight
                     : AppColors.lightTextTertiary,
-                onTap: unlockedModules.contains(13)
+                onTap: simUnlocked
                     ? () => context.push('/simulation')
                     : null,
               ),
@@ -938,8 +1187,13 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   Widget _buildProgressCard(
     BuildContext context, {
     required String teamName,
+<<<<<<< Updated upstream
     required List<int> unlockedModules,
     required List<_EduModule> modules,
+=======
+    required List<_EduModule> displayed,
+    required Set<int> unlocked,
+>>>>>>> Stashed changes
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final s = ref.watch(stringsProvider);
@@ -1062,7 +1316,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                   children: [
                     _ProgressStat(
                       value: '$_completedCount',
+<<<<<<< Updated upstream
                       sub: '/${modules.length}',
+=======
+                      sub: '/$_totalCount',
+>>>>>>> Stashed changes
                       label: s.tr('Complete', 'مكتمل'),
                       color: AppColors.primaryLight,
                     ),
@@ -1104,10 +1362,16 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                 ),
                 const SizedBox(height: 8),
                 Row(
+<<<<<<< Updated upstream
                   children: List.generate(modules.length, (i) {
                     final m = modules[i];
                     final isUnlocked =
                         _isUnlocked(m.catalogId, unlockedModules);
+=======
+                  children: List.generate(displayed.length, (i) {
+                    final m = displayed[i];
+                    final isUnlocked = unlocked.contains(m.catalogId);
+>>>>>>> Stashed changes
                     final completion =
                         _moduleProgress[m.catalogId] ?? 0;
                     final passed = _modulePassed[m.catalogId] ?? false;
@@ -1115,7 +1379,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                     return Expanded(
                       child: Padding(
                         padding: EdgeInsets.only(
+<<<<<<< Updated upstream
                           right: i < modules.length - 1 ? 4 : 0,
+=======
+                          right: i < displayed.length - 1 ? 4 : 0,
+>>>>>>> Stashed changes
                         ),
                         child: Column(
                           children: [
@@ -1239,7 +1507,7 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   // Simulation Banner
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildSimulationBanner(BuildContext context,
-      {required bool isUnlocked}) {
+      {required bool isUnlocked, required bool isSelfPaced}) {
     final s = ref.watch(stringsProvider);
     return GestureDetector(
       onTap: isUnlocked
@@ -1342,12 +1610,20 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
                       size: 14,
                       color: Colors.white.withValues(alpha: 0.7)),
                   const SizedBox(width: 4),
-                  Text(
-                    s.tr('Locked', 'مقفل'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withValues(alpha: 0.7),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 110),
+                    child: Text(
+                      // Corporate: earned by finishing the modules, or opened by
+                      // the facilitator. (Self-paced learners are never locked.)
+                      isSelfPaced
+                          ? s.tr('Locked', 'مقفل')
+                          : s.tr('Complete all modules to unlock',
+                              'أكمل جميع الوحدات لفتح المحاكاة'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
                     ),
                   ),
                 ],
@@ -1358,20 +1634,40 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
     );
   }
 
+  Widget _buildResumeCard(BuildContext context, EducationCatalogEntry entry) {
+    final s = ref.watch(stringsProvider);
+    return _ExtraButton(
+      icon: Icons.play_circle_fill_rounded,
+      label: s.tr('Continue where you left off', 'تابع من حيث توقفت'),
+      sublabel: s.tr(entry.titleEn, entry.titleAr),
+      color: AppColors.primaryLight,
+      // The module and deck screens reopen at the saved slide themselves.
+      onTap: () => context.push(entry.route),
+    );
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
-  // Glossary & Excel buttons
+  // Daily Practice, Glossary, Knowledge Base & Certificate
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildExtraButtons(BuildContext context) {
     final s = ref.watch(stringsProvider);
     return Column(
       children: [
+        _ExtraButton(
+          icon: Icons.local_fire_department_rounded,
+          label: s.tr('Daily Practice', 'التدريب اليومي'),
+          sublabel: s.tr('Term Trainer', 'مدرب المصطلحات'),
+          color: AppColors.warning,
+          onTap: () => showDailyPractice(context),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
               child: _ExtraButton(
                 icon: Icons.menu_book_rounded,
-                label: s.tr('Financial Glossary', 'القاموس المالي'),
-                sublabel: s.tr('180+ terms', 'أكثر من 180 مصطلحًا'),
+                label: s.tr('Glossary', 'المصطلحات'),
+                sublabel: s.tr('${financialTerms.length} terms', '${financialTerms.length} مصطلحًا'),
                 color: AppColors.accentLight,
                 onTap: () => context.push('/education/glossary'),
               ),
@@ -1379,11 +1675,11 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _ExtraButton(
-                icon: Icons.table_chart_rounded,
-                label: s.tr('Excel Data', 'بيانات إكسل'),
-                sublabel: s.tr('IFRS Statements', 'قوائم IFRS'),
-                color: AppColors.dangerLight,
-                onTap: () => context.push('/education/excel'),
+                icon: Icons.auto_stories_rounded,
+                label: s.tr('Knowledge Base', 'قاعدة المعرفة'),
+                sublabel: s.tr('Articles & standards', 'مقالات ومعايير'),
+                color: AppColors.primaryLight,
+                onTap: () => context.push('/knowledge'),
               ),
             ),
           ],
@@ -1476,15 +1772,15 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Assessment & Research
+  // Assessment
   // ─────────────────────────────────────────────────────────────────────────
-  Widget _buildAssessmentResearch(BuildContext context) {
+  Widget _buildAssessment(BuildContext context) {
     final s = ref.watch(stringsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          s.tr('Assessment & Research', 'التقييم والبحث'),
+          s.tr('Assessment', 'التقييم'),
           style: GoogleFonts.plusJakartaSans(
             fontSize: 15,
             fontWeight: FontWeight.w700,
@@ -1515,9 +1811,12 @@ class _EducationHubScreenState extends ConsumerState<EducationHubScreen> {
             ),
           ],
         ),
+<<<<<<< Updated upstream
         // No research tile: FinPlay does not collect the DBA study's data.
         // The website removed the consent and instrument flow; study
         // instruments are answered on a separate anonymous platform.
+=======
+>>>>>>> Stashed changes
       ],
     );
   }
@@ -1593,7 +1892,7 @@ class _ModuleCard extends StatefulWidget {
   final int completionPercent;
   final bool isPassed;
   final bool ar;
-  final bool isSelfPaced;
+  final bool lockedByFacilitator;
   final VoidCallback? onTap;
 
   const _ModuleCard({
@@ -1603,7 +1902,7 @@ class _ModuleCard extends StatefulWidget {
     required this.completionPercent,
     required this.isPassed,
     required this.ar,
-    this.isSelfPaced = false,
+    this.lockedByFacilitator = false,
     this.onTap,
   });
 
@@ -1972,11 +2271,11 @@ class _ModuleCardState extends State<_ModuleCard> {
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              widget.isSelfPaced
-                                  ? (widget.ar
+                              widget.lockedByFacilitator
+                                  ? (widget.ar ? 'مقفل من قبل الميسّر' : 'Locked by facilitator')
+                                  : (widget.ar
                                       ? 'أكمل الوحدة السابقة لفتحها'
-                                      : 'Complete the previous module to unlock')
-                                  : (widget.ar ? 'مقفل من قبل الميسّر' : 'Locked by facilitator'),
+                                      : 'Complete the previous module to unlock'),
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 10,

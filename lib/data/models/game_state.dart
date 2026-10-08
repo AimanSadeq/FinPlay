@@ -14,7 +14,6 @@ class GameState {
   final bool educationRetryUnlocked;
   final bool preAssessmentMandated;
   final bool postAssessmentMandated;
-  final bool siteAccessEnabled;
   final String? activeQrPlaceholder;
   final String? activeCaseStudyId;
   final String gameMode;
@@ -39,7 +38,6 @@ class GameState {
     this.educationRetryUnlocked = false,
     this.preAssessmentMandated = false,
     this.postAssessmentMandated = false,
-    this.siteAccessEnabled = false,
     this.activeQrPlaceholder,
     this.activeCaseStudyId,
     this.gameMode = 'facilitator',
@@ -80,6 +78,7 @@ class GameState {
       capitalBudgetingUnlocked: json['capitalBudgetingUnlocked'] as bool? ?? base?.capitalBudgetingUnlocked ?? false,
       educationUnlocked: json['educationUnlocked'] as bool? ?? base?.educationUnlocked ?? false,
       educationModulesUnlocked: (json['educationModulesUnlocked'] as List<dynamic>?)
+<<<<<<< Updated upstream
           ?.map((e) => (e as num).toInt()).toList() ?? base?.educationModulesUnlocked ?? [],
       educationRetryUnlocked: json['educationRetryUnlocked'] as bool? ?? base?.educationRetryUnlocked ?? false,
       preAssessmentMandated: json['preAssessmentMandated'] as bool? ?? base?.preAssessmentMandated ?? false,
@@ -92,6 +91,17 @@ class GameState {
       corporateAccessCode: json.containsKey('corporateAccessCode')
           ? json['corporateAccessCode'] as String?
           : base?.corporateAccessCode,
+=======
+          ?.map((e) => (e as num).toInt()).toList() ?? [],
+      educationRetryUnlocked: json['educationRetryUnlocked'] as bool? ?? false,
+      preAssessmentMandated: json['preAssessmentMandated'] as bool? ?? false,
+      postAssessmentMandated: json['postAssessmentMandated'] as bool? ?? false,
+      activeQrPlaceholder: json['activeQrPlaceholder'] as String?,
+      activeCaseStudyId: json['activeCaseStudyId'] as String?,
+      gameMode: json['gameMode'] as String? ?? 'facilitator',
+      corporateModeEnabled: json['corporateModeEnabled'] as bool? ?? false,
+      corporateAccessCode: json['corporateAccessCode'] as String?,
+>>>>>>> Stashed changes
     );
   }
 

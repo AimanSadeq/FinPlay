@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,7 +23,7 @@ class CreditRatingScreen extends ConsumerStatefulWidget {
 
 class _RatingBand {
   final String letter;
-  final double maxLeverage; // Debt/EBITDA must be below this
+  final double maxLeverage; // Debt/EBITDA must be at or below this
   final double minCoverage; // Interest coverage must be at/above this
   final int spreadBps; // credit spread over risk-free
   final bool investmentGrade;
@@ -31,15 +32,56 @@ class _RatingBand {
       this.spreadBps, this.investmentGrade, this.color);
 }
 
+// The website's RATING_SCALE (server/routes/credit-rating.ts, mirrored in wacc.ts).
 const _bands = <_RatingBand>[
-  _RatingBand('AAA', 1.0, 8.5, 60, true, AppColors.secondary),
-  _RatingBand('AA', 1.5, 7.0, 80, true, AppColors.secondaryLight),
-  _RatingBand('A', 2.0, 5.5, 110, true, AppColors.primaryLight),
-  _RatingBand('BBB', 3.0, 4.0, 160, true, AppColors.info),
-  _RatingBand('BB', 4.0, 3.0, 300, false, AppColors.accentLight),
-  _RatingBand('B', 5.5, 2.0, 500, false, AppColors.warning),
-  _RatingBand('CCC/C', double.infinity, 0.0, 900, false, AppColors.dangerLight),
+  _RatingBand('AAA', 1.0, 12.0, 50, true, AppColors.secondary),
+  _RatingBand('AA', 1.5, 9.5, 75, true, AppColors.secondaryLight),
+  _RatingBand('A', 2.0, 7.0, 125, true, AppColors.primaryLight),
+  _RatingBand('BBB', 3.0, 4.0, 175, true, AppColors.info),
+  _RatingBand('BB', 4.0, 2.5, 350, false, AppColors.accentLight),
+  _RatingBand('B', 5.5, 1.5, 500, false, AppColors.warning),
+  _RatingBand('CCC/C', double.infinity, 0.0, 800, false, AppColors.dangerLight),
 ];
+
+/// Synthetic rating as the website assigns it: each metric picks the best band it
+/// qualifies for (Debt/EBITDA at or below the band's maximum; coverage at or above its
+/// minimum) and the worse of the two binds. Index 0 = AAA … 6 = CCC/C.
+class CreditRatingScale {
+  CreditRatingScale._();
+
+  static const letters = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC/C'];
+  static const spreads = [0.005, 0.0075, 0.0125, 0.0175, 0.035, 0.05, 0.08];
+
+  /// Debt/EBITDA band. Negative leverage (net cash) rates best; unbounded leverage
+  /// (debt with no EBITDA) rates worst.
+  static int byLeverage(double debtToEbitda) {
+    if (debtToEbitda.isNaN || debtToEbitda == double.infinity) return 6;
+    if (debtToEbitda < 0) return 0;
+    for (var i = 0; i < _bands.length; i++) {
+      if (debtToEbitda <= _bands[i].maxLeverage) return i;
+    }
+    return _bands.length - 1;
+  }
+
+  /// Coverage band. Unbounded coverage (EBITDA with no interest to pay) rates best. (The
+  /// website's rateByCoverage maps a non-finite coverage to the worst band; that reads a
+  /// debt-free firm as distressed, so the app does not copy it.)
+  static int byCoverage(double coverage) {
+    if (coverage.isNaN) return 6;
+    if (coverage == double.infinity) return 0;
+    for (var i = 0; i < _bands.length; i++) {
+      if (coverage >= _bands[i].minCoverage) return i;
+    }
+    return _bands.length - 1;
+  }
+
+  /// Worse of the two.
+  static int rate({required double debt, required double ebitda, required double interest}) {
+    final leverage = ebitda > 0 ? debt / ebitda : (debt > 0 ? double.infinity : 0.0);
+    final coverage = interest > 0 ? ebitda / interest : (ebitda > 0 ? double.infinity : 0.0);
+    return math.max(byLeverage(leverage), byCoverage(coverage));
+  }
+}
 
 class _CreditRatingScreenState extends ConsumerState<CreditRatingScreen> {
   int _tab = 0;
@@ -49,8 +91,10 @@ class _CreditRatingScreenState extends ConsumerState<CreditRatingScreen> {
   double _interest = 90000;
   double _riskFree = 4; // %
 
-  double get _leverage => _ebitda > 0 ? _debt / _ebitda : double.infinity;
-  double get _coverage => _interest > 0 ? _ebitda / _interest : double.infinity;
+  double get _leverage =>
+      _ebitda > 0 ? _debt / _ebitda : (_debt > 0 ? double.infinity : 0);
+  double get _coverage =>
+      _interest > 0 ? _ebitda / _interest : (_ebitda > 0 ? double.infinity : 0);
 
   @override
   void initState() {
@@ -64,39 +108,16 @@ class _CreditRatingScreenState extends ConsumerState<CreditRatingScreen> {
   List<double?> _leverageSeries(GameMetricsState m) => m.series(
       (fd) => fd.totalEquity != 0 ? fd.totalLiabilities / fd.totalEquity : null);
 
-  /// Worst-of: find the first (best) band the company qualifies for on BOTH
-  /// metrics. The binding metric is the one dragging the rating down.
-  int get _bandIndex {
-    for (int i = 0; i < _bands.length; i++) {
-      final b = _bands[i];
-      if (_leverage < b.maxLeverage && _coverage >= b.minCoverage) {
-        return i;
-      }
-    }
-    return _bands.length - 1;
-  }
+  int get _byLeverage => CreditRatingScale.byLeverage(_leverage);
+  int get _byCoverage => CreditRatingScale.byCoverage(_coverage);
+
+  /// Worse of the two metrics binds (website bindingIndex).
+  int get _bandIndex => math.max(_byLeverage, _byCoverage);
 
   _RatingBand get _band => _bands[_bandIndex];
 
-  /// Which metric is binding (worse): leverage or coverage.
-  bool get _leverageBinding {
-    // The band would be better if leverage allowed it; compare how far each
-    // metric falls. Find best band each metric alone would allow.
-    int byLev = _bands.length - 1, byCov = _bands.length - 1;
-    for (int i = 0; i < _bands.length; i++) {
-      if (_leverage < _bands[i].maxLeverage) {
-        byLev = i;
-        break;
-      }
-    }
-    for (int i = 0; i < _bands.length; i++) {
-      if (_coverage >= _bands[i].minCoverage) {
-        byCov = i;
-        break;
-      }
-    }
-    return byLev >= byCov; // leverage gives the worse (higher index) band
-  }
+  /// Which metric is binding: leverage when it gives the worse (or equal) band.
+  bool get _leverageBinding => _byLeverage >= _byCoverage;
 
   double get _impliedCostOfDebt => _riskFree + _band.spreadBps / 100.0;
 
@@ -203,7 +224,7 @@ class _CreditRatingScreenState extends ConsumerState<CreditRatingScreen> {
                         Expanded(
                           child: Text(
                             b.maxLeverage.isFinite
-                                ? '${s.tr('Lev', 'رافعة')} < ${b.maxLeverage.toStringAsFixed(1)}× · ${s.tr('Cov', 'تغطية')} ≥ ${b.minCoverage.toStringAsFixed(1)}×'
+                                ? '${s.tr('Lev', 'رافعة')} ≤ ${b.maxLeverage.toStringAsFixed(1)}× · ${s.tr('Cov', 'تغطية')} ≥ ${b.minCoverage.toStringAsFixed(1)}×'
                                 : s.tr('High leverage or weak coverage', 'رافعة عالية أو تغطية ضعيفة'),
                             style: TextStyle(
                                 fontSize: 11.5,

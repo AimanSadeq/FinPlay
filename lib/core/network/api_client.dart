@@ -6,6 +6,7 @@ import '../utils/constants.dart';
 /// to make clear it is added by the client and never sent by the server.
 const String httpStatusKey = '_httpStatus';
 
+<<<<<<< Updated upstream
 /// True when a response map returned by ApiClient is a failure: the server said
 /// so (`success: false`) or the request was rejected with a 4xx that ApiClient
 /// preserved as a body. A missing route answers 404 {success:false, error:'API
@@ -13,6 +14,16 @@ const String httpStatusKey = '_httpStatus';
 /// as success.
 bool apiFailed(Map<String, dynamic> res) =>
     res['success'] == false || ((res[httpStatusKey] as int?) ?? 0) >= 400;
+=======
+/// `RequestOptions.extra` flag: a 401 on this request is an expected answer (e.g. a wrong
+/// password re-entered to confirm a sensitive action), not an expired session, so the
+/// auth interceptor must NOT fire [ApiClient.onUnauthorized] (which signs the learner out).
+const String skipUnauthorizedHandlerExtra = 'skipUnauthorizedHandler';
+
+/// `RequestOptions.extra` flag: never auto-retry this request (non-idempotent actions such
+/// as deleting an account, where a retry after a 5xx could act twice).
+const String noRetryExtra = 'noRetry';
+>>>>>>> Stashed changes
 
 class ApiClient {
   static ApiClient? _instance;
@@ -222,7 +233,8 @@ class _AuthInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (err.response?.statusCode == 401 &&
-        err.requestOptions.headers.containsKey('Authorization')) {
+        err.requestOptions.headers.containsKey('Authorization') &&
+        err.requestOptions.extra[skipUnauthorizedHandlerExtra] != true) {
       _client.onUnauthorized?.call();
     }
     handler.next(err);
@@ -253,6 +265,7 @@ class _RetryInterceptor extends Interceptor {
   }
 
   bool _shouldRetry(DioException err) {
+    if (err.requestOptions.extra[noRetryExtra] == true) return false;
     // Don't retry connection errors (server not reachable)
     if (err.type == DioExceptionType.connectionError) return false;
     // Don't retry baseline/case-study 500s (expected when Excel not connected)

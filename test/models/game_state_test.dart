@@ -78,7 +78,6 @@ void main() {
           'breakEvenUnlocked': true,
           'capitalBudgetingUnlocked': true,
           'educationRetryUnlocked': true,
-          'siteAccessEnabled': true,
           'gameMode': 'self-paced',
           'corporateModeEnabled': true,
           'corporateAccessCode': 'X7K2M9',
@@ -90,7 +89,6 @@ void main() {
         expect(gs.breakEvenUnlocked, true);
         expect(gs.capitalBudgetingUnlocked, true);
         expect(gs.educationRetryUnlocked, true);
-        expect(gs.siteAccessEnabled, true);
         expect(gs.gameMode, 'self-paced');
         expect(gs.corporateModeEnabled, true);
         expect(gs.corporateAccessCode, 'X7K2M9');

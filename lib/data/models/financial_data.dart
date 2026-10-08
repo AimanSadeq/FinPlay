@@ -7,6 +7,10 @@ class StatementRow {
   final bool isCalculation;
   final String? type; // For ratios: "Liquidity", "Efficiency", etc.
 
+  /// The server's value as sent: null when the engine marks a ratio n/m
+  /// (e.g. ROE on negative equity). [value] reads that as 0 for arithmetic.
+  final Object? rawValue;
+
   const StatementRow({
     required this.title,
     this.value = 0,
@@ -14,6 +18,7 @@ class StatementRow {
     this.isMajor = false,
     this.isCalculation = false,
     this.type,
+    this.rawValue,
   });
 
   factory StatementRow.fromJson(Map<String, dynamic> json) {
@@ -24,6 +29,7 @@ class StatementRow {
       isMajor: json['isMajor'] as bool? ?? false,
       isCalculation: json['isCalculation'] as bool? ?? false,
       type: json['type'] as String?,
+      rawValue: json['value'],
     );
   }
 
@@ -85,7 +91,7 @@ class FinancialData {
       ? null
       : {for (final r in ratioRows) r.title.trim(): r.value};
 
-  /// Parse a single statement response from /api/sheets/results/round
+  /// Parse a single statement response from /api/game/results/round
   static FinancialData fromSheetResponse(
     Map<String, dynamic> json, {
     String statementType = 'income',
